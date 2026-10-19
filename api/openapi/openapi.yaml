@@ -95,7 +95,7 @@ paths:
         "4XX": { $ref: "#/components/responses/Problem" }
     patch:
       operationId: updateClient
-      summary: Update contact details or KYC status (KYC: managers only)
+      summary: "Update contact details or KYC status (KYC: managers only)"
       requestBody:
         required: true
         content:
@@ -131,7 +131,7 @@ paths:
                 phone: { type: string }
                 company: { type: string }
                 message: { type: string }
-                website: { type: string, description: Honeypot; must be empty }
+                website: { type: string, description: "Honeypot; must be empty" }
       responses:
         "202": { description: Received }
         "4XX": { $ref: "#/components/responses/Problem" }
@@ -419,7 +419,7 @@ components:
       type: object
       required: [subject, severity, channel]
       properties:
-        tenant_id: { type: string, format: uuid, description: Required for staff; clients use their own tenant }
+        tenant_id: { type: string, format: uuid, description: "Required for staff; clients use their own tenant" }
         subject: { type: string }
         description: { type: string }
         severity: { $ref: "#/components/schemas/Severity" }
