@@ -3,6 +3,7 @@ import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { Pill } from "../../components/ui";
 import { api } from "../../lib/api";
+import { useLive } from "../../lib/live";
 import { useSession } from "../../lib/session";
 import { useTheme } from "../../lib/theme";
 import type { Intervention } from "../../lib/types";
@@ -25,6 +26,7 @@ export default function Field() {
     setBusy(false);
   }, [syncDrafts]);
   useFocusEffect(useCallback(() => void load(), [load]));
+  useLive((e) => { if (e.subject.startsWith("intervention.")) void load(); });
   return (
     <FlatList
       style={s.screen}

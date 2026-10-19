@@ -4,6 +4,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import type { Ticket } from "@/lib/types";
 import { SeverityBadge, SlaChip, StatusBadge } from "@/components/Badges";
+import { useLive } from "@/lib/live";
 
 export default function Tickets() {
   const [rows, setRows] = useState<Ticket[]>([]);
@@ -20,6 +21,7 @@ export default function Tickets() {
     [status, severity],
   );
   useEffect(() => { void load(); }, [load]);
+  useLive((e) => { if (e.subject.startsWith("ticket.")) void load(); });
   return (
     <>
       <div className="row">

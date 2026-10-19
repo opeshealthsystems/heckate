@@ -5,6 +5,7 @@ import { Button, TicketPills } from "../../components/ui";
 import { AttachmentList } from "../../components/AttachmentList";
 import { PhotoButtons } from "../../components/PhotoButtons";
 import { api } from "../../lib/api";
+import { useLive } from "../../lib/live";
 import { useSession } from "../../lib/session";
 import { useTheme } from "../../lib/theme";
 import type { Comment, Status, Ticket } from "../../lib/types";
@@ -31,6 +32,8 @@ export default function TicketScreen() {
     }
   }, [id]);
   useFocusEffect(useCallback(() => void load(), [load]));
+  // New replies and status changes appear without pulling to refresh.
+  useLive((e) => { if (e.subject.startsWith("ticket.") && e.data.id === id) void load(); });
   const run = (p: Promise<unknown>) => p.then(load).catch((e) => setErr(e.message));
   if (!t) return <View style={s.pad}>{err ? <Text style={s.error}>{err}</Text> : <Text style={s.muted}>Loading…</Text>}</View>;
   const move = (to: Status) => run(api.updateTicket(id, { status: to }, t.version));

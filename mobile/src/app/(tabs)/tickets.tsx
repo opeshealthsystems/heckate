@@ -3,6 +3,7 @@ import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { TicketPills } from "../../components/ui";
 import { api } from "../../lib/api";
+import { useLive } from "../../lib/live";
 import { useSession } from "../../lib/session";
 import { useTheme } from "../../lib/theme";
 import type { Ticket } from "../../lib/types";
@@ -25,6 +26,7 @@ export default function Tickets() {
     setBusy(false);
   }, [syncDrafts]);
   useFocusEffect(useCallback(() => void load(), [load]));
+  useLive((e) => { if (e.subject.startsWith("ticket.")) void load(); });
 
   if (me?.scope === "other") return <View style={s.pad}><Text style={s.text}>Your role does not use the mobile app. Please use the web portal.</Text></View>;
   return (

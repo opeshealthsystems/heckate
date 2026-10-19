@@ -6,6 +6,7 @@ import { useMe } from "@/lib/session";
 import type { Comment, Status, Ticket } from "@/lib/types";
 import { SeverityBadge, SlaChip, StatusBadge } from "@/components/Badges";
 import { Attachments } from "@/components/Attachments";
+import { useLive } from "@/lib/live";
 
 export default function TicketPage() {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +30,8 @@ export default function TicketPage() {
     }
   }, [id]);
   useEffect(() => { void reload(); }, [reload]);
+  // A new reply or status change on this ticket refreshes the conversation without a reload.
+  useLive((e) => { if (e.subject.startsWith("ticket.") && e.data.id === id) void reload(); });
   const run = (p: Promise<unknown>) => p.then(reload).catch((e) => setErr(e.message));
   if (err && !t) return <p className="error">{err}</p>;
   if (!t) return <p className="muted">Loading…</p>;
