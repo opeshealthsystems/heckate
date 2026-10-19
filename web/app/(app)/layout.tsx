@@ -11,11 +11,21 @@ function Shell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const staff = me.scope === "staff";
-  const links = [
+  const has = (...r: string[]) => me.roles.some((x) => r.includes(x));
+  const links: [string, string][] = [
     ["/dashboard", "Dashboard"],
     ["/tickets", staff ? "Ticket queue" : "Support"],
-    ...(staff ? [["/clients", "Clients"], ["/leads", "Leads"], ["/documents", "Documents"]] : []),
   ];
+  if (staff && has("ceo", "manager", "sales")) links.push(["/clients", "Clients"], ["/leads", "Leads"]);
+  else if (staff && has("support", "finance", "engineer")) links.push(["/clients", "Clients"]);
+  if (staff || has("client_user", "client_admin")) links.push(["/quotes", "Quotes"], ["/invoices", "Invoices"]);
+  if (staff || has("client_user", "client_admin")) links.push(["/projects", "Projects"], ["/interventions", has("client_user", "client_admin") ? "Site visits" : "Field"]);
+  if (staff) links.push(["/timesheets", "Time"], ["/inventory", "Inventory"]);
+  else if (has("client_user", "client_admin")) links.push(["/inventory", "Equipment"]);
+  if (has("ceo", "manager", "finance", "auditor")) links.push(["/accounting", "Accounting"]);
+  if (has("ceo", "manager", "procurement", "finance", "supplier")) links.push(["/procurement", has("supplier") ? "Supplier portal" : "Purchasing"]);
+  if (staff) links.push(["/hr", "People"]);
+  if (staff && has("ceo", "manager", "finance", "sales", "support", "engineer", "logistics", "procurement")) links.push(["/documents", "Documents"]);
   return (
     <div className="shell">
       <header className="top">

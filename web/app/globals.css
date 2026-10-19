@@ -65,3 +65,15 @@ tbody tr:last-child td { border-bottom: 0; }
   .content { padding: 24px; }
 }
 @media (min-width: 1600px) { .content { max-width: 1400px; } }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; margin: 12px 0; border-bottom: 1px solid var(--line); }
+.tab { min-height: 44px; padding: 0 16px; background: none; border: 0; border-bottom: 3px solid transparent; color: var(--muted); font: inherit; cursor: pointer; }
+.tab.on { color: var(--fg); border-bottom-color: var(--brand); font-weight: 600; }
+.lines { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin: 12px 0; }
+.line { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 8px; }
+.grid2 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.totals { margin-left: auto; width: min(100%, 320px); }
+.totals div { display: flex; justify-content: space-between; padding: 4px 0; }
+.totals .grand { font-weight: 700; border-top: 1px solid var(--line); }
+@media (min-width: 768px) { .line { grid-template-columns: 3fr 1fr 1.4fr auto; } }
+.signature { max-width: min(100%, 360px); background: #fff; border: 1px solid var(--line); border-radius: 8px; }

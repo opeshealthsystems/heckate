@@ -18,13 +18,25 @@ ERP, client and supplier portals, public website and mobile app on one API. Requ
 
 | Module | State |
 | --- | --- |
-| Identity (JWT/OIDC, roles, tenant claim) | Built. Keycloak realm provided, untested |
-| Clients, CRM (leads from website) | Built |
-| Support & Incidents (tickets, SLA, comments, internal notes, rating, report) | Built, web + mobile |
+| Identity (JWT/OIDC, roles, tenant claim) | Built. Keycloak realm provided, **untested** against a real Keycloak |
+| Clients, CRM (leads from the website form) | Built |
+| Support & Incidents (tickets, SLA, comments, internal notes, rating, report) | Built: web and mobile |
+| Sales & Invoicing (quotes, client approval, invoices, payments, credit notes, TVA+CAC, dual control above a threshold) | Built: web |
+| Accounting (append-only hash-chained double-entry ledger, auto-posting from sales and purchases, trial balance, chain verification) | Built: web. Starter chart only; accountant must validate |
+| Projects & Field Service (projects, tasks, interventions with GPS and signature, timesheets) | Built: web; field check-in/out on mobile |
+| Inventory & Assets (stock ledger, serialised equipment, issue to staff, client assets, parts used on interventions) | Built: web |
+| Purchasing & Suppliers (supplier register with call-back-verified bank details, RFQs, POs, receipts, supplier invoices with three-way match, supplier portal) | Built: web |
+| HR (employee records, leave with balances, expense claims) | Built: web. **Payroll not built** |
 | Documents & Trust (register, references, public verification) | Built (register and verify; PDF generation and PAdES signing not built) |
-| Push device registration | Built; sending needs credentials |
-| Public website | Built |
-| Everything else in the spec | Not built yet, see docs/BLOCKERS.md |
+| Push notifications | Device registration built; sending needs credentials |
+| Public website (EN/FR) | Built |
+| Reporting dashboards | Per-module reports and the dashboard; Metabase not set up |
+| API as a product (keys, plans, metering, developer portal) | Not built |
+| Real-time chat (WebSockets) | Not built |
+| Mobile payments (MTN MoMo, Orange Money) | Not built: payments are recorded manually |
+| File attachments (MinIO) | Not built |
+
+Every endpoint is in `api/openapi/openapi.yaml`, and a test fails if the code and the contract disagree.
 
 ## Run it
 

@@ -17,7 +17,13 @@ async function call<T>(method: string, path: string, body?: unknown, extra: Reco
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (method === "POST") headers["Idempotency-Key"] = crypto.randomUUID();
-  const res = await fetch(`${API_URL}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  } catch {
+    // Offline, DNS failure or a navigation aborting the request: not an authentication problem.
+    throw new ApiError(0, "Network error", "Cannot reach the server. Check your connection.");
+  }
   if (res.status === 401 && token) {
     clearToken();
     if (typeof location !== "undefined") location.assign("/login");
@@ -28,6 +34,14 @@ async function call<T>(method: string, path: string, body?: unknown, extra: Reco
   }
   return res.status === 204 ? (undefined as T) : res.json();
 }
+
+/** Generic call for endpoints without a hand-written wrapper. */
+export const raw = {
+  get: <T,>(path: string) => call<T>("GET", path),
+  post: <T,>(path: string, body?: unknown) => call<T>("POST", path, body ?? {}),
+  put: <T,>(path: string, body?: unknown) => call<T>("PUT", path, body ?? {}),
+  patch: <T,>(path: string, body?: unknown) => call<T>("PATCH", path, body ?? {}),
+};
 
 export const api = {
   me: () => call<Me>("GET", "/v1/me"),

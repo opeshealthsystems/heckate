@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { Verification } from "@/lib/types";
 
@@ -7,16 +7,27 @@ export default function Verify() {
   const [ref, setRef] = useState("");
   const [res, setRes] = useState<Verification | null>(null);
   const [err, setErr] = useState("");
-  async function check(e: React.FormEvent) {
-    e.preventDefault();
+  async function run(r: string) {
     setErr("");
     setRes(null);
     try {
-      setRes(await api.verify(ref.trim()));
+      setRes(await api.verify(r.trim()));
     } catch (x) {
       setErr((x as Error).message);
     }
   }
+  const check = (e: React.FormEvent) => {
+    e.preventDefault();
+    void run(ref);
+  };
+  // A link or QR code can carry the reference: /verify?ref=HS-INV-2026-000001
+  useEffect(() => {
+    const q = new URLSearchParams(location.search).get("ref");
+    if (q) {
+      setRef(q);
+      void run(q);
+    }
+  }, []);
   return (
     <main className="center">
       <div className="card narrow">

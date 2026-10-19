@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "./api";
+import { api, ApiError } from "./api";
 import { clearToken, getToken } from "./auth";
 import type { Me } from "./types";
 
@@ -22,12 +22,16 @@ export function SessionGate({ children }: { children: ReactNode }) {
       return;
     }
     api.me().then(setMe).catch((e) => {
-      clearToken();
+      // Only a rejected token ends the session. A network error must not sign the user out.
+      if (e instanceof ApiError && e.status === 401) {
+        clearToken();
+        router.replace("/login");
+        return;
+      }
       setErr(String(e.message ?? e));
-      router.replace("/login");
     });
   }, [router]);
-  if (err) return <p className="muted pad">{err}</p>;
+  if (err) return <p className="error pad" role="alert">{err} <button className="btn" onClick={() => location.reload()}>Retry</button></p>;
   if (!me) return <p className="muted pad">Loading…</p>;
   return <Ctx.Provider value={me}>{children}</Ctx.Provider>;
 }
