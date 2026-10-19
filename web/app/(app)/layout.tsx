@@ -31,7 +31,7 @@ function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="shell">
       <header className="top">
-        <strong>HEKATE</strong>
+        <Link href="/dashboard" className="logo"><img src="/brand/HEKATE_Logo_White.png" alt="HEKATE SYSTEMS" width={104} height={42} /></Link>
         <button className="btn menu" aria-expanded={open} aria-label="Menu" onClick={() => setOpen(!open)}>☰</button>
         <nav className={open ? "open" : ""}>
           {links.map(([href, label]) => (
