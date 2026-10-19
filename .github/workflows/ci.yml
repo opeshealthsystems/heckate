@@ -51,6 +51,15 @@ jobs:
         with:
           node-version: "22"
       - run: cd web && npm ci && npm run typecheck && npm test && npm run build
+  sdk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # The generated types must match the contract: regenerate and fail on any difference.
+      - run: cd sdk/typescript && npm ci && npm run check && npm run typecheck && npm test
   mobile:
     runs-on: ubuntu-latest
     steps:

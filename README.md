@@ -32,7 +32,7 @@ ERP, client and supplier portals, public website and mobile app on one API. Requ
 | Push notifications | Built (Expo push); real delivery needs credentials |
 | Public website (EN/FR) | Built |
 | Reporting dashboards | Per-module reports and the dashboard; Metabase not set up |
-| API as a product (keys, plans, metering, developer screen) | Built: read-only company keys, plans with rate limit and monthly quota, usage. Billing for paid plans and SDK generation not built |
+| API as a product (keys, plans, metering, developer screen) | Built: read-only company keys, plans with rate limit and monthly quota, usage. TypeScript SDK generated from the contract (`sdk/typescript`). Billing for paid plans not built |
 | Live updates (WebSocket `/v1/stream`, tickets and interventions) | Built: web and mobile. Chat not built |
 | Mobile payments (MTN MoMo, Orange Money) | Not built: payments are recorded manually |
 | File attachments | Built, stored in Postgres (max 10 MB; MinIO not used) |
