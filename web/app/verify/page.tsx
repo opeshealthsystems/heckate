@@ -57,6 +57,7 @@ export default function Verify() {
                 <p className="muted small">
                   {res.ref} · issued {res.issued_at && new Date(res.issued_at).toLocaleDateString()}
                 </p>
+                {res.superseded_by && <p className="notice">This document is genuine, but it has been replaced by a newer version: <strong>{res.superseded_by}</strong>.</p>}
                 <label htmlFor="file">Check a PDF you were given (it stays on your device)</label>
                 <input id="file" type="file" accept="application/pdf" onChange={(e) => { const f = e.target.files?.[0]; if (f) void checkFile(f); }} />
                 {match === "same" && <p className="result ok" role="status">This file is identical to the original issued by HEKATE.</p>}

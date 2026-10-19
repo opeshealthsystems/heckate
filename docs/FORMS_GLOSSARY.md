@@ -85,6 +85,14 @@ Approved version of every entry above: **1.0**. SHA-256 of each approved origina
 | HS-FRM-41 | `6bd9bdd9eb3ad4f0e98998b46318500206241ca8cd0654ffa957e0c83b8f122f` |
 | HS-PO | `a53a3cb96469e68e89049c89558da8cce2645bf39085284cfb3d53ca2ce1ac5a` |
 
+## Version history and revisions
+
+* Every save of a draft text document keeps a numbered version: who saved it, when, why (a short change note), and a SHA-256 fingerprint of the content. Saving without a change records nothing. The history is append-only: the database refuses to change or delete a version.
+* Issuing records a final version (`Issued as <reference>`) and freezes the document.
+* A change after issue is a **revision**: a new draft copied from the issued document (`Revise`), numbered one higher, whose history begins `Revision of <reference>`. The issued document is never touched. When the revision is issued, the old reference stays valid and verifiable, and `/verify` shows that it has been replaced and by which reference.
+* Every create, edit, issue and revise is also in the tamper-evident audit log. Screens: Documents, My documents, History and Revise. API: `GET /v1/narratives/{id}/versions`, `POST /v1/narratives/{id}/revise`.
+* Not yet covered: documents produced by other modules (invoices, quotes, payslips and so on) are frozen at issue and corrected with credit notes or new documents, as accounting requires; they do not have draft histories. The pack's *Revision Log* sheet (document, version, date, author, change, approver, hash) is not imported: the platform keeps its own history, and approver sign-off on a revision is not modelled.
+
 ## Reference numbers: a difference in the pack that needs a decision
 
 The pack describes document references in two ways:

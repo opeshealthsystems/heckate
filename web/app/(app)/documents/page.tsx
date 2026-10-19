@@ -9,6 +9,7 @@ import { TERMS } from "@/lib/glossary";
 import { day } from "@/lib/format";
 import type { DocumentEntry } from "@/lib/types";
 import { DocumentPreview, type PreviewSource } from "@/components/DocumentPreview";
+import { VersionHistory } from "@/components/VersionHistory";
 import { Err, Field, Pill, Tabs, Table, useAction } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 
@@ -29,6 +30,7 @@ export default function Documents() {
   const [mine, setMine] = useState<Narrative[]>([]);
   const [f, setF] = useState({ code: "", title: "" });
   const [issued, setIssued] = useState<DocumentEntry[]>([]);
+  const [history, setHistory] = useState<string | null>(null);
   const load = useCallback(() => raw.get<{ data: Narrative[] }>("/v1/narratives").then((r) => setMine(r.data)).catch(() => {}), []);
   useEffect(() => { void load(); }, [load]);
   const act = useAction(load);
@@ -81,20 +83,27 @@ export default function Documents() {
       )}
 
       {tab === "My documents" && (
-        <Table head={["Reference", "Title", "Kind", "Created", ""]} empty={mine.length ? undefined : "No documents yet. Fill one in from the Library."}>
-          {mine.map((n) => (
-            <tr key={n.id}>
-              <td>{n.ref ?? <Pill text="draft" tone="warn" />}</td>
-              <td className="wrap">{n.title}</td>
-              <td>{n.form_code ? `HS-${n.form_code}` : n.kind.replace(/_/g, " ")}</td>
-              <td>{day(n.created_at)}</td>
-              <td className="nowrap">
-                <button className="btn" onClick={() => open(n)}><Icon name="eye" size={16} /> Preview</button>{" "}
-                {!n.ref && writer && <button className="btn primary" disabled={act.busy} onClick={() => act.run(() => raw.post(`/v1/narratives/${n.id}/issue`))}>Issue</button>}
-              </td>
-            </tr>
-          ))}
-        </Table>
+        <>
+          <Table head={["Reference", "Title", "Kind", "Version", "Created", ""]} empty={mine.length ? undefined : "No documents yet. Fill one in from the Library."}>
+            {mine.map((n) => (
+              <tr key={n.id}>
+                <td>{n.ref ?? <Pill text="draft" tone="warn" />}</td>
+                <td className="wrap">{n.title}{n.superseded_by && <><br /><span className="muted small">Replaced by {n.superseded_by}</span></>}</td>
+                <td>{n.form_code ? `HS-${n.form_code}` : n.kind.replace(/_/g, " ")}</td>
+                <td>{n.revision}{n.superseded_by && <> <Pill text="replaced" /></>}</td>
+                <td>{day(n.created_at)}</td>
+                <td className="nowrap">
+                  <button className="btn" onClick={() => open(n)}><Icon name="eye" size={16} /> Preview</button>{" "}
+                  <button className="btn" aria-expanded={history === n.id} onClick={() => setHistory(history === n.id ? null : n.id)}><Icon name="time" size={16} /> History</button>{" "}
+                  {!n.ref && writer && <Link className="btn" href={`/documents/new?id=${n.id}`}>Edit</Link>}{" "}
+                  {!n.ref && writer && <button className="btn primary" disabled={act.busy} onClick={() => act.run(() => raw.post(`/v1/narratives/${n.id}/issue`))}>Issue</button>}
+                  {n.ref && writer && !n.superseded_by && <button className="btn" disabled={act.busy} onClick={() => act.run(() => raw.post(`/v1/narratives/${n.id}/revise`, {}))}>Revise</button>}
+                </td>
+              </tr>
+            ))}
+          </Table>
+          {history && (<section className="panel"><div className="panel-head"><h2>History</h2><button className="btn" onClick={() => setHistory(null)}>Close</button></div><div className="panel-body"><VersionHistory id={history} /></div></section>)}
+        </>
       )}
 
       {tab === "Glossary" && (

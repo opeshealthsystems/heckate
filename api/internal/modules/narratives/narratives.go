@@ -3,6 +3,9 @@
 package narratives
 
 import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -63,9 +66,14 @@ type Narrative struct {
 	CreatedBy string    `json:"created_by"`
 	IssuedBy  *string   `json:"issued_by"`
 	CreatedAt time.Time `json:"created_at"`
+	// Revision 1 is the first document; a revision of an issued document counts up and points back at it.
+	Revision     int     `json:"revision"`
+	Supersedes   *string `json:"supersedes"`    // id of the document this one replaces
+	SupersededBy *string `json:"superseded_by"` // reference of the issued document that replaced this one
 }
 
-const cols = `id::text, kind, form_code, tenant_id::text, title, sections, ref, signed_by, created_by, issued_by, created_at`
+const cols = `id::text, kind, form_code, tenant_id::text, title, sections, ref, signed_by, created_by, issued_by, created_at, revision, supersedes::text,
+	(SELECT r.ref FROM documents.narratives r WHERE r.supersedes = documents.narratives.id AND r.ref IS NOT NULL)`
 
 type module struct{ docs docs.Options }
 
@@ -78,6 +86,8 @@ func Register(a *platform.App, o docs.Options) {
 	a.Route("POST /v1/narratives/{id}/issue", writers, platform.Idempotent(issue))
 	a.Route("GET /v1/narratives/{id}/pdf", platform.Portal, m.pdf)
 	a.Route("GET /v1/narratives/{id}/preview", platform.Portal, m.preview)
+	a.Route("GET /v1/narratives/{id}/versions", writers, versions)
+	a.Route("POST /v1/narratives/{id}/revise", writers, platform.Idempotent(revise))
 }
 
 // notAllowed turns a row-level-security refusal into a 403 that names the problem; other errors pass through.
@@ -88,6 +98,29 @@ func notAllowed(err error) error {
 	return err
 }
 
+// snapshot appends the current content to the document's history. The history is append-only in the database,
+// so each entry is permanent: who saved it, when, why, and a fingerprint of exactly what was saved.
+func snapshot(ctx context.Context, s *platform.Scope, n *Narrative, event, note string) error {
+	sec, _ := json.Marshal(n.Sections)
+	signed := ""
+	if n.SignedBy != nil {
+		signed = *n.SignedBy
+	}
+	sum := sha256.Sum256([]byte(n.Title + "\x00" + signed + "\x00" + string(sec)))
+	_, err := s.Tx.Exec(ctx, `INSERT INTO documents.narrative_versions (narrative_id, version, event, title, sections, signed_by, change_note, changed_by, content_sha256)
+		VALUES ($1, COALESCE((SELECT max(version) FROM documents.narrative_versions WHERE narrative_id = $1), 0) + 1, $2, $3, $4, NULLIF($5,''), $6, $7, $8)`,
+		n.ID, event, n.Title, sec, signed, note, s.Claims.Sub, hex.EncodeToString(sum[:]))
+	return err
+}
+
+func cleanNote(v string) (string, error) {
+	v = strings.TrimSpace(v)
+	if len(v) > 500 {
+		return "", bad("a change note can be at most 500 characters")
+	}
+	return v, nil
+}
+
 func bad(msg string) error {
 	return platform.Err(http.StatusUnprocessableEntity, "Invalid request", msg)
 }
@@ -95,7 +128,7 @@ func bad(msg string) error {
 func scan(row pgx.Row) (*Narrative, error) {
 	var n Narrative
 	var sec []byte
-	err := row.Scan(&n.ID, &n.Kind, &n.FormCode, &n.TenantID, &n.Title, &sec, &n.Ref, &n.SignedBy, &n.CreatedBy, &n.IssuedBy, &n.CreatedAt)
+	err := row.Scan(&n.ID, &n.Kind, &n.FormCode, &n.TenantID, &n.Title, &sec, &n.Ref, &n.SignedBy, &n.CreatedBy, &n.IssuedBy, &n.CreatedAt, &n.Revision, &n.Supersedes, &n.SupersededBy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, platform.Err(http.StatusNotFound, "Not found", "document not found")
 	}
@@ -130,8 +163,13 @@ func create(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		Title    string    `json:"title"`
 		Sections []Section `json:"sections"`
 		SignedBy string    `json:"signed_by"`
+		Note     string    `json:"note"`
 	}
 	if err := platform.DecodeBody(r, &in); err != nil {
+		return nil, err
+	}
+	note, err := cleanNote(in.Note)
+	if err != nil {
 		return nil, err
 	}
 	if _, ok := kinds[in.Kind]; !ok {
@@ -159,6 +197,12 @@ func create(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 			return nil, bad("unknown client")
 		}
 		return nil, notAllowed(err)
+	}
+	if note == "" {
+		note = "Created"
+	}
+	if err := snapshot(r.Context(), s, n, "created", note); err != nil {
+		return nil, err
 	}
 	if err := s.Audit(r.Context(), "create", "narrative", n.ID); err != nil {
 		return nil, err
@@ -200,8 +244,13 @@ func update(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		Title    string    `json:"title"`
 		Sections []Section `json:"sections"`
 		SignedBy string    `json:"signed_by"`
+		Note     string    `json:"note"` // why it changed; kept with the new version
 	}
 	if err := platform.DecodeBody(r, &in); err != nil {
+		return nil, err
+	}
+	note, err := cleanNote(in.Note)
+	if err != nil {
 		return nil, err
 	}
 	in.Title = strings.TrimSpace(in.Title)
@@ -225,6 +274,20 @@ func update(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Saving without a change records nothing; a real change is a new version and an audit entry.
+	if changed, err := differsFromLatest(ctx, s, n); err != nil {
+		return nil, err
+	} else if changed {
+		if note == "" {
+			note = "Edited"
+		}
+		if err := snapshot(ctx, s, n, "edited", note); err != nil {
+			return nil, err
+		}
+		if err := s.Audit(ctx, "update", "narrative", n.ID); err != nil {
+			return nil, err
+		}
+	}
 	return &platform.Result{Status: http.StatusOK, Body: n}, nil
 }
 
@@ -245,6 +308,15 @@ func issue(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	n, err := scan(s.Tx.QueryRow(ctx, `UPDATE documents.narratives SET ref=$2, issued_by=$3 WHERE id=$1 RETURNING `+cols, cur.ID, doc.Ref, s.Claims.Sub))
 	if err != nil {
 		return nil, err
+	}
+	if err := snapshot(ctx, s, n, "issued", "Issued as "+doc.Ref); err != nil {
+		return nil, err
+	}
+	if cur.Supersedes != nil {
+		// The earlier document stays valid and verifiable; verification now says it has been replaced.
+		if _, err := s.Tx.Exec(ctx, `INSERT INTO documents.supersessions (old_ref, new_ref) SELECT o.ref, $2 FROM documents.narratives o WHERE o.id::text = $1 AND o.ref IS NOT NULL`, *cur.Supersedes, doc.Ref); err != nil {
+			return nil, err
+		}
 	}
 	if err := s.Audit(ctx, "issue", "narrative", n.ID); err != nil {
 		return nil, err
@@ -281,6 +353,108 @@ func (m *module) pdf(r *http.Request, s *platform.Scope) (*platform.Result, erro
 		}
 		return docs.RenderNarrative(m.docs, *n.Ref, label, entry.IssuedAt, n.Title, client, secs, signed)
 	})
+}
+
+func differsFromLatest(ctx context.Context, s *platform.Scope, n *Narrative) (bool, error) {
+	sec, _ := json.Marshal(n.Sections)
+	signed := ""
+	if n.SignedBy != nil {
+		signed = *n.SignedBy
+	}
+	sum := sha256.Sum256([]byte(n.Title + "\x00" + signed + "\x00" + string(sec)))
+	var latest string
+	err := s.Tx.QueryRow(ctx, `SELECT content_sha256 FROM documents.narrative_versions WHERE narrative_id = $1 ORDER BY version DESC LIMIT 1`, n.ID).Scan(&latest)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return true, nil
+	}
+	return latest != hex.EncodeToString(sum[:]), err
+}
+
+type Version struct {
+	Version       int       `json:"version"`
+	Event         string    `json:"event"`
+	Title         string    `json:"title"`
+	Sections      []Section `json:"sections"`
+	SignedBy      *string   `json:"signed_by"`
+	ChangeNote    string    `json:"change_note"`
+	ChangedBy     string    `json:"changed_by"`
+	ChangedAt     time.Time `json:"changed_at"`
+	ContentSHA256 string    `json:"content_sha256"`
+}
+
+// versions lists the full history of a document, oldest first.
+func versions(r *http.Request, s *platform.Scope) (*platform.Result, error) {
+	ctx := r.Context()
+	n, err := scan(s.Tx.QueryRow(ctx, `SELECT `+cols+` FROM documents.narratives WHERE id::text=$1`, r.PathValue("id")))
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.Tx.Query(ctx, `SELECT version, event, title, sections, signed_by, change_note, changed_by, changed_at, content_sha256
+		FROM documents.narrative_versions WHERE narrative_id = $1 ORDER BY version`, n.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Version{}
+	for rows.Next() {
+		var v Version
+		var sec []byte
+		if err := rows.Scan(&v.Version, &v.Event, &v.Title, &sec, &v.SignedBy, &v.ChangeNote, &v.ChangedBy, &v.ChangedAt, &v.ContentSHA256); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(sec, &v.Sections); err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+	return &platform.Result{Status: http.StatusOK, Body: map[string]any{"data": out}}, rows.Err()
+}
+
+// revise starts a new draft from an issued document. The issued one is never touched; once the revision is
+// issued, verification of the old reference says that it has been replaced and by what.
+func revise(r *http.Request, s *platform.Scope) (*platform.Result, error) {
+	var in struct {
+		Note string `json:"note"`
+	}
+	if err := platform.DecodeBody(r, &in); err != nil {
+		return nil, err
+	}
+	note, err := cleanNote(in.Note)
+	if err != nil {
+		return nil, err
+	}
+	ctx := r.Context()
+	cur, err := scan(s.Tx.QueryRow(ctx, `SELECT `+cols+` FROM documents.narratives WHERE id::text=$1 FOR UPDATE`, r.PathValue("id")))
+	if err != nil {
+		return nil, err
+	}
+	if cur.Ref == nil {
+		return nil, platform.Err(http.StatusConflict, "Not issued", "a draft can simply be edited; only an issued document is revised")
+	}
+	if cur.SupersededBy != nil {
+		return nil, platform.Err(http.StatusConflict, "Already replaced", "this document was already replaced by "+*cur.SupersededBy+"; revise that one")
+	}
+	sec, _ := json.Marshal(cur.Sections)
+	n, err := scan(s.Tx.QueryRow(ctx, `INSERT INTO documents.narratives (kind, form_code, tenant_id, title, sections, signed_by, created_by, supersedes, revision)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING `+cols, cur.Kind, cur.FormCode, cur.TenantID, cur.Title, sec, cur.SignedBy, s.Claims.Sub, cur.ID, cur.Revision+1))
+	if err != nil {
+		if strings.Contains(err.Error(), "narratives_one_revision") {
+			return nil, platform.Err(http.StatusConflict, "Revision exists", "a revision of this document is already being prepared")
+		}
+		return nil, notAllowed(err)
+	}
+	if note == "" {
+		note = "Revision of " + *cur.Ref
+	} else {
+		note = "Revision of " + *cur.Ref + ": " + note
+	}
+	if err := snapshot(ctx, s, n, "created", note); err != nil {
+		return nil, err
+	}
+	if err := s.Audit(ctx, "revise", "narrative", n.ID); err != nil {
+		return nil, err
+	}
+	return &platform.Result{Status: http.StatusCreated, Body: n}, nil
 }
 
 // preview renders a draft as it will print, marked "draft, not valid". Nothing is stored, numbered or logged.

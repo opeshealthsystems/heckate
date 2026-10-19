@@ -938,6 +938,7 @@ paths:
                   status: { type: string }
                   issued_at: { type: string, format: date-time }
                   sha256: { type: string, description: "SHA-256 of the issued PDF once generated; compare with sha256sum of a file you hold" }
+                  superseded_by: { type: string, description: "Reference of the revision that replaced this document. The document itself stays authentic; this says a newer one exists." }
         "4XX": { $ref: "#/components/responses/Problem" }
   /v1/quotes:
     post:
@@ -3037,6 +3038,36 @@ paths:
           content:
             application/pdf: { schema: { type: string, format: binary } }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/narratives/{id}/versions:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: listNarrativeVersions
+      summary: "Full history of a text document, oldest first: who saved each version, when, why, and a fingerprint of the content. Append-only"
+      responses:
+        "200":
+          description: "The versions"
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/NarrativeVersion" } } } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/narratives/{id}/revise:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      operationId: reviseNarrative
+      summary: "Start a new draft from an issued document. The issued one is untouched and is shown as replaced once the revision is issued"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { note: { type: string, maxLength: 500 } } }
+      responses:
+        "201":
+          description: "The new draft"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Narrative" }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/narratives/{id}/preview:
     parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
     get:
@@ -3159,6 +3190,21 @@ components:
         created_by: { type: string }
         issued_by: { type: [string, "null"] }
         created_at: { type: string, format: date-time }
+        revision: { type: integer, description: "1 for the first document; a revision of an issued document counts up" }
+        supersedes: { type: [string, "null"], description: "Id of the issued document this one replaces" }
+        superseded_by: { type: [string, "null"], description: "Reference of the issued revision that replaced this document" }
+    NarrativeVersion:
+      type: object
+      properties:
+        version: { type: integer }
+        event: { type: string, enum: [created, edited, issued] }
+        title: { type: string }
+        sections: { type: array, items: { type: object, properties: { heading: { type: string }, body: { type: string } } } }
+        signed_by: { type: [string, "null"] }
+        change_note: { type: string }
+        changed_by: { type: string }
+        changed_at: { type: string, format: date-time }
+        content_sha256: { type: string }
     OnlinePayment:
       type: object
       properties:

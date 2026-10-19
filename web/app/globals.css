@@ -191,3 +191,14 @@ td code { white-space: nowrap; }
 .terms { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin: 12px 0; }
 .terms > div { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; }
 .terms dt { font-weight: 700; color: var(--hs-navy); } .terms dd { margin: 4px 0 0; color: var(--hs-body); }
+
+/* Version history */
+.panel-body { padding: 8px 20px 16px; }
+.history { list-style: none; margin: 0; padding: 0; }
+.history li { border-top: 1px solid var(--line); padding: 12px 0; }
+.history li:first-child { border-top: 0; }
+.history p { margin: 4px 0; }
+.diff { margin: 8px 0; padding: 12px; background: var(--hs-band); border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; font: 12.5px/1.5 var(--font-mono, ui-monospace, monospace); white-space: pre-wrap; }
+.diff .d-add { background: var(--hs-success-bg); color: var(--hs-success); display: block; }
+.diff .d-del { background: var(--hs-danger-bg); color: var(--hs-danger); display: block; }
+.diff .d-same { color: var(--hs-body); display: block; }

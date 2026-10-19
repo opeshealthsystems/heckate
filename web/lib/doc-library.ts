@@ -1,7 +1,9 @@
 import type { FormEntry } from "./forms-library";
 import type { PreviewSource } from "@/components/DocumentPreview";
 
-export interface Narrative { id: string; kind: string; form_code: string | null; tenant_id: string; title: string; ref: string | null; created_at: string }
+export interface Narrative { id: string; kind: string; form_code: string | null; tenant_id: string; title: string; ref: string | null; created_at: string; revision: number; supersedes: string | null; superseded_by: string | null }
+export interface Section { heading: string; body: string }
+export interface Version { version: number; event: "created" | "edited" | "issued"; title: string; sections: Section[]; signed_by: string | null; change_note: string; changed_by: string; changed_at: string; content_sha256: string }
 
 /** Library entries the platform can fill in as a text document, and how it files them. */
 export const FILLABLE: Record<string, { kind: string; form?: string }> = {

@@ -2644,6 +2644,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/narratives/{id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Full history of a text document, oldest first: who saved each version, when, why, and a fingerprint of the content. Append-only */
+        get: operations["listNarrativeVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/narratives/{id}/revise": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start a new draft from an issued document. The issued one is untouched and is shown as replaced once the revision is issued */
+        post: operations["reviseNarrative"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/narratives/{id}/preview": {
         parameters: {
             query?: never;
@@ -2776,6 +2814,28 @@ export interface components {
             issued_by?: string | null;
             /** Format: date-time */
             created_at?: string;
+            /** @description 1 for the first document; a revision of an issued document counts up */
+            revision?: number;
+            /** @description Id of the issued document this one replaces */
+            supersedes?: string | null;
+            /** @description Reference of the issued revision that replaced this document */
+            superseded_by?: string | null;
+        };
+        NarrativeVersion: {
+            version?: number;
+            /** @enum {string} */
+            event?: "created" | "edited" | "issued";
+            title?: string;
+            sections?: {
+                heading?: string;
+                body?: string;
+            }[];
+            signed_by?: string | null;
+            change_note?: string;
+            changed_by?: string;
+            /** Format: date-time */
+            changed_at?: string;
+            content_sha256?: string;
         };
         OnlinePayment: {
             /** Format: uuid */
@@ -4525,6 +4585,8 @@ export interface operations {
                         issued_at?: string;
                         /** @description SHA-256 of the issued PDF once generated; compare with sha256sum of a file you hold */
                         sha256?: string;
+                        /** @description Reference of the revision that replaced this document. The document itself stays authentic; this says a newer one exists. */
+                        superseded_by?: string;
                     };
                 };
             };
@@ -7806,6 +7868,62 @@ export interface operations {
                 };
                 content: {
                     "application/pdf": string;
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    listNarrativeVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The versions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["NarrativeVersion"][];
+                    };
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    reviseNarrative: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The new draft */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Narrative"];
                 };
             };
             "4XX": components["responses"]["Problem"];

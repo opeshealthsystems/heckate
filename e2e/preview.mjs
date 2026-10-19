@@ -61,7 +61,7 @@ await p.getByRole("button", { name: /Preview as it will print/ }).click();
 await p.waitForSelector(".pv-page[data-ready]", { timeout: 20000 });
 ok(/Draft/.test(await p.locator(".pv-note, .pv-title").first().innerText()) && /not valid/.test(await p.locator(".pv-title").innerText()), "the draft preview says it is a draft and not valid");
 await p.keyboard.press("Escape");
-await p.getByRole("button", { name: "Save draft" }).click();
+await p.getByRole("button", { name: /^Save (draft|changes)$/ }).click();
 await p.waitForURL("**/documents");
 await p.getByRole("tab", { name: "My documents" }).click();
 ok((await p.locator("table tbody tr", { hasText: `Change request ${sfx}` }).count()) === 1, "the saved draft is listed under My documents");
@@ -75,6 +75,37 @@ await p.locator("table tbody tr", { hasText: `Change request ${sfx}` }).getByRol
 await p.waitForSelector(".pv-page[data-ready]", { timeout: 20000 });
 ok(!/not valid/.test(await p.locator(".pv-title").innerText()), "an issued document previews without the draft marking");
 await p.keyboard.press("Escape");
+
+// Version history: every save is kept; a change after issue is a revision that replaces the issued document.
+const row = () => p.locator("table tbody tr", { hasText: `Change request ${sfx}` });
+await row().first().getByRole("button", { name: /History/ }).click();
+await p.waitForSelector(".history li");
+ok((await p.locator(".history li").count()) === 2, "the history lists the creation and the issue as two versions");
+ok(/Issued as HS-FRM-23-/.test(await p.locator(".history li").first().innerText()), "the newest history entry records the issue");
+await p.getByRole("button", { name: "Close" }).first().click();
+await row().first().getByRole("button", { name: "Revise" }).click();
+await p.locator("table tbody tr", { hasText: `Change request ${sfx}` }).filter({ hasText: "draft" }).first().waitFor({ timeout: 10000 });
+await p.locator("table tbody tr", { hasText: `Change request ${sfx}` }).filter({ hasText: "draft" }).getByRole("link", { name: "Edit" }).click();
+await p.waitForSelector("#d-note");
+await p.fill('textarea[aria-label="Text 1"]', "Add three access points to the second floor.");
+await p.fill("#d-note", "Client wants three, not two");
+await p.getByRole("button", { name: "Save changes" }).click();
+await p.waitForURL("**/documents");
+await p.getByRole("tab", { name: "My documents" }).click();
+await p.locator("table tbody tr", { hasText: `Change request ${sfx}` }).filter({ hasText: "draft" }).getByRole("button", { name: /History/ }).click();
+await p.waitForSelector(".history li");
+const hist = await p.locator(".history").innerText();
+ok(/Client wants three, not two/.test(hist) && /Revision of HS-FRM-23-/.test(hist), "the revision's history keeps the reason for the change and names the document it replaces");
+await p.locator(".history details summary").first().click();
+ok((await p.locator(".diff .d-add").count()) >= 1 && (await p.locator(".diff .d-del").count()) >= 1, "the change is shown line by line, additions and removals marked");
+await p.getByRole("button", { name: "Close" }).first().click();
+await p.locator("table tbody tr", { hasText: `Change request ${sfx}` }).filter({ hasText: "draft" }).getByRole("button", { name: "Issue" }).click();
+await p.locator("table tbody tr", { hasText: "Replaced by HS-FRM-23-" }).first().waitFor({ timeout: 10000 });
+ok(true, "once the revision is issued the earlier document is shown as replaced");
+const oldRef = (await p.locator("table tbody tr", { hasText: "Replaced by" }).first().locator("td").first().innerText()).trim();
+await p.goto(`${WEB}/verify?ref=${oldRef}`);
+await p.waitForSelector("text=Valid document");
+ok(await p.getByText("replaced by a newer version").isVisible(), "verifying the old reference says it is genuine but replaced");
 
 // Invoice preview and print
 await p.goto(`${WEB}/invoices/${drafted.id}`);

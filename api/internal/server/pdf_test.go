@@ -401,3 +401,117 @@ func TestNarrativeDocuments(t *testing.T) {
 		}
 	}
 }
+
+func TestDocumentVersionHistory(t *testing.T) {
+	e := setup(t)
+	pool := testPool(t)
+	sfx := fmt.Sprint(time.Now().UnixNano())
+	sales := token("ver-sales", "", "sales")
+	hr := token("ver-hr", "", "hr")
+	ta := e.newClient(token("m", "", "manager"), "Version Co "+sfx)
+	alice := token("ver-alice", ta, "client_user")
+	body := func(text, note string) map[string]any {
+		b := map[string]any{"title": "Proposal " + sfx, "sections": []map[string]any{{"heading": "Scope", "body": text}}}
+		if note != "" {
+			b["note"] = note
+		}
+		return b
+	}
+	create := body("First text", "")
+	create["kind"], create["tenant_id"] = "proposal", ta
+	c, n, _ := e.do("POST", "/v1/narratives", sales, create)
+	if c != 201 {
+		t.Fatalf("create: %d %v", c, n)
+	}
+	id := n["id"].(string)
+	history := func(who string) []map[string]any {
+		c, b, _ := e.do("GET", "/v1/narratives/"+id+"/versions", who, nil)
+		if c != 200 {
+			t.Fatalf("versions: %d %v", c, b)
+		}
+		var out []map[string]any
+		for _, x := range b["data"].([]any) {
+			out = append(out, x.(map[string]any))
+		}
+		return out
+	}
+	if h := history(sales); len(h) != 1 || h[0]["event"] != "created" || h[0]["changed_by"] != "ver-sales" {
+		t.Fatalf("creating must record version 1: %v", h)
+	}
+	// A real change is a new version with who and why; saving the same content again records nothing.
+	if c, _, _ := e.do("PUT", "/v1/narratives/"+id, sales, body("Second text", "Client asked for more detail")); c != 200 {
+		t.Fatalf("edit: %d", c)
+	}
+	e.do("PUT", "/v1/narratives/"+id, sales, body("Second text", "same again"))
+	h := history(sales)
+	if len(h) != 2 || h[1]["change_note"] != "Client asked for more detail" || h[1]["event"] != "edited" || h[0]["content_sha256"] == h[1]["content_sha256"] {
+		t.Fatalf("one edit must add exactly one version: %v", h)
+	}
+	if secs := h[0]["sections"].([]any); secs[0].(map[string]any)["body"] != "First text" {
+		t.Errorf("version 1 must still hold the original text: %v", h[0])
+	}
+	c, iss, _ := e.do("POST", "/v1/narratives/"+id+"/issue", sales, nil)
+	if c != 200 {
+		t.Fatalf("issue: %d %v", c, iss)
+	}
+	ref := iss["ref"].(string)
+	if h = history(sales); len(h) != 3 || h[2]["event"] != "issued" || h[2]["change_note"] != "Issued as "+ref {
+		t.Fatalf("issuing must be the last version: %v", h)
+	}
+	// Edits and the history are staff-only; history rows can never be changed or deleted.
+	if c, _, _ := e.do("GET", "/v1/narratives/"+id+"/versions", alice, nil); c != 403 {
+		t.Errorf("a client reading the history: want 403, got %d", c)
+	}
+	if c, _, _ := e.do("GET", "/v1/narratives/"+id+"/versions", hr, nil); c != 403 && c != 404 && c != 200 {
+		t.Errorf("unexpected status for hr: %d", c)
+	}
+	for _, q := range []string{`UPDATE documents.narrative_versions SET change_note = 'x'`, `DELETE FROM documents.narrative_versions`} {
+		if _, err := pool.Exec(context.Background(), q); err == nil {
+			t.Errorf("history must be append-only: %s succeeded", q)
+		}
+	}
+	// A change after issue is a revision that supersedes the issued document.
+	if c, _, _ := e.do("POST", "/v1/narratives/"+id+"/revise", sales, map[string]any{}); c != 201 {
+		t.Fatalf("revise: %d", c)
+	}
+	c, rev, _ := e.do("POST", "/v1/narratives/"+id+"/revise", sales, map[string]any{})
+	if c != 409 {
+		t.Errorf("a second revision of the same document: want 409, got %d %v", c, rev)
+	}
+	_, list, _ := e.do("GET", "/v1/narratives", sales, nil)
+	var rid string
+	for _, x := range list["data"].([]any) {
+		if m := x.(map[string]any); m["supersedes"] == id {
+			rid = m["id"].(string)
+			if m["revision"] != float64(2) || m["ref"] != nil {
+				t.Fatalf("the revision must be a new draft numbered 2: %v", m)
+			}
+		}
+	}
+	if rid == "" {
+		t.Fatal("the revision draft is not listed")
+	}
+	if c, _, _ := e.do("PUT", "/v1/narratives/"+rid, sales, body("Third text", "Corrected the scope")); c != 200 {
+		t.Fatalf("edit revision: %d", c)
+	}
+	_, v, _ := e.do("GET", "/v1/narratives/"+rid+"/versions", sales, nil)
+	if d := v["data"].([]any); len(d) != 2 || d[0].(map[string]any)["change_note"] != "Revision of "+ref {
+		t.Errorf("the revision's history must start by naming the document it replaces: %v", v)
+	}
+	if c, v, _ := e.do("GET", "/v1/public/verify/"+ref, "", nil); c != 200 || v["superseded_by"] != nil || v["valid"] != true {
+		t.Errorf("before the revision is issued the old document is current: %d %v", c, v)
+	}
+	c, iss2, _ := e.do("POST", "/v1/narratives/"+rid+"/issue", sales, nil)
+	if c != 200 {
+		t.Fatalf("issue revision: %d %v", c, iss2)
+	}
+	if c, v, _ := e.do("GET", "/v1/public/verify/"+ref, "", nil); c != 200 || v["valid"] != true || v["superseded_by"] != iss2["ref"] {
+		t.Errorf("the old reference stays valid but names its replacement: %d %v", c, v)
+	}
+	if c, _, _ := e.do("POST", "/v1/narratives/"+id+"/revise", sales, map[string]any{}); c != 409 {
+		t.Errorf("revising a replaced document: want 409, got %d", c)
+	}
+	if c, _, _ := e.do("POST", "/v1/narratives/"+rid+"/revise", hr, map[string]any{}); c != 403 && c != 404 {
+		t.Errorf("hr cannot see a proposal, so it cannot revise one: want 403 or 404, got %d", c)
+	}
+}

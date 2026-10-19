@@ -14,7 +14,9 @@ interface Sec { heading: string; body: string }
 
 function Fill() {
   const router = useRouter();
-  const code = useSearchParams().get("code") ?? "";
+  const params = useSearchParams();
+  const editId = params.get("id");
+  const [code, setCode] = useState(params.get("code") ?? "");
   const entry = FORMS.find((x) => x.code === code);
   const how = FILLABLE[code];
   const [clients, setClients] = useState<Client[]>([]);
@@ -24,13 +26,25 @@ function Fill() {
   const [signed, setSigned] = useState("");
   const [saved, setSaved] = useState<Narrative | null>(null);
   const [preview, setPreview] = useState<PreviewSource | null>(null);
+  const [note, setNote] = useState("");
+  const [loadErr, setLoadErr] = useState("");
   useEffect(() => { api.clients().then((r) => setClients(r.data)).catch(() => {}); }, []);
+  // Editing a draft: load it, then everything below works on that document and each save becomes a version.
+  useEffect(() => {
+    if (!editId) return;
+    raw.get<Narrative & { sections: Sec[]; signed_by: string | null }>(`/v1/narratives/${editId}`).then((n) => {
+      const key = Object.entries(FILLABLE).find(([, h]) => h.kind === n.kind && (h.form ? `HS-${h.form}` === `HS-${n.form_code}` : true))?.[0] ?? "";
+      setCode(key); setSaved(n); setTenant(n.tenant_id); setTitle(n.title); setSecs(n.sections.length ? n.sections : [{ heading: "", body: "" }]); setSigned(n.signed_by ?? "");
+    }).catch((e) => setLoadErr(e.message));
+  }, [editId]);
   const act = useAction();
+  if (loadErr) return <p className="error" role="alert">{loadErr}</p>;
+  if (editId && !saved) return <p className="muted" role="status">Loading…</p>;
 
   if (!entry || !how) {
     return (<><h1>Fill in a document</h1><p className="error">That form is not one the platform fills in. <Link href="/documents">Back to the library</Link></p></>);
   }
-  const body = () => ({ ...(saved ? {} : { kind: how.kind, ...(how.form ? { form: how.form } : {}), tenant_id: tenant }), title, signed_by: signed, sections: secs.filter((s) => s.body.trim()) });
+  const body = () => ({ ...(saved ? {} : { kind: how.kind, ...(how.form ? { form: how.form } : {}), tenant_id: tenant }), title, signed_by: signed, sections: secs.filter((s) => s.body.trim()), ...(note.trim() ? { note: note.trim() } : {}) });
   const save = async (): Promise<Narrative> => {
     const n = saved ? await raw.put<Narrative>(`/v1/narratives/${saved.id}`, body()) : await raw.post<Narrative>("/v1/narratives", body());
     setSaved(n);
@@ -39,7 +53,7 @@ function Fill() {
   const setSec = (i: number, k: keyof Sec, v: string) => setSecs(secs.map((s, j) => (j === i ? { ...s, [k]: v } : s)));
   return (
     <>
-      <h1>Fill in: {entry.title}</h1>
+      <h1>{editId ? "Edit draft" : "Fill in"}: {entry.title}</h1>
       <p className="meta"><code>{entry.code}</code> · {entry.cls} · <button type="button" className="linklike" onClick={() => setPreview(formPreview(entry))}><Icon name="eye" size={14} /> View the blank form</button></p>
       <Err msg={act.err} />
       <form className="card form" onSubmit={(e) => { e.preventDefault(); void act.run(async () => { await save(); router.push("/documents"); }); }}>
@@ -62,13 +76,14 @@ function Fill() {
           ))}
           <button type="button" className="btn" onClick={() => setSecs([...secs, { heading: "", body: "" }])}><Icon name="plus" size={16} /> Add a section</button>
         </fieldset>
+        {saved && <Field id="d-note" label="What changed, and why (kept with this version)"><input id="d-note" maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} /></Field>}
         <Field id="d-signed" label="Signed for HEKATE by (optional)"><input id="d-signed" value={signed} onChange={(e) => setSigned(e.target.value)} /></Field>
         <div className="actions">
           <button type="button" className="btn" disabled={act.busy || !tenant || !title || !secs[0].body.trim()} onClick={() => act.run(async () => {
             const n = await save();
             setPreview({ title: `Draft · ${n.title}`, filename: "draft-preview.pdf", note: "Draft preview: not issued and not valid", load: () => fetchFile(`/v1/narratives/${n.id}/preview`) });
           })}><Icon name="eye" size={16} /> Preview as it will print</button>
-          <button className="btn primary" disabled={act.busy}>Save draft</button>
+          <button className="btn primary" disabled={act.busy}>{saved ? "Save changes" : "Save draft"}</button>
         </div>
         <p className="muted small">A draft can be changed. You issue it from <Link href="/documents">My documents</Link>; issuing gives it a reference and freezes it.</p>
       </form>

@@ -187,6 +187,14 @@ func verify(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	if d.SHA256 != nil {
 		body["sha256"] = *d.SHA256 // lets anyone check a file they hold against the original
 	}
+	// A replaced document stays authentic; say so, and point to the one that replaced it.
+	var newer *string
+	if err := s.Tx.QueryRow(r.Context(), `SELECT documents.superseded_by($1)`, ref).Scan(&newer); err != nil {
+		return nil, err
+	}
+	if newer != nil {
+		body["superseded_by"] = *newer
+	}
 	return &platform.Result{Status: http.StatusOK, Body: body}, nil
 }
 

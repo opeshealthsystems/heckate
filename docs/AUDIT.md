@@ -4,7 +4,7 @@ A running record of what was checked, what was found, what was fixed and what re
 
 Status key: **Fixed** (change plus a test), **By design** (explained), **Open** (needs a decision or a person).
 
-## 1. Data layer (69 tables, 31 migrations)
+## 1. Data layer (71 tables, 32 migrations)
 
 Checked: row-level security (RLS) and FORCE on every table, policies per table, privileges of the application role, definer functions, primary keys, foreign-key indexes.
 
