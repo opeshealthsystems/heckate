@@ -1,6 +1,6 @@
 .PHONY: test build run up down lint-api
 test:
-	cd api && go vet ./... && go test ./...
+	cd api && go vet ./... && go test -race ./...
 build:
 	cd api && go build -o ../bin/api ./cmd/api
 run:

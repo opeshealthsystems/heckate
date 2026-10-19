@@ -92,13 +92,13 @@ func (a *App) begin(ctx context.Context, c *Claims, trace string) (*Scope, error
 	if err != nil {
 		return nil, err
 	}
-	var tenant, role, actor string
+	var tenant, role, actor, roles string
 	if c != nil {
-		tenant, role, actor = c.TenantID, c.Scope(), c.Sub
+		tenant, role, actor, roles = c.TenantID, c.Scope(), c.Sub, strings.Join(c.Roles, ",")
 	} else {
 		role = "public"
 	}
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.tenant_id',$1,true), set_config('app.role',$2,true), set_config('app.actor',$3,true)`, tenant, role, actor); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT set_config('app.tenant_id',$1,true), set_config('app.role',$2,true), set_config('app.actor',$3,true), set_config('app.roles',$4,true)`, tenant, role, actor, roles); err != nil {
 		_ = tx.Rollback(ctx)
 		return nil, err
 	}

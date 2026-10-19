@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -50,7 +51,7 @@ func token(sub string, tenant string, roles ...string) string {
 	return platform.SignDevToken(secret, map[string]any{"sub": sub, "tenant_id": tenant, "roles": roles, "exp": time.Now().Add(time.Hour).Unix()})
 }
 
-var idem int
+var idem atomic.Int64
 
 func (e *env) do(method, path, tok string, body any, hdr ...string) (int, map[string]any, http.Header) {
 	e.t.Helper()
@@ -66,8 +67,7 @@ func (e *env) do(method, path, tok string, body any, hdr ...string) (int, map[st
 		req.Header.Set("Authorization", "Bearer "+tok)
 	}
 	if method == "POST" {
-		idem++
-		req.Header.Set("Idempotency-Key", fmt.Sprintf("%s-%d-%d", e.t.Name(), time.Now().UnixNano(), idem))
+		req.Header.Set("Idempotency-Key", fmt.Sprintf("%s-%d-%d", e.t.Name(), time.Now().UnixNano(), idem.Add(1)))
 	}
 	for i := 0; i+1 < len(hdr); i += 2 {
 		req.Header.Set(hdr[i], hdr[i+1])

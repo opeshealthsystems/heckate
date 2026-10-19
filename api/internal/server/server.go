@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/opeshealthsystems/heckate/api/internal/modules/accounting"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/clients"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/crm"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/documents"
@@ -36,6 +37,7 @@ func New(cfg platform.Config, pool *pgxpool.Pool) http.Handler {
 	support.Register(app)
 	documents.Register(app)
 	notify.Register(app)
-	sales.Register(app, nil)
+	sales.Register(app, accounting.SalesPoster{})
+	accounting.Register(app)
 	return platform.Trace(platform.CORS(cfg.CORSOrigins, app.Mux))
 }
