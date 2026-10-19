@@ -4,6 +4,7 @@ import { raw } from "@/lib/api";
 import { day, xaf } from "@/lib/format";
 import { Err, Pill, Table, Tabs, useAction } from "@/components/ui";
 import { Bank } from "@/components/Bank";
+import { BankAccounts } from "@/components/BankAccounts";
 import { Reports } from "@/components/Reports";
 import { useMe } from "@/lib/session";
 
@@ -33,7 +34,7 @@ export default function Accounting() {
     <>
       <h1>Accounting</h1>
       <Err msg={err} />
-      <Tabs tabs={["Trial balance", "Journal", "Bank", "Reports", "Integrity"]} value={tab} onChange={setTab} />
+      <Tabs tabs={["Trial balance", "Journal", "Bank", "Bank accounts", "Reports", "Integrity"]} value={tab} onChange={setTab} />
       {tab === "Trial balance" && tb && (
         <>
           <div className="filters">
@@ -60,6 +61,7 @@ export default function Accounting() {
         </Table>
       )}
       {tab === "Bank" && <Bank />}
+      {tab === "Bank accounts" && <BankAccounts />}
       {tab === "Reports" && <Reports accounts={(tb?.rows ?? []).map((r) => ({ account: r.account, name: r.name }))} canSell={me.roles.some((r) => ["ceo", "manager", "finance"].includes(r))} />}
       {tab === "Integrity" && (
         <>

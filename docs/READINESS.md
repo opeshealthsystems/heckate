@@ -10,8 +10,8 @@ What exists today (counted):
 
 | | |
 | --- | --- |
-| API operations in the OpenAPI contract | 208 |
-| Database migrations | 33 |
+| API operations in the OpenAPI contract | 257 |
+| Database migrations | 34 |
 | Go tests (integration tests run against a real PostgreSQL, as a superuser **and** as an ordinary database owner) | ~110 |
 | Browser end-to-end scripts (Playwright) | 8 |
 | Languages / apps | Go API, Next.js web ERP and portals, Expo mobile app, static bilingual site, TypeScript SDK |

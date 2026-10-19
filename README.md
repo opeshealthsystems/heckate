@@ -23,7 +23,10 @@ ERP, client and supplier portals, public website and mobile app on one API. Requ
 | Support & Incidents (tickets, SLA, comments, internal notes, rating, report) | Built: web and mobile |
 | Sales & Invoicing (quotes, client approval, invoices, payments, credit notes, TVA+CAC, dual control above a threshold) | Built: web |
 | Accounting (append-only hash-chained double-entry ledger, auto-posting from sales, purchases and payroll, trial balance, chain verification, bank reconciliation) | Built: web. Starter chart only; accountant must validate |
-| Projects & Field Service (projects, tasks, interventions with GPS and signature, timesheets) | Built: web; field check-in/out on mobile |
+| Projects & Field Service (projects, tasks, milestones, progress, budget against cost, start from a quotation, interventions with GPS and signature, timesheets) | Built: web; field check-in/out on mobile |
+| Contracts (multi-year agreements, clauses, per-contract response times, links to projects/assets/invoices/tickets, renewal warnings and auto-renewal, schedule PDF) | Built: web and API. Wording and service levels are the company's to supply |
+| Client online forms (send, fill online or key in from paper, review, return, history) | Built: web and API. The four starter forms are generic, not the pack's numbered forms |
+| Employee files (personal details held apart, employment contracts, pay history, staff register), company bank-account register, QR stickers for assets and stock items | Built: web and API |
 | Inventory & Assets (stock ledger, serialised equipment, issue to staff, client assets, parts used on interventions) | Built: web |
 | Purchasing & Suppliers (supplier register with call-back-verified bank details, RFQs, POs, receipts, supplier invoices with three-way match, supplier portal) | Built: web |
 | HR (employee records, leave with balances, expense claims) | Built: web |

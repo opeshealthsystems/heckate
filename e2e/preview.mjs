@@ -104,8 +104,8 @@ await p.locator("table tbody tr", { hasText: "Replaced by HS-FRM-23-" }).first()
 ok(true, "once the revision is issued the earlier document is shown as replaced");
 const oldRef = (await p.locator("table tbody tr", { hasText: "Replaced by" }).first().locator("td").first().innerText()).trim();
 await p.goto(`${WEB}/verify?ref=${oldRef}`);
-await p.waitForSelector("text=Valid document");
-ok(await p.getByText("replaced by a newer version").isVisible(), "verifying the old reference says it is genuine but replaced");
+await p.waitForSelector("text=Genuine, but replaced");
+ok(await p.getByText("has replaced it").isVisible(), "verifying the old reference says it is genuine but replaced");
 
 // Invoice preview and print
 await p.goto(`${WEB}/invoices/${drafted.id}`);

@@ -25,6 +25,8 @@ function Shell({ children }: { children: ReactNode }) {
   else if (staff && has("support", "finance", "engineer")) links.push(["/clients", "Clients"]);
   // Money is for management, finance and sales, and for the client themselves; other staff do not see it.
   if (has("ceo", "manager", "finance", "sales", "client_user", "client_admin")) links.push(["/quotes", "Quotes"], ["/invoices", "Invoices"]);
+  if (has("ceo", "manager", "sales", "finance", "support", "engineer", "client_user", "client_admin")) links.push(["/contracts", "Contracts"]);
+  if (has("ceo", "manager", "sales", "support", "engineer", "client_user", "client_admin")) links.push(["/forms", has("client_user", "client_admin") ? "Forms to fill" : "Client forms"]);
   if (staff || has("client_user", "client_admin")) links.push(["/projects", "Projects"], ["/interventions", has("client_user", "client_admin") ? "Site visits" : "Field"]);
   if (has("ceo", "manager", "finance", "sales", "support", "engineer", "hr", "employee")) links.push(["/timesheets", "Time"]);
   if (has("ceo", "manager", "finance", "sales", "support", "engineer", "hr", "employee", "logistics")) links.push(["/inventory", "Inventory"]);
@@ -37,8 +39,9 @@ function Shell({ children }: { children: ReactNode }) {
   if (has("client_admin", "client_user")) links.push(["/developer", "Developer"]);
   const ordered = [...links].sort((a, b) => Number(groupOf(a[0]) !== "Work") - Number(groupOf(b[0]) !== "Work"));
   // The menu is the list of what a role may open; a page typed into the address bar follows the same rule.
-  const allowed = ordered.some(([href]) => path === href || path.startsWith(href + "/"));
-  const icons: Record<string, IconName> = {"/dashboard": "dashboard", "/tickets": "tickets", "/clients": "clients", "/leads": "leads", "/quotes": "quotes", "/invoices": "invoices", "/projects": "projects", "/interventions": "field", "/timesheets": "time", "/inventory": "inventory", "/accounting": "accounting", "/procurement": "purchasing", "/hr": "people", "/payroll": "payroll", "/documents": "documents", "/developer": "developer"};
+  // /asset is where a scanned sticker lands: any signed-in person may open it, and the API decides what they see.
+  const allowed = path === "/asset" || ordered.some(([href]) => path === href || path.startsWith(href + "/"));
+  const icons: Record<string, IconName> = {"/dashboard": "dashboard", "/tickets": "tickets", "/clients": "clients", "/leads": "leads", "/quotes": "quotes", "/invoices": "invoices", "/projects": "projects", "/interventions": "field", "/timesheets": "time", "/inventory": "inventory", "/accounting": "accounting", "/procurement": "purchasing", "/hr": "people", "/payroll": "payroll", "/documents": "documents", "/contracts": "contracts", "/forms": "forms", "/developer": "developer"};
   return (
     <div className="shell">
       <header className="side">

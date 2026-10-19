@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { raw } from "@/lib/api";
 import { useMe } from "@/lib/session";
 import { ExportButton } from "@/components/ExportButton";
+import { PdfActions } from "@/components/PdfActions";
+import Link from "next/link";
 import { Err, Field, Pill, Table, Tabs, useAction } from "@/components/ui";
 
 interface Item { id: string; sku: string; name: string; unit: string; serialised: boolean; min_stock: number; on_hand: number; low: boolean }
@@ -24,6 +26,10 @@ export default function Inventory() {
   const [wh, setWh] = useState("");
   const [rcv, setRcv] = useState({ item_id: "", warehouse_id: "", qty: "1", serials: "", ref: "" });
   const [assign, setAssign] = useState<Record<string, string>>({});
+  const [pick, setPick] = useState<Record<string, boolean>>({});
+  const [pickItems, setPickItems] = useState<Record<string, boolean>>({});
+  const picked = Object.keys(pick).filter((k) => pick[k]);
+  const pickedItems = Object.keys(pickItems).filter((k) => pickItems[k]);
   const load = useCallback(async () => {
     try {
       if (staff) {
@@ -48,9 +54,10 @@ export default function Inventory() {
       {staff && tab === "Items" && (
         <>
           {low.length > 0 && <p className="notice">{low.length} item(s) below minimum stock: {low.map((i) => i.sku).join(", ")}</p>}
-          <Table head={["SKU", "Name", "On hand", "Minimum", ""]} empty={items.length ? undefined : "No items yet."}>
-            {items.map((i) => (<tr key={i.id}><td>{i.sku}</td><td>{i.name}{i.serialised && " (serialised)"}</td><td className="num">{i.on_hand}</td><td className="num">{i.min_stock}</td><td>{i.low && <Pill text="low" tone="bad" />}</td></tr>))}
+          <Table head={["Label", "SKU", "Name", "On hand", "Minimum", ""]} empty={items.length ? undefined : "No items yet."}>
+            {items.map((i) => (<tr key={i.id}><td><input type="checkbox" aria-label={`Print a label for ${i.sku}`} checked={!!pickItems[i.id]} onChange={(e) => setPickItems({ ...pickItems, [i.id]: e.target.checked })} /></td><td>{i.sku}</td><td>{i.name}{i.serialised && " (serialised)"}</td><td className="num">{i.on_hand}</td><td className="num">{i.min_stock}</td><td>{i.low && <Pill text="low" tone="bad" />}</td></tr>))}
           </Table>
+          {pickedItems.length > 0 && <div className="actions"><PdfActions path={`/v1/items/labels/pdf?ids=${pickedItems.join(",")}`} reference="item-labels" title={`${pickedItems.length} QR label(s)`} /></div>}
           {keeper && (
             <>
               <h2>New item</h2>
@@ -95,10 +102,13 @@ export default function Inventory() {
         </>
       )}
       {tab === "Equipment" && (
-        <Table head={["Item", "Serial", "Status", ...(staff ? ["Holder / client", ""] : [])]} empty={assets.length ? undefined : "No equipment."}>
+        <>
+        {staff && picked.length > 0 && <div className="actions"><PdfActions path={`/v1/assets/labels/pdf?ids=${picked.join(",")}`} reference="asset-labels" title={`${picked.length} QR label(s)`} /></div>}
+        <Table head={[...(staff ? ["Label"] : []), "Item", "Serial", "Status", ...(staff ? ["Holder / client", ""] : [])]} empty={assets.length ? undefined : "No equipment."}>
           {assets.map((a) => (
             <tr key={a.id}>
-              <td>{a.item}</td><td>{a.serial}</td><td><Pill text={a.status} /></td>
+              {staff && <td><input type="checkbox" aria-label={`Print a label for ${a.serial}`} checked={!!pick[a.id]} onChange={(e) => setPick({ ...pick, [a.id]: e.target.checked })} /></td>}
+              <td><Link href={`/asset?id=${a.id}`}>{a.item}</Link></td><td>{a.serial}</td><td><Pill text={a.status} /></td>
               {staff && <td>{a.holder ?? a.tenant_id?.slice(0, 8) ?? "–"}</td>}
               {staff && (
                 <td>
@@ -114,6 +124,7 @@ export default function Inventory() {
             </tr>
           ))}
         </Table>
+        </>
       )}
     </>
   );

@@ -5,6 +5,7 @@ import { raw } from "@/lib/api";
 import { useMe } from "@/lib/session";
 import { day, xaf } from "@/lib/format";
 import { Err, Field, Pill, Table, useAction } from "@/components/ui";
+import { ProjectProgress } from "@/components/ProjectProgress";
 
 interface Task { id: string; title: string; status: string; assignee: string | null; due_date: string | null }
 interface Project { id: string; name: string; status: string; manager: string | null; budget: number | null; start_date: string | null; end_date: string | null; tasks: Task[] }
@@ -34,6 +35,7 @@ export default function ProjectPage() {
         </div>
       )}
       <Err msg={act.err} />
+      <ProjectProgress id={id} />
       <h2>Tasks</h2>
       <Table head={["Task", "Assignee", "Due", "Status"]} empty={(p.tasks ?? []).length ? undefined : "No tasks yet."}>
         {(p.tasks ?? []).map((t) => (

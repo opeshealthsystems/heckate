@@ -6,6 +6,7 @@ import { day, xaf } from "@/lib/format";
 import { ExportButton } from "@/components/ExportButton";
 import { Err, Field, Pill, Table, Tabs, useAction } from "@/components/ui";
 import { Attachments } from "@/components/Attachments";
+import { Staff } from "@/components/Staff";
 
 interface Me { full_name: string; position: string; annual_leave_entitlement: number; annual_leave_taken: number; annual_leave_balance: number }
 interface Leave { id: string; actor: string; kind: string; start_date: string; end_date: string; days: number; status: string }
@@ -33,7 +34,7 @@ export default function HR() {
   }, [all]);
   useEffect(() => { void load(); }, [load]);
   const act = useAction(load);
-  const tabs = ["My leave", "My expenses", "My payslips", ...(reviewer || payer ? ["Approvals"] : [])];
+  const tabs = ["My leave", "My expenses", "My payslips", ...(reviewer || payer ? ["Approvals"] : []), ...(reviewer ? ["Staff"] : [])];
   return (
     <>
       <h1>People</h1>
@@ -92,6 +93,7 @@ export default function HR() {
           </form>
         </>
       )}
+      {tab === "Staff" && <Staff />}
       {tab === "Approvals" && (
         <>
           <h2>Leave</h2>
