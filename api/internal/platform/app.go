@@ -159,6 +159,18 @@ func (a *App) limit(w http.ResponseWriter, r *http.Request, key string) bool {
 	return ok
 }
 
+// Limit applies the shared rate limit for a key and writes the standard headers; false means the
+// request was rejected with 429 and the caller must stop.
+func (a *App) Limit(w http.ResponseWriter, r *http.Request, key string) bool {
+	return a.limit(w, r, key)
+}
+
+// Handle registers a raw handler (used for WebSocket upgrades, which need the ResponseWriter itself).
+func (a *App) Handle(pattern string, h http.HandlerFunc) {
+	a.Patterns = append(a.Patterns, pattern)
+	a.Mux.HandleFunc(pattern, h)
+}
+
 func clientIP(r *http.Request) string {
 	if f := r.Header.Get("X-Forwarded-For"); f != "" {
 		return strings.TrimSpace(strings.Split(f, ",")[0])

@@ -18,20 +18,28 @@ import (
 	"github.com/opeshealthsystems/heckate/api/internal/modules/procurement"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/projects"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/sales"
+	"github.com/opeshealthsystems/heckate/api/internal/modules/stream"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/support"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 )
 
 // New returns the full API handler.
 func New(cfg platform.Config, pool *pgxpool.Pool) http.Handler {
-	app := build(cfg, pool)
-	return platform.Trace(platform.CORS(cfg.CORSOrigins, app.Mux))
+	h, _ := NewWithHub(cfg, pool)
+	return h
+}
+
+// NewWithHub also returns the live-event hub, which the outbox relay must feed.
+func NewWithHub(cfg platform.Config, pool *pgxpool.Pool) (http.Handler, *stream.Hub) {
+	hub := stream.NewHub()
+	app := build(cfg, pool, hub)
+	return platform.Trace(platform.CORS(cfg.CORSOrigins, app.Mux)), hub
 }
 
 // Patterns lists every route the server registers ("METHOD /path"), without needing a database.
-func Patterns() []string { return build(platform.Config{}, nil).Patterns }
+func Patterns() []string { return build(platform.Config{}, nil, stream.NewHub()).Patterns }
 
-func build(cfg platform.Config, pool *pgxpool.Pool) *platform.App {
+func build(cfg platform.Config, pool *pgxpool.Pool, hub *stream.Hub) *platform.App {
 	app := &platform.App{
 		Pool:     pool,
 		Verifier: platform.NewVerifier(cfg),
@@ -58,5 +66,6 @@ func build(cfg platform.Config, pool *pgxpool.Pool) *platform.App {
 	procurement.Register(app, accounting.ProcurementPoster{})
 	sales.Register(app, accounting.SalesPoster{})
 	accounting.Register(app)
+	stream.Register(app, hub, cfg.CORSOrigins)
 	return app
 }

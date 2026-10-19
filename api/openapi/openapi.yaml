@@ -2064,6 +2064,15 @@ paths:
             image/webp: { schema: { type: string, format: binary } }
             application/pdf: { schema: { type: string, format: binary } }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/stream:
+    get:
+      operationId: openEventStream
+      summary: "WebSocket of live ticket and site-visit events. Authenticate with the subprotocols hekate.v1 and bearer.<token>."
+      description: "Events are hints to refetch ({subject, data}); clients only hear about their own tenant. The connection ends when the token expires. At most 5 connections per user."
+      security: []
+      responses:
+        "101": { description: Switching protocols }
+        "4XX": { $ref: "#/components/responses/Problem" }
 components:
   securitySchemes:
     oauth2:

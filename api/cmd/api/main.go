@@ -62,11 +62,13 @@ func main() {
 		pub = platform.MultiPublisher{pub, platform.BestEffort{Inner: notify.NewNotifier(pool, notify.NewExpoSender(cfg.ExpoToken))}}
 		slog.Info("push notifications enabled")
 	}
+	handler, hub := server.NewWithHub(cfg, pool)
+	pub = platform.MultiPublisher{pub, hub} // live events to connected clients, beside the broker
 	go platform.RelayOutbox(ctx, pool, pub, 2*time.Second)
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           server.New(cfg, pool),
+		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	go func() {

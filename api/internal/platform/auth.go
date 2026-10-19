@@ -22,6 +22,7 @@ type Claims struct {
 	Email    string
 	TenantID string
 	Roles    []string
+	Exp      time.Time // when the token stops being valid (long-lived connections must end then)
 }
 
 var staffRoles = map[string]bool{
@@ -131,7 +132,7 @@ func (v *Verifier) Verify(token string) (*Claims, error) {
 	if v.cfg.Audience != "" && !audMatches(p.Aud, v.cfg.Audience) {
 		return nil, ErrUnauthorized
 	}
-	return &Claims{Sub: p.Sub, Email: p.Email, TenantID: p.TenantID, Roles: append(p.Roles, p.RealmAccess.Roles...)}, nil
+	return &Claims{Sub: p.Sub, Email: p.Email, TenantID: p.TenantID, Roles: append(p.Roles, p.RealmAccess.Roles...), Exp: time.Unix(p.Exp, 0)}, nil
 }
 
 func audMatches(aud any, want string) bool {
