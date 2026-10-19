@@ -10,9 +10,9 @@ What exists today (counted):
 
 | | |
 | --- | --- |
-| API operations in the OpenAPI contract | 160 |
-| Database migrations | 22 |
-| Go tests (integration tests run against a real PostgreSQL, as a superuser **and** as an ordinary database owner) | 94 |
+| API operations in the OpenAPI contract | 166 |
+| Database migrations | 23 |
+| Go tests (integration tests run against a real PostgreSQL, as a superuser **and** as an ordinary database owner) | 95 |
 | Browser end-to-end scripts (Playwright) | 8 |
 | Languages / apps | Go API, Next.js web ERP and portals, Expo mobile app, static bilingual site, TypeScript SDK |
 
@@ -26,7 +26,7 @@ A module counts as production ready only when **all** of these are true. Today t
 | 2 | Data integrity enforced in the database, not only the app | Build (done for most modules) |
 | 3 | Access control tested, including cross-tenant and wrong-role cases | Build (done for most modules) |
 | 4 | Automated tests, run in CI on every change | Build (done) |
-| 5 | Printable documents the business needs, with verification | Build (9 of ~36, see below) |
+| 5 | Printable documents the business needs, with verification | Build (14 of ~36, see below) |
 | 6 | Dependency, secret and code scanning gating every change | Build (added with this file) |
 | 7 | Domain sign-off: the accountant (tax, ledger, payroll), a lawyer (contracts, retention) | **People** |
 | 8 | Independent penetration test and fixes | **External firm** |
@@ -56,8 +56,8 @@ Also built, outside the ten: identity and roles, an API-as-a-product layer (keys
 
 The specification lists about **36** document templates (quotation, proposal, order confirmation, statement of work, invoice, receipt, credit note, 24 numbered forms, penetration test report, purchase order, RFQ, letter, certificate).
 
-- **Rendered as real PDFs today: 9**: invoice (HS-INV), quotation (HS-QT), site-visit acceptance (HS-FRM-27), payment receipt (HS-RCT), credit note (HS-CN), purchase order (HS-PO), request for quotation (HS-RFQ), asset issue and return form (HS-FRM-38), payslip (HS-PAY, confidential; reference issued when the run is approved). Each has a QR code to the public verification page and its SHA-256 recorded; the first rendering is stored so one reference is always one file.
-- **Not started: about 27.**
+- **Rendered as real PDFs today: 14**: invoice (HS-INV), quotation (HS-QT), site-visit acceptance (HS-FRM-27), payment receipt (HS-RCT), credit note (HS-CN), purchase order (HS-PO), request for quotation (HS-RFQ), asset issue and return form (HS-FRM-38), payslip (HS-PAY, confidential; reference issued when the run is approved), and through one text-document engine: proposal (HS-PRP), order confirmation (HS-OC), statement of work (HS-SOW), letter (HS-LTR) and certificate (HS-CRT), each a draft that is frozen and numbered when issued. Each has a QR code to the public verification page and its SHA-256 recorded; the first rendering is stored so one reference is always one file.
+- **Not started: about 22.**
 
 The company letterhead lines are configuration (`HEKATE_LETTERHEAD`), and PDFs use built-in Latin-1 fonts. Cryptographic signing (PAdES) is not done because it needs a signing certificate.
 

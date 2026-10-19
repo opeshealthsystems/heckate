@@ -241,3 +241,35 @@ func RenderPayslip(o Options, ref string, issued time.Time, p Payslip) ([]byte, 
 	d.note("Confidential. Calculated from the payroll rules approved for this period; amounts are in CFA francs (XAF). Verify it by entering its reference on the HEKATE verification page.")
 	return d.bytes()
 }
+
+// Section is one titled block of a narrative document.
+type Section struct {
+	Heading string
+	Body    string
+}
+
+// RenderNarrative draws a text document made of titled sections: proposal, order confirmation,
+// statement of work, letter or certificate. kind is the heading printed at the top.
+func RenderNarrative(o Options, ref, kind string, issued time.Time, title string, client Party, sections []Section, signedBy string) ([]byte, error) {
+	d := newDoc(o, ref, kind, issued)
+	d.title(strings.ToUpper(kind), ref)
+	d.kv("Date", date(issued))
+	d.kv("Subject", title)
+	d.pdf.Ln(2)
+	d.party("Prepared for", client)
+	for _, s := range sections {
+		d.pdf.Ln(2)
+		if strings.TrimSpace(s.Heading) != "" {
+			d.pdf.SetFont("Helvetica", "B", 11)
+			d.pdf.CellFormat(0, 7, d.tr(s.Heading), "", 1, "L", false, 0, "")
+		}
+		d.pdf.SetFont("Helvetica", "", 10)
+		d.pdf.MultiCell(0, 5, d.tr(s.Body), "", "L", false)
+	}
+	if strings.TrimSpace(signedBy) != "" {
+		d.pdf.Ln(10)
+		d.pdf.SetFont("Helvetica", "", 10)
+		d.pdf.CellFormat(0, 5, d.tr("For HEKATE SYSTEMS SARL: "+signedBy), "", 1, "L", false, 0, "")
+	}
+	return d.bytes()
+}

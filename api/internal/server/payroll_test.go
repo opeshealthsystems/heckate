@@ -14,8 +14,29 @@ import (
 func TestPayrollDualControlAndValidation(t *testing.T) {
 	e := setup(t)
 	n := time.Now().UnixNano()
-	period := func(k int64) string { return fmt.Sprintf("%d-%02d", 1990+(n/1000+k*7)%35, 1+(n/1000/25+k*5)%12) }
-	pa, pb := period(1), period(2)
+	// Pick two months in 1990-2024 that no earlier run on this (reused) database has taken.
+	taken := map[string]bool{}
+	if conn, err := pgx.Connect(context.Background(), adminDSN()); err == nil {
+		rows, _ := conn.Query(context.Background(), `SELECT to_char(period,'YYYY-MM') FROM payroll.runs`)
+		for rows.Next() {
+			var p string
+			_ = rows.Scan(&p)
+			taken[p] = true
+		}
+		rows.Close()
+		conn.Close(context.Background())
+	}
+	var free []string
+	for i := int64(0); i < 35*12; i++ {
+		p := fmt.Sprintf("%d-%02d", 1990+(n/1000+i)%35, 1+(n/1000/35+i/35)%12)
+		if !taken[p] {
+			free = append(free, p)
+		}
+	}
+	if len(free) < 2 {
+		t.Skip("no free payroll months left on this database")
+	}
+	pa, pb := free[0], free[1]
 	emp := fmt.Sprintf("pay-emp-%d", n)
 	hr := token("pay-hr", "", "hr")
 	fin1 := token("pay-fin1", "", "finance")

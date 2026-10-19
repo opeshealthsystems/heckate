@@ -2698,6 +2698,89 @@ paths:
           content:
             application/pdf: { schema: { type: string, format: binary } }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/narratives:
+    post:
+      operationId: createNarrative
+      summary: "Create a draft proposal, order confirmation, statement of work, letter or certificate"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NarrativeInput" }
+      responses:
+        "201":
+          description: "Created"
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Narrative" } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    get:
+      operationId: listNarratives
+      summary: "Text documents; clients see only issued ones addressed to them"
+      responses:
+        "200":
+          description: "Documents, newest first"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Narrative" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/narratives/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: getNarrative
+      summary: "One text document"
+      responses:
+        "200":
+          description: "The document"
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Narrative" } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    put:
+      operationId: updateNarrative
+      summary: "Edit a draft. An issued document cannot be edited"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NarrativeInput" }
+      responses:
+        "200":
+          description: "Updated"
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Narrative" } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/narratives/{id}/issue:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      operationId: issueNarrative
+      summary: "Give the draft its reference and freeze it"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: "Issued"
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Narrative" } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/narratives/{id}/pdf:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: downloadNarrativePdf
+      summary: "PDF of an issued text document with a verification QR code"
+      responses:
+        "200":
+          description: "The canonical PDF; its SHA-256 is in the X-Document-SHA256 header."
+          headers:
+            X-Document-SHA256: { schema: { type: string } }
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/invoices/{id}/pdf:
     parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
     get:
@@ -2776,6 +2859,37 @@ components:
         trace_id: { type: [string, "null"] }
         chain_seq: { type: [integer, "null"] }
         hash: { type: [string, "null"] }
+    NarrativeInput:
+      type: object
+      required: [title, sections]
+      properties:
+        kind: { type: string, enum: [proposal, order_confirmation, sow, letter, certificate], description: "Required on create, ignored on edit" }
+        tenant_id: { type: string, format: uuid, description: "Required on create, ignored on edit" }
+        title: { type: string, maxLength: 200 }
+        signed_by: { type: string }
+        sections:
+          type: array
+          minItems: 1
+          maxItems: 60
+          items:
+            type: object
+            required: [body]
+            properties:
+              heading: { type: string }
+              body: { type: string }
+    Narrative:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string }
+        tenant_id: { type: string, format: uuid }
+        title: { type: string }
+        sections: { type: array, items: { type: object, properties: { heading: { type: string }, body: { type: string } } } }
+        ref: { type: [string, "null"] }
+        signed_by: { type: [string, "null"] }
+        created_by: { type: string }
+        issued_by: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
     OnlinePayment:
       type: object
       properties:

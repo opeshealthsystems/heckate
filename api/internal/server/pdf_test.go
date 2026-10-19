@@ -303,3 +303,66 @@ func TestPurchasingAndAssetPDFs(t *testing.T) {
 		t.Errorf("unknown form: want 404, got %d", r.StatusCode)
 	}
 }
+
+func TestNarrativeDocuments(t *testing.T) {
+	e := setup(t)
+	sfx := fmt.Sprint(time.Now().UnixNano())
+	sales := token("nar-sales", "", "sales")
+	hr := token("nar-hr", "", "hr")
+	ta := e.newClient(token("m", "", "manager"), "Narrative Co "+sfx)
+	tb := e.newClient(token("m", "", "manager"), "Other Narrative Co "+sfx)
+	alice := token("nar-alice", ta, "client_user")
+	bob := token("nar-bob", tb, "client_user")
+	body := map[string]any{"kind": "proposal", "tenant_id": ta, "title": "Network upgrade " + sfx, "signed_by": "A. Manager",
+		"sections": []map[string]any{{"heading": "Scope", "body": "Replace the core switches " + sfx}, {"heading": "Timeline", "body": "Six weeks."}}}
+
+	if c, _, _ := e.do("POST", "/v1/narratives", hr, body); c != 403 {
+		t.Errorf("hr creating: want 403, got %d", c)
+	}
+	if c, _, _ := e.do("POST", "/v1/narratives", sales, map[string]any{"kind": "memo", "tenant_id": ta, "title": "x", "sections": []map[string]any{{"body": "y"}}}); c != 422 {
+		t.Errorf("unknown kind: want 422, got %d", c)
+	}
+	c, n, _ := e.do("POST", "/v1/narratives", sales, body)
+	if c != 201 {
+		t.Fatalf("create: %d %v", c, n)
+	}
+	id := n["id"].(string)
+	if r, _ := e.pdf(sales, "/v1/narratives/"+id+"/pdf"); r.StatusCode != 409 {
+		t.Errorf("draft pdf: want 409, got %d", r.StatusCode)
+	}
+	if c, _, _ := e.do("GET", "/v1/narratives/"+id, alice, nil); c != 404 {
+		t.Errorf("client must not see a draft, got %d", c)
+	}
+	body["title"] = "Network upgrade v2 " + sfx
+	if c, _, _ := e.do("PUT", "/v1/narratives/"+id, sales, body); c != 200 {
+		t.Fatalf("edit draft: %d", c)
+	}
+	c, iss, _ := e.do("POST", "/v1/narratives/"+id+"/issue", sales, nil)
+	if c != 200 || !strings.Contains(iss["ref"].(string), "-PRP-") {
+		t.Fatalf("issue: %d %v", c, iss)
+	}
+	if c, _, _ := e.do("PUT", "/v1/narratives/"+id, sales, body); c != 409 {
+		t.Errorf("edit issued: want 409, got %d", c)
+	}
+	if c, _, _ := e.do("POST", "/v1/narratives/"+id+"/issue", sales, nil); c != 409 {
+		t.Errorf("issue twice: want 409, got %d", c)
+	}
+	resp, a := e.pdf(sales, "/v1/narratives/"+id+"/pdf")
+	for _, w := range []string{iss["ref"].(string), "PROPOSAL", "Network upgrade v2 " + sfx, "Replace the core switches " + sfx, "A. Manager", "Narrative Co " + sfx} {
+		if !bytes.Contains(a, []byte(w)) {
+			t.Errorf("proposal PDF must contain %q (status %d)", w, resp.StatusCode)
+		}
+	}
+	if _, b := e.pdf(alice, "/v1/narratives/"+id+"/pdf"); !bytes.Equal(a, b) {
+		t.Error("the client must get the same file")
+	}
+	if r, _ := e.pdf(bob, "/v1/narratives/"+id+"/pdf"); r.StatusCode != 404 {
+		t.Errorf("another client: want 404, got %d", r.StatusCode)
+	}
+	_, lst, _ := e.do("GET", "/v1/narratives", bob, nil)
+	for _, x := range lst["data"].([]any) {
+		if x.(map[string]any)["id"] == id {
+			t.Error("another client's list must not include the document")
+		}
+	}
+}

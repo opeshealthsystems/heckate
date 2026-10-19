@@ -2322,6 +2322,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/narratives": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Text documents; clients see only issued ones addressed to them */
+        get: operations["listNarratives"];
+        put?: never;
+        /** Create a draft proposal, order confirmation, statement of work, letter or certificate */
+        post: operations["createNarrative"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/narratives/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** One text document */
+        get: operations["getNarrative"];
+        /** Edit a draft. An issued document cannot be edited */
+        put: operations["updateNarrative"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/narratives/{id}/issue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Give the draft its reference and freeze it */
+        post: operations["issueNarrative"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/narratives/{id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** PDF of an issued text document with a verification QR code */
+        get: operations["downloadNarrativePdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/invoices/{id}/pdf": {
         parameters: {
             query?: never;
@@ -2396,6 +2472,42 @@ export interface components {
             trace_id?: string | null;
             chain_seq?: number | null;
             hash?: string | null;
+        };
+        NarrativeInput: {
+            /**
+             * @description Required on create, ignored on edit
+             * @enum {string}
+             */
+            kind?: "proposal" | "order_confirmation" | "sow" | "letter" | "certificate";
+            /**
+             * Format: uuid
+             * @description Required on create, ignored on edit
+             */
+            tenant_id?: string;
+            title: string;
+            signed_by?: string;
+            sections: {
+                heading?: string;
+                body: string;
+            }[];
+        };
+        Narrative: {
+            /** Format: uuid */
+            id?: string;
+            kind?: string;
+            /** Format: uuid */
+            tenant_id?: string;
+            title?: string;
+            sections?: {
+                heading?: string;
+                body?: string;
+            }[];
+            ref?: string | null;
+            signed_by?: string | null;
+            created_by?: string;
+            issued_by?: string | null;
+            /** Format: date-time */
+            created_at?: string;
         };
         OnlinePayment: {
             /** Format: uuid */
@@ -6852,6 +6964,155 @@ export interface operations {
         };
     };
     downloadPayslipPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The canonical PDF; its SHA-256 is in the X-Document-SHA256 header. */
+            200: {
+                headers: {
+                    "X-Document-SHA256"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    listNarratives: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Documents, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Narrative"][];
+                    };
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    createNarrative: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NarrativeInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Narrative"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    getNarrative: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Narrative"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    updateNarrative: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NarrativeInput"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Narrative"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    issueNarrative: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Issued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Narrative"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    downloadNarrativePdf: {
         parameters: {
             query?: never;
             header?: never;
