@@ -1861,6 +1861,85 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Object" }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/stock/reorder:
+    get:
+      operationId: listReorder
+      summary: "Items whose stock across all warehouses is below their minimum, largest shortfall first"
+      responses:
+        "200":
+          description: "Items to reorder"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/stock/counts:
+    post:
+      operationId: createStockCount
+      summary: "Record a count of one warehouse. Stock does not change until a second person approves it"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [warehouse_id, lines]
+              properties:
+                warehouse_id: { type: string, format: uuid }
+                lines:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  items:
+                    type: object
+                    required: [item_id, counted]
+                    properties:
+                      item_id: { type: string, format: uuid }
+                      counted: { type: integer, minimum: 0 }
+      responses:
+        "201":
+          description: "The count with the quantity expected at count time and the variance per line"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    get:
+      operationId: listStockCounts
+      summary: "Stock counts, newest first"
+      responses:
+        "200":
+          description: "Counts"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/stock/counts/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: getStockCount
+      summary: "One stock count with its lines"
+      responses:
+        "200":
+          description: "The count"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/stock/counts/{id}/approve:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      operationId: approveStockCount
+      summary: "Approve a count and book its differences as adjustments. Management only, and not the person who counted"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: "The approved count"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/stock:
     get:
       operationId: getStockLevels

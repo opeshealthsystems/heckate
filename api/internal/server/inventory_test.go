@@ -227,3 +227,98 @@ func TestInterventionPartsComeOutOfStock(t *testing.T) {
 		t.Errorf("parts used must be recorded on the report: %v", done["parts"])
 	}
 }
+
+func TestStockCountsAndReorder(t *testing.T) {
+	e := setup(t)
+	sfx := fmt.Sprint(time.Now().UnixNano())
+	log := token("cnt-log", "", "logistics")
+	mgr1 := token("cnt-mgr1", "", "manager")
+	mgr2 := token("cnt-mgr2", "", "manager")
+	item := mkItem(t, e, log, "CNT-"+sfx, false) // min_stock 2
+	wh := mkWarehouse(t, e, log, "Count store "+sfx)
+	if c, _, _ := e.do("POST", "/v1/stock/receipts", log, map[string]any{"item_id": item, "warehouse_id": wh, "qty": 10}); c != 201 {
+		t.Fatalf("receipt: %d", c)
+	}
+	onHand := func() float64 {
+		_, lv, _ := e.do("GET", "/v1/stock", log, nil)
+		for _, r := range lv["data"].([]any) {
+			m := r.(map[string]any)
+			if m["item_id"] == item && m["warehouse_id"] == wh {
+				return m["qty"].(float64)
+			}
+		}
+		return 0
+	}
+	if c, _, _ := e.do("POST", "/v1/stock/counts", token("cnt-sales", "", "sales"), map[string]any{"warehouse_id": wh, "lines": []map[string]any{{"item_id": item, "counted": 1}}}); c != 403 {
+		t.Errorf("sales counting: want 403, got %d", c)
+	}
+	for _, bad := range []map[string]any{
+		{"warehouse_id": wh, "lines": []map[string]any{}},
+		{"warehouse_id": wh, "lines": []map[string]any{{"item_id": item, "counted": -1}}},
+		{"warehouse_id": wh, "lines": []map[string]any{{"item_id": item, "counted": 1}, {"item_id": item, "counted": 2}}},
+	} {
+		if c, _, _ := e.do("POST", "/v1/stock/counts", mgr1, bad); c != 422 {
+			t.Errorf("invalid count %v: want 422, got %d", bad, c)
+		}
+	}
+	code, cnt, _ := e.do("POST", "/v1/stock/counts", mgr1, map[string]any{"warehouse_id": wh, "lines": []map[string]any{{"item_id": item, "counted": 1}}})
+	if code != 201 {
+		t.Fatalf("count: %d %v", code, cnt)
+	}
+	id := cnt["id"].(string)
+	line := cnt["lines"].([]any)[0].(map[string]any)
+	if line["expected"] != float64(10) || line["counted"] != float64(1) || line["variance"] != float64(-9) {
+		t.Errorf("the count must record expected 10, counted 1: %v", line)
+	}
+	if onHand() != 10 {
+		t.Error("a draft count must not change stock")
+	}
+	// A shortfall against the minimum is reported before the count is approved or not: 10 on hand is fine.
+	_, ro, _ := e.do("GET", "/v1/stock/reorder", log, nil)
+	for _, r := range ro["data"].([]any) {
+		if r.(map[string]any)["item_id"] == item {
+			t.Error("10 on hand with a minimum of 2 must not be on the reorder list")
+		}
+	}
+	if c, _, _ := e.do("POST", "/v1/stock/counts/"+id+"/approve", mgr1, nil); c != 403 {
+		t.Errorf("the counter approving their own count: want 403, got %d", c)
+	}
+	if c, _, _ := e.do("POST", "/v1/stock/counts/"+id+"/approve", log, nil); c != 403 {
+		t.Errorf("logistics approving: want 403, got %d", c)
+	}
+	if c, b, _ := e.do("POST", "/v1/stock/counts/"+id+"/approve", mgr2, nil); c != 200 || b["status"] != "approved" {
+		t.Fatalf("approve: %d %v", c, b)
+	}
+	if onHand() != 1 {
+		t.Errorf("approval must apply the difference: want 1 on hand, got %v", onHand())
+	}
+	if c, _, _ := e.do("POST", "/v1/stock/counts/"+id+"/approve", mgr2, nil); c != 409 {
+		t.Errorf("approve twice: want 409, got %d", c)
+	}
+	_, ro, _ = e.do("GET", "/v1/stock/reorder", log, nil)
+	found := false
+	for _, r := range ro["data"].([]any) {
+		if m := r.(map[string]any); m["item_id"] == item {
+			found = m["shortfall"] == float64(1) && m["on_hand"] == float64(1)
+		}
+	}
+	if !found {
+		t.Errorf("1 on hand against a minimum of 2 must be listed with a shortfall of 1: %v", ro)
+	}
+	if c, _, _ := e.do("GET", "/v1/stock/counts/"+id, log, nil); c != 200 {
+		t.Errorf("get count: %d", c)
+	}
+
+	// The rules also hold in the database.
+	conn, err := pgx.Connect(context.Background(), adminDSN())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close(context.Background())
+	if _, err := conn.Exec(context.Background(), `UPDATE inventory.counts SET counted_by = 'x' WHERE id = $1`, id); err == nil {
+		t.Error("an approved count must not change, even with raw SQL")
+	}
+	if _, err := conn.Exec(context.Background(), `DELETE FROM inventory.count_lines WHERE count_id = $1`, id); err == nil {
+		t.Error("the lines of an approved count must not be deleted")
+	}
+}

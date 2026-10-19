@@ -1540,6 +1540,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stock/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Items whose stock across all warehouses is below their minimum, largest shortfall first */
+        get: operations["listReorder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stock counts, newest first */
+        get: operations["listStockCounts"];
+        put?: never;
+        /** Record a count of one warehouse. Stock does not change until a second person approves it */
+        post: operations["createStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/counts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** One stock count with its lines */
+        get: operations["getStockCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/counts/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a count and book its differences as adjustments. Management only, and not the person who counted */
+        post: operations["approveStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/stock": {
         parameters: {
             query?: never;
@@ -5737,6 +5810,131 @@ export interface operations {
         responses: {
             /** @description Success */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    listReorder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Items to reorder */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    listStockCounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    createStockCount: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    warehouse_id: string;
+                    lines: {
+                        /** Format: uuid */
+                        item_id: string;
+                        counted: number;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description The count with the quantity expected at count time and the variance per line */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    getStockCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    approveStockCount: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The approved count */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

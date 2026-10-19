@@ -10,9 +10,9 @@ What exists today (counted):
 
 | | |
 | --- | --- |
-| API operations in the OpenAPI contract | 170 |
-| Database migrations | 25 |
-| Go tests (integration tests run against a real PostgreSQL, as a superuser **and** as an ordinary database owner) | 98 |
+| API operations in the OpenAPI contract | 175 |
+| Database migrations | 26 |
+| Go tests (integration tests run against a real PostgreSQL, as a superuser **and** as an ordinary database owner) | 99 |
 | Browser end-to-end scripts (Playwright) | 8 |
 | Languages / apps | Go API, Next.js web ERP and portals, Expo mobile app, static bilingual site, TypeScript SDK |
 
@@ -45,7 +45,7 @@ A module counts as production ready only when **all** of these are true. Today t
 | **Sales & Invoicing** | Quotes, client approval, invoices, dual control above a threshold, payments, credit notes, TVA + CAC, PDF invoice and quote, online mobile-money payment framework | Proposals, order confirmation, reminders, recurring invoices, rate card. **Tax figures need the accountant** |
 | **Accounting** | Append-only hash-chained ledger, balanced entries enforced in the database, posting from sales, purchasing and payroll, trial balance, permanent month close that locks the period in the database, ledger integrity check, bank reconciliation | DSF filing, SYSCOHADA presentation of the statements (a class-based income statement and balance sheet exist), the filed VAT return (a working VAT summary from the ledger exists), fixed assets, ageing. **Chart of accounts is a starter set** |
 | **Purchasing & Suppliers** | Supplier register with call-back-verified bank details, RFQs with sealed bids, purchase orders with dual control, goods receipt, supplier invoices with three-way match, supplier portal | supplier registration and evaluation forms (HS-FRM-39, 41), contract management |
-| **Inventory & Assets** | Append-only stock ledger, no negative stock, serialised equipment, issue to staff, client-held assets, parts on interventions | Stock counts, reorder levels, barcode scanning, depreciation |
+| **Inventory & Assets** | Append-only stock ledger, no negative stock, serialised equipment, issue to staff, client-held assets, parts on interventions, stock counts approved by a second person, reorder report from minimum levels | Counting serialised equipment, barcode scanning, depreciation |
 | **HR & Payroll** | Employee records, leave with live balances, expense claims with receipts, payroll engine (rates are data, a second person must validate them, dual control to approve and pay, posts to the ledger), payslips for employees | Recruitment and offers (HS-FRM-32, 33), appraisals, CNPS / tax declaration files, overtime, bonuses, contracts. **Payroll rates are unvalidated** |
 | **Documents & Trust** | Document register, references with check characters, public verification page, PDF hash recorded and checkable in the browser | **Digital signatures (PAdES) need a certificate**; letter and certificate templates; retention rules |
 | **Reporting** | Per-module reports and a dashboard | BI tool (Metabase), exports to CSV / Excel, scheduled reports, cross-module KPIs |
