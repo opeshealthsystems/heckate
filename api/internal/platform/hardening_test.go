@@ -41,7 +41,7 @@ func TestClientIPOnlyBelievesTrustedProxies(t *testing.T) {
 
 func TestProductionRefusesUnsafeConfiguration(t *testing.T) {
 	good := Config{Env: "production", JWKSURL: "https://auth/certs", Issuer: "https://auth/realms/h", Audience: "hekate-api",
-		DatabaseURL: "postgres://u@db/h?sslmode=verify-full", CORSOrigins: "https://app.example.com"}
+		DatabaseURL: "postgres://u@db/h?sslmode=verify-full", CORSOrigins: "https://app.example.com", PortalURL: "https://portal.example.com"}
 	if p := good.Problems(); len(p) != 0 {
 		t.Fatalf("a sound production configuration was refused: %v", p)
 	}
@@ -53,6 +53,7 @@ func TestProductionRefusesUnsafeConfiguration(t *testing.T) {
 		"sandbox pay":    func(c *Config) { c.PaymentsSandbox = true },
 		"plain database": func(c *Config) { c.DatabaseURL = "postgres://u@db/h?sslmode=disable" },
 		"wildcard cors":  func(c *Config) { c.CORSOrigins = "*" },
+		"local portal":   func(c *Config) { c.PortalURL = "http://localhost:3000" },
 		"typo in env":    func(c *Config) { c.Env = "prod" },
 		"bad proxy cidr": func(c *Config) { c.TrustedProxies = []string{"nope"} },
 	} {

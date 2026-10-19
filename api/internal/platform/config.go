@@ -156,6 +156,9 @@ func (c Config) Problems() []string {
 	if !c.Production() {
 		return p
 	}
+	if u := strings.ToLower(c.PortalURL); !strings.HasPrefix(u, "https://") || strings.Contains(u, "localhost") {
+		p = append(p, "HEKATE_PORTAL_URL must be the public https address of the web app (QR codes and verification links point there)")
+	}
 	if c.Env != "production" {
 		p = append(p, fmt.Sprintf("HEKATE_ENV must be production or development, not %q", c.Env))
 	}

@@ -55,6 +55,10 @@ func main() {
 		slog.Warn("running in DEVELOPMENT mode: weaker authentication and fake payments may be enabled")
 	}
 
+	if cfg.Production() && cfg.QRSigningKeyFile == "" {
+		slog.Warn("HEKATE_QR_SIGNING_KEY_FILE is not set: document QR codes are plain, unsigned verification links")
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
