@@ -52,7 +52,15 @@ var (
 	approvers      = []string{"ceo", "manager"}
 )
 
-func Register(a *platform.App, p Poster, o docs.Options) {
+// Recorder lets other contexts (online payments) settle invoices without going through HTTP.
+type Recorder interface {
+	// Outstanding returns an invoice's status and unpaid balance.
+	Outstanding(ctx context.Context, s *platform.Scope, invoiceID string) (status string, balance int64, tenant string, err error)
+	// RecordPayment books a payment on an issued invoice, posting it to the ledger like a manual one.
+	RecordPayment(ctx context.Context, s *platform.Scope, invoiceID string, amount int64, method, reference string) error
+}
+
+func Register(a *platform.App, p Poster, o docs.Options) Recorder {
 	m := &module{post: p, docs: o}
 	a.Route("POST /v1/quotes", quoteWriters, platform.Idempotent(m.createQuote))
 	a.Route("GET /v1/quotes", nil, m.listQuotes)
@@ -73,6 +81,7 @@ func Register(a *platform.App, p Poster, o docs.Options) {
 	a.Route("POST /v1/invoices/{id}/payments", financeRoles, platform.Idempotent(m.recordPayment))
 	a.Route("POST /v1/invoices/{id}/credit-notes", financeRoles, platform.Idempotent(m.creditNote))
 	a.Route("GET /v1/reports/sales", financeRoles, report)
+	return m
 }
 
 type settings struct {
@@ -661,27 +670,51 @@ func (m *module) recordPayment(r *http.Request, s *platform.Scope) (*platform.Re
 	if in.Amount <= 0 || !methods[in.Method] {
 		return nil, platform.Err(http.StatusUnprocessableEntity, "Invalid payment", "amount must be positive and method one of momo, orange_money, bank, card, cash")
 	}
-	ctx := r.Context()
-	v, err := loadInvoice(ctx, s, r.PathValue("id"), true, false)
+	out, err := m.applyPayment(r.Context(), s, r.PathValue("id"), in.Amount, in.Method, in.Reference)
+	if err != nil {
+		return nil, err
+	}
+	return &platform.Result{Status: http.StatusCreated, Body: out}, nil
+}
+
+func (m *module) Outstanding(ctx context.Context, s *platform.Scope, id string) (string, int64, string, error) {
+	v, err := loadInvoice(ctx, s, id, false, false)
+	if err != nil {
+		return "", 0, "", err
+	}
+	return v.Status, v.Balance, v.TenantID, nil
+}
+
+func (m *module) RecordPayment(ctx context.Context, s *platform.Scope, id string, amount int64, method, reference string) error {
+	if !methods[method] {
+		return platform.Err(http.StatusUnprocessableEntity, "Invalid payment", "unknown payment method")
+	}
+	_, err := m.applyPayment(ctx, s, id, amount, method, reference)
+	return err
+}
+
+// applyPayment is the one place a payment is recorded, whoever initiated it.
+func (m *module) applyPayment(ctx context.Context, s *platform.Scope, id string, amount int64, method, reference string) (*Invoice, error) {
+	v, err := loadInvoice(ctx, s, id, true, false)
 	if err != nil {
 		return nil, err
 	}
 	if v.Status != "issued" {
 		return nil, platform.Err(http.StatusConflict, "Cannot record payment", "payments can only be recorded against an issued, unpaid invoice")
 	}
-	if in.Amount > v.Balance {
+	if amount > v.Balance {
 		return nil, platform.Err(http.StatusUnprocessableEntity, "Overpayment", "amount exceeds the outstanding balance")
 	}
 	if _, err := s.Tx.Exec(ctx, `INSERT INTO sales.payments (invoice_id, tenant_id, amount, method, reference, recorded_by) VALUES ($1,$2,$3,$4,$5,$6)`,
-		v.ID, v.TenantID, in.Amount, in.Method, in.Reference, s.Claims.Sub); err != nil {
+		v.ID, v.TenantID, amount, method, reference, s.Claims.Sub); err != nil {
 		return nil, err
 	}
 	if m.post != nil {
-		if err := m.post.PaymentReceived(ctx, s, PaymentEntry{InvoiceRef: *v.Ref, Tenant: v.TenantID, Method: in.Method, Amount: in.Amount, Date: time.Now().UTC()}); err != nil {
+		if err := m.post.PaymentReceived(ctx, s, PaymentEntry{InvoiceRef: *v.Ref, Tenant: v.TenantID, Method: method, Amount: amount, Date: time.Now().UTC()}); err != nil {
 			return nil, err
 		}
 	}
-	if err := s.Emit(ctx, "payment.recorded", map[string]any{"invoice_id": v.ID, "amount": in.Amount, "method": in.Method}); err != nil {
+	if err := s.Emit(ctx, "payment.recorded", map[string]any{"invoice_id": v.ID, "amount": amount, "method": method}); err != nil {
 		return nil, err
 	}
 	out, err := settle(ctx, s, v.ID)
@@ -691,7 +724,7 @@ func (m *module) recordPayment(r *http.Request, s *platform.Scope) (*platform.Re
 	if err := s.Audit(ctx, "payment", "invoice", v.ID); err != nil {
 		return nil, err
 	}
-	return &platform.Result{Status: http.StatusCreated, Body: out}, nil
+	return out, nil
 }
 
 func (m *module) creditNote(r *http.Request, s *platform.Scope) (*platform.Result, error) {

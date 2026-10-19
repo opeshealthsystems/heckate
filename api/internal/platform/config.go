@@ -20,6 +20,21 @@ type Config struct {
 	PDFCompress bool     // HEKATE_PDF_COMPRESS: on unless set to 0 (tests turn it off to read text)
 	PushEnabled bool     // HEKATE_PUSH=1 sends push notifications through the Expo push service
 	ExpoToken   string   // HEKATE_EXPO_ACCESS_TOKEN, optional
+
+	PaymentsWebhookSecret string // HEKATE_PAYMENTS_WEBHOOK_SECRET: signs provider callbacks (HMAC-SHA256); callbacks are refused without it
+	PaymentsSandbox       bool   // HEKATE_PAYMENTS_SANDBOX=1: a fake provider that never moves money. Development only.
+	MoMo                  MoMoConfig
+}
+
+// MoMoConfig is the MTN Mobile Money Collection API account (all empty: MoMo is off).
+type MoMoConfig struct {
+	BaseURL         string // HEKATE_MOMO_BASE_URL, e.g. https://proxy.momoapi.mtn.com
+	SubscriptionKey string // HEKATE_MOMO_SUBSCRIPTION_KEY
+	APIUser         string // HEKATE_MOMO_API_USER
+	APIKey          string // HEKATE_MOMO_API_KEY
+	Environment     string // HEKATE_MOMO_ENVIRONMENT: sandbox or the production target, for X-Target-Environment
+	Currency        string // HEKATE_MOMO_CURRENCY, default XAF
+	CallbackURL     string // HEKATE_MOMO_CALLBACK_URL, optional
 }
 
 func LoadConfig() Config {
@@ -43,6 +58,15 @@ func LoadConfig() Config {
 		PDFCompress: os.Getenv("HEKATE_PDF_COMPRESS") != "0",
 		PushEnabled: os.Getenv("HEKATE_PUSH") == "1",
 		ExpoToken:   os.Getenv("HEKATE_EXPO_ACCESS_TOKEN"),
+
+		PaymentsWebhookSecret: os.Getenv("HEKATE_PAYMENTS_WEBHOOK_SECRET"),
+		PaymentsSandbox:       os.Getenv("HEKATE_PAYMENTS_SANDBOX") == "1",
+		MoMo: MoMoConfig{
+			BaseURL: os.Getenv("HEKATE_MOMO_BASE_URL"), SubscriptionKey: os.Getenv("HEKATE_MOMO_SUBSCRIPTION_KEY"),
+			APIUser: os.Getenv("HEKATE_MOMO_API_USER"), APIKey: os.Getenv("HEKATE_MOMO_API_KEY"),
+			Environment: os.Getenv("HEKATE_MOMO_ENVIRONMENT"), Currency: get("HEKATE_MOMO_CURRENCY", "XAF"),
+			CallbackURL: os.Getenv("HEKATE_MOMO_CALLBACK_URL"),
+		},
 	}
 }
 

@@ -34,7 +34,7 @@ ERP, client and supplier portals, public website and mobile app on one API. Requ
 | Reporting dashboards | Per-module reports and the dashboard; Metabase not set up |
 | API as a product (keys, plans, metering, developer screen) | Built: read-only company keys, plans with rate limit and monthly quota, usage. TypeScript SDK generated from the contract (`sdk/typescript`). Billing for paid plans not built |
 | Live updates (WebSocket `/v1/stream`, tickets and interventions) | Built: web and mobile. Chat not built |
-| Mobile payments (MTN MoMo, Orange Money) | Not built: payments are recorded manually |
+| Mobile payments (MTN MoMo, Orange Money) | Built behind a provider interface: the client asks to pay, the invoice is marked paid only on a signed provider callback or a confirmed status lookup. MTN MoMo client written from its public API and tested against a fake; **untested against the real service**; Orange Money not built; a sandbox provider is for development |
 | File attachments | Built, stored in Postgres (max 10 MB; MinIO not used) |
 
 Every endpoint is in `api/openapi/openapi.yaml`, and a test fails if the code and the contract disagree.

@@ -7,6 +7,7 @@ import { xaf, day } from "@/lib/format";
 import type { Invoice } from "@/lib/sales-types";
 import { Err, Field, Pill, Table, useAction } from "@/components/ui";
 import { Totals } from "@/components/Totals";
+import { PayOnline } from "@/components/PayOnline";
 
 export default function InvoicePage() {
   const { id } = useParams<{ id: string }>();
@@ -43,6 +44,8 @@ export default function InvoicePage() {
         {finance && v.status === "draft" && <button className="btn primary" disabled={act.busy} onClick={() => act.run(() => raw.post(`/v1/invoices/${id}/issue`))}>Issue</button>}
         {approver && v.status === "pending_approval" && !mustWaitForSecond && <button className="btn primary" disabled={act.busy} onClick={() => act.run(() => raw.post(`/v1/invoices/${id}/approve`))}>Approve and issue</button>}
       </div>
+
+      {v.status === "issued" && v.balance > 0 && me.roles.some((r) => ["client_admin", "client_user"].includes(r)) && <PayOnline invoiceId={id} balance={v.balance} onPaid={() => void load()} />}
 
       {finance && v.status === "issued" && (
         <>

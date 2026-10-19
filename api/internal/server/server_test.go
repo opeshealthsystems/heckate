@@ -21,7 +21,10 @@ import (
 	"github.com/opeshealthsystems/heckate/api/migrations"
 )
 
-const secret = "test-secret"
+const (
+	secret    = "test-secret"
+	paySecret = "pay-secret"
+)
 
 type env struct {
 	t   *testing.T
@@ -43,7 +46,7 @@ func setup(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	srv := httptest.NewServer(New(platform.Config{DevSecret: secret, PortalURL: "https://app.example.com"}, pool))
+	srv := httptest.NewServer(New(platform.Config{DevSecret: secret, PortalURL: "https://app.example.com", PaymentsSandbox: true, PaymentsWebhookSecret: paySecret}, pool))
 	t.Cleanup(srv.Close)
 	return &env{t, srv}
 }
@@ -391,7 +394,7 @@ func TestDeviceRegistrationIsPerUser(t *testing.T) {
 
 func httptestServer(t *testing.T, pool *pgxpool.Pool) *httptest.Server {
 	t.Helper()
-	srv := httptest.NewServer(New(platform.Config{DevSecret: secret, PortalURL: "https://app.example.com"}, pool))
+	srv := httptest.NewServer(New(platform.Config{DevSecret: secret, PortalURL: "https://app.example.com", PaymentsSandbox: true, PaymentsWebhookSecret: paySecret}, pool))
 	t.Cleanup(srv.Close)
 	return srv
 }

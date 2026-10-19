@@ -17,6 +17,7 @@ import (
 	"github.com/opeshealthsystems/heckate/api/internal/modules/hr"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/inventory"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/notify"
+	"github.com/opeshealthsystems/heckate/api/internal/modules/payments"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/payroll"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/procurement"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/projects"
@@ -70,7 +71,7 @@ func build(cfg platform.Config, pool *pgxpool.Pool, hub *stream.Hub) *platform.A
 	inventory.Register(app)
 	payroll.Register(app, accounting.PayrollPoster{})
 	procurement.Register(app, accounting.ProcurementPoster{})
-	sales.Register(app, accounting.SalesPoster{}, docOpts)
+	payments.Register(app, sales.Register(app, accounting.SalesPoster{}, docOpts), cfg)
 	accounting.Register(app)
 	stream.Register(app, hub, cfg.CORSOrigins)
 	return app

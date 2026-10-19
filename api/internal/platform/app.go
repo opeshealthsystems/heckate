@@ -51,6 +51,50 @@ func (s *Scope) Audit(ctx context.Context, action, entity, entityID string) erro
 	return err
 }
 
+// AsSystem runs fn with the transaction acting as a trusted internal actor (staff, finance) instead of
+// the caller, then restores the caller. It is for steps whose authority comes from something other
+// than the caller's token, such as a verified payment-provider callback, and must be called only after
+// that verification. The audit log and ledger record the actor name given here.
+func (s *Scope) AsSystem(ctx context.Context, actor string, fn func() error) error {
+	prev := s.Claims
+	var tenant, role, who, roles string
+	if err := s.Tx.QueryRow(ctx, `SELECT current_setting('app.tenant_id',true), current_setting('app.role',true), current_setting('app.actor',true), current_setting('app.roles',true)`).Scan(&tenant, &role, &who, &roles); err != nil {
+		return err
+	}
+	if _, err := s.Tx.Exec(ctx, `SELECT set_config('app.role','staff',true), set_config('app.actor',$1,true), set_config('app.roles','finance',true)`, actor); err != nil {
+		return err
+	}
+	s.Claims = &Claims{Sub: actor, Roles: []string{"finance"}}
+	err := fn()
+	if err == nil {
+		// Deferred checks (a balanced ledger entry, non-negative stock) read tables under row-level
+		// security, so they must run now, while the privileges that wrote the rows still apply.
+		if _, err = s.Tx.Exec(ctx, `SET CONSTRAINTS ALL IMMEDIATE`); err == nil {
+			_, err = s.Tx.Exec(ctx, `SET CONSTRAINTS ALL DEFERRED`)
+		}
+		err = deferredCheckError(err)
+	}
+	s.Claims = prev
+	if _, e2 := s.Tx.Exec(ctx, `SELECT set_config('app.tenant_id',$1,true), set_config('app.role',$2,true), set_config('app.actor',$3,true), set_config('app.roles',$4,true)`, tenant, role, who, roles); e2 != nil && err == nil {
+		err = e2
+	}
+	return err
+}
+
+// deferredCheckError turns a failed deferred-constraint check into a problem response; other errors pass through.
+func deferredCheckError(err error) error {
+	if err == nil {
+		return nil
+	}
+	switch msg := err.Error(); {
+	case strings.Contains(msg, "insufficient stock"):
+		return Err(http.StatusConflict, "Insufficient stock", "not enough stock for this movement")
+	case strings.Contains(msg, "is not balanced"):
+		return Err(http.StatusUnprocessableEntity, "Entry does not balance", "debits and credits must be equal")
+	}
+	return err
+}
+
 // Emit writes a domain event to the transactional outbox.
 func (s *Scope) Emit(ctx context.Context, subject string, payload any) error {
 	b, _ := json.Marshal(payload)
@@ -250,12 +294,10 @@ func (a *App) run(w http.ResponseWriter, r *http.Request, claims *Claims, h Hand
 	}
 	if err := s.Tx.Commit(ctx); err != nil {
 		// Deferred database constraints (balanced ledger entries, non-negative stock) fail at commit.
-		switch msg := err.Error(); {
-		case strings.Contains(msg, "insufficient stock"):
-			WriteProblem(w, r, http.StatusConflict, "Insufficient stock", "not enough stock for this movement")
-		case strings.Contains(msg, "is not balanced"):
-			WriteProblem(w, r, http.StatusUnprocessableEntity, "Entry does not balance", "debits and credits must be equal")
-		default:
+		var he *HTTPError
+		if e := deferredCheckError(err); errors.As(e, &he) {
+			WriteProblem(w, r, he.Status, he.Title, he.Detail)
+		} else {
 			slog.Error("commit", "err", err)
 			WriteProblem(w, r, http.StatusInternalServerError, "Internal error", "")
 		}

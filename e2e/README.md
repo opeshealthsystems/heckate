@@ -9,6 +9,7 @@ Drive the real web app against a real API and Postgres with Playwright (Chromium
 | `documents.mjs` | Downloading an invoice PDF, checking that exact file (and a tampered copy) on `/verify`, and a client admin creating, using and revoking an API key |
 | `payroll.mjs` | Payroll: finance prepares a month, a second finance user approves, a third person pays, and the employee finds their payslip. Each role sees only the buttons it may press |
 | `bank.mjs` | Bank reconciliation: statement import, automatic matching of unambiguous lines, manual choice for an ambiguous one, outstanding ledger lines |
+| `payments.mjs` | Paying an invoice by mobile money against the sandbox provider: nothing is booked until a correctly signed callback arrives. Start the API with `HEKATE_PAYMENTS_SANDBOX=1 HEKATE_PAYMENTS_WEBHOOK_SECRET=e2e-pay` |
 
 ## Run
 

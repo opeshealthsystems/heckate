@@ -379,7 +379,7 @@ paths:
               type: object
               required: [account, opening, closing, csv]
               properties:
-                account: { type: string, description: A treasury account (class 5) from the chart, for example 521 }
+                account: { type: string, description: "A treasury account (class 5) from the chart, for example 521" }
                 opening: { type: integer }
                 closing: { type: integer }
                 csv: { type: string }
@@ -438,6 +438,92 @@ paths:
       summary: Undo a match
       responses:
         "204": { description: Unmatched }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/payment-providers:
+    get:
+      operationId: listPaymentProviders
+      summary: Which online payment providers are switched on
+      responses:
+        "200":
+          description: Providers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { type: string, enum: [momo, orange_money] } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/invoices/{id}/online-payments:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: listOnlinePayments
+      summary: Online payment attempts for an invoice
+      responses:
+        "200":
+          description: Attempts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/OnlinePayment" } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: startOnlinePayment
+      summary: Ask the client's phone to approve a mobile money payment (client users). Settles only when the provider confirms.
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider, msisdn]
+              properties:
+                provider: { type: string, enum: [momo, orange_money] }
+                msisdn: { type: string, example: "237670000000" }
+                amount: { type: integer, description: Defaults to the outstanding balance }
+      responses:
+        "202":
+          description: Request sent; waiting for approval on the phone
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OnlinePayment" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/online-payments/{id}/refresh:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      operationId: refreshOnlinePayment
+      summary: Ask the provider what became of a request and settle it if the answer is final
+      responses:
+        "200":
+          description: Current state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OnlinePayment" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/webhooks/payments/{provider}:
+    parameters: [{ name: provider, in: path, required: true, schema: { type: string, enum: [momo, orange_money] } }]
+    post:
+      operationId: paymentCallback
+      summary: Provider callback. Authenticated by an HMAC-SHA256 signature of the body in X-Hekate-Signature (sha256=hex).
+      security: []
+      parameters: [{ name: X-Hekate-Signature, in: header, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_id, reference, status]
+              properties:
+                event_id: { type: string }
+                reference: { type: string, format: uuid }
+                status: { type: string, enum: [succeeded, failed] }
+                amount: { type: integer }
+                reason: { type: string }
+      responses:
+        "200": { description: Accepted (repeated deliveries are harmless) }
         "4XX": { $ref: "#/components/responses/Problem" }
   /v1/clients:
     get:
@@ -2509,6 +2595,18 @@ components:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
   schemas:
+    OnlinePayment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        invoice_id: { type: string, format: uuid }
+        amount: { type: integer }
+        provider: { type: string }
+        msisdn: { type: string }
+        status: { type: string, enum: [pending, succeeded, failed, expired, review] }
+        provider_ref: { type: [string, "null"] }
+        reason: { type: string }
+        created_at: { type: string, format: date-time }
     BankStatement:
       type: object
       properties:
