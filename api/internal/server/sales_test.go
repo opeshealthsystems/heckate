@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"os"
 	"strings"
 	"testing"
 
@@ -168,7 +167,7 @@ func TestIssuedInvoicesAreImmutableInTheDatabase(t *testing.T) {
 	e.do("POST", "/v1/invoices/"+id+"/issue", fin, nil)
 
 	// Even the owning database role (no RLS, no SET ROLE) is stopped by the triggers.
-	conn, err := pgx.Connect(context.Background(), os.Getenv("HEKATE_TEST_DB"))
+	conn, err := pgx.Connect(context.Background(), adminDSN())
 	if err != nil {
 		t.Fatal(err)
 	}

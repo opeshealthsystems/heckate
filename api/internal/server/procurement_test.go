@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -226,7 +225,7 @@ func TestBankDetailsCannotBeSelfVerifiedInTheDatabase(t *testing.T) {
 	e.do("PUT", "/v1/suppliers/me/bank", token("fraud", sup, "supplier"), map[string]any{"account": "CM00 0000 0000 0000"})
 
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, os.Getenv("HEKATE_TEST_DB"))
+	conn, err := pgx.Connect(ctx, adminDSN())
 	if err != nil {
 		t.Fatal(err)
 	}

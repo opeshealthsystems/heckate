@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -123,7 +122,7 @@ func TestLedgerIsAppendOnlyAndBalancedInTheDatabase(t *testing.T) {
 	e.do("POST", "/v1/accounting/entries", token("f", "", "finance"), map[string]any{"journal": "OD", "entry_date": "2026-10-01", "narration": "seed",
 		"lines": []map[string]any{{"account": "521", "debit": 1}, {"account": "101", "credit": 1}}})
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, os.Getenv("HEKATE_TEST_DB"))
+	conn, err := pgx.Connect(ctx, adminDSN())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +160,7 @@ func TestHashChainVerifiesAndDetectsTampering(t *testing.T) {
 		t.Fatalf("chain should be intact: %v", v)
 	}
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, os.Getenv("HEKATE_TEST_DB"))
+	conn, err := pgx.Connect(ctx, adminDSN())
 	if err != nil {
 		t.Fatal(err)
 	}

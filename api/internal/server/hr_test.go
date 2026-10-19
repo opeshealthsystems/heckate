@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -114,7 +113,7 @@ func TestLeaveWorkflow(t *testing.T) {
 	// Even around the API, an employee cannot approve their own leave.
 	_, l2, _ := e.do("POST", "/v1/leave", me, map[string]any{"kind": "sick", "start_date": "2026-11-09", "end_date": "2026-11-09"})
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, os.Getenv("HEKATE_TEST_DB"))
+	conn, err := pgx.Connect(ctx, adminDSN())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +173,7 @@ func TestExpenseClaims(t *testing.T) {
 			t.Error("another employee must not see this claim")
 		}
 	}
-	conn, err := pgx.Connect(context.Background(), os.Getenv("HEKATE_TEST_DB"))
+	conn, err := pgx.Connect(context.Background(), adminDSN())
 	if err != nil {
 		t.Fatal(err)
 	}

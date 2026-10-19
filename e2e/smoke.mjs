@@ -1,7 +1,17 @@
 import { chromium } from "playwright-core";
-import fs from "node:fs";
-const staff = fs.readFileSync("staff.tok", "utf8").trim();
-const client = fs.readFileSync("client.tok", "utf8").trim();
+import crypto from "node:crypto";
+
+const API = process.env.API ?? "http://localhost:8080";
+const SECRET = process.env.HEKATE_DEV_JWT_SECRET ?? "e2e-secret";
+const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
+function token(sub, roles, tenant = "") {
+  const head = b64({ alg: "HS256", typ: "JWT" });
+  const body = b64({ sub, roles, tenant_id: tenant, exp: Math.floor(Date.now() / 1000) + 3600 });
+  return `${head}.${body}.${crypto.createHmac("sha256", SECRET).update(`${head}.${body}`).digest("base64url")}`;
+}
+const staff = token("smoke-staff", ["manager", "support"]);
+const created = await fetch(`${API}/v1/clients`, { method: "POST", headers: { Authorization: `Bearer ${staff}`, "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ legal_name: `Smoke Client ${Date.now()}` }) });
+const client = token("smoke-client", ["client_user"], (await created.json()).tenant_id);
 const b = await chromium.launch({ executablePath: process.env.CHROMIUM ?? "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
 const ok = (c, m) => { console.log(c ? "PASS" : "FAIL", m); if (!c) process.exitCode = 1; };
 

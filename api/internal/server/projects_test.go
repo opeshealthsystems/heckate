@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"encoding/base64"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -112,7 +111,7 @@ func TestFieldInterventionFlow(t *testing.T) {
 		}
 	}
 	// Signed records are frozen in the database.
-	conn, err := pgx.Connect(context.Background(), os.Getenv("HEKATE_TEST_DB"))
+	conn, err := pgx.Connect(context.Background(), adminDSN())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +183,7 @@ func TestTimesheets(t *testing.T) {
 	if !seen {
 		t.Error("hr should see everyone's timesheets with all=1")
 	}
-	conn, err := pgx.Connect(context.Background(), os.Getenv("HEKATE_TEST_DB"))
+	conn, err := pgx.Connect(context.Background(), adminDSN())
 	if err != nil {
 		t.Fatal(err)
 	}

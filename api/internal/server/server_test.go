@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"io"
 	"log/slog"
 	"net/http"
@@ -370,7 +371,7 @@ func TestDeviceRegistrationIsPerUser(t *testing.T) {
 	if c := put(b, tok); c != 204 { // handed to another user
 		t.Fatalf("reassign: want 204, got %d", c)
 	}
-	owner, err := pgx.Connect(context.Background(), os.Getenv("HEKATE_TEST_DB"))
+	owner, err := pgx.Connect(context.Background(), adminDSN())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -386,4 +387,33 @@ func TestDeviceRegistrationIsPerUser(t *testing.T) {
 	if resp.StatusCode != 422 {
 		t.Errorf("bad platform: want 422, got %d", resp.StatusCode)
 	}
+}
+
+func httptestServer(t *testing.T, pool *pgxpool.Pool) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(New(platform.Config{DevSecret: secret}, pool))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func putJSON(e *env, path, tok string, body any) int {
+	b, _ := json.Marshal(body)
+	req, _ := http.NewRequest("PUT", e.srv.URL+path, bytes.NewReader(b))
+	req.Header.Set("Authorization", "Bearer "+tok)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	resp.Body.Close()
+	return resp.StatusCode
+}
+
+// adminDSN is a connection that bypasses row-level security (a superuser). Tests that prove the
+// database's own triggers and constraints hold even against raw SQL need it. It defaults to
+// HEKATE_TEST_DB; set HEKATE_TEST_ADMIN_DB when HEKATE_TEST_DB is an ordinary (non-superuser) owner.
+func adminDSN() string {
+	if v := os.Getenv("HEKATE_TEST_ADMIN_DB"); v != "" {
+		return v
+	}
+	return os.Getenv("HEKATE_TEST_DB")
 }

@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -94,7 +93,7 @@ func TestStockLedger(t *testing.T) {
 		}
 	}
 	// Movements are append-only, and a concurrent race cannot drive stock negative.
-	conn, err := pgx.Connect(context.Background(), os.Getenv("HEKATE_TEST_DB"))
+	conn, err := pgx.Connect(context.Background(), adminDSN())
 	if err != nil {
 		t.Fatal(err)
 	}

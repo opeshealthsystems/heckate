@@ -23,7 +23,20 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.24"
-      - run: make test
+      # First as an ordinary database owner, in a fresh cluster: production should not own the schema
+      # with a superuser, and superusers hide row-level-security mistakes. Raw-SQL trigger tests use the
+      # admin connection (HEKATE_TEST_ADMIN_DB).
+      - name: Tests as a non-superuser owner
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres \
+            -c "CREATE ROLE app_owner LOGIN PASSWORD 'pw' CREATEROLE NOSUPERUSER NOBYPASSRLS" \
+            -c "CREATE DATABASE ownerdb OWNER app_owner"
+          cd api && go vet ./... && go test -race ./...
+        env:
+          HEKATE_TEST_DB: postgres://app_owner:pw@localhost:5432/ownerdb?sslmode=disable
+          HEKATE_TEST_ADMIN_DB: postgres://postgres:postgres@localhost:5432/ownerdb?sslmode=disable
+      - name: Tests as a superuser
+        run: make test
       - run: make build
   openapi:
     runs-on: ubuntu-latest

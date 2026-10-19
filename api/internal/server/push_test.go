@@ -174,7 +174,7 @@ func TestPushReachesTheRightDevicesOnly(t *testing.T) {
 	fx.mu.Unlock()
 	e.do("PATCH", "/v1/tickets/"+id, staffTok, map[string]any{"status": "closed"})
 	relay()
-	owner, _ := pgx.Connect(ctx, os.Getenv("HEKATE_TEST_DB"))
+	owner, _ := pgx.Connect(ctx, adminDSN())
 	defer owner.Close(ctx)
 	var n int
 	_ = owner.QueryRow(ctx, `SELECT count(*) FROM notify.devices WHERE token=$1`, dev("alice")).Scan(&n)
