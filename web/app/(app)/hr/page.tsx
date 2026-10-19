@@ -8,6 +8,7 @@ import { Attachments } from "@/components/Attachments";
 
 interface Me { full_name: string; position: string; annual_leave_entitlement: number; annual_leave_taken: number; annual_leave_balance: number }
 interface Leave { id: string; actor: string; kind: string; start_date: string; end_date: string; days: number; status: string }
+interface Pay { id: string; period: string; gross: number; irpp: number; cac: number; net: number; deductions: { label: string; amount: number }[] }
 interface Claim { id: string; actor: string; expense_date: string; category: string; description: string; amount: number; status: string; decided_by: string | null }
 
 export default function HR() {
@@ -19,6 +20,7 @@ export default function HR() {
   const [recErr, setRecErr] = useState("");
   const [leave, setLeave] = useState<Leave[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
+  const [slips, setSlips] = useState<Pay[]>([]);
   const [lf, setLf] = useState({ kind: "annual", start_date: "", end_date: "", reason: "" });
   const [cf, setCf] = useState({ expense_date: new Date().toISOString().slice(0, 10), category: "", description: "", amount: "" });
   const all = tab === "Approvals" ? "?all=1" : "";
@@ -26,10 +28,11 @@ export default function HR() {
     raw.get<Me>("/v1/employees/me").then(setRec).catch((e) => setRecErr(e.message));
     raw.get<{ data: Leave[] }>(`/v1/leave${all}`).then((r) => setLeave(r.data)).catch(() => {});
     raw.get<{ data: Claim[] }>(`/v1/expenses${all}`).then((r) => setClaims(r.data)).catch(() => {});
+    raw.get<{ data: Pay[] }>("/v1/payslips/me").then((r) => setSlips(r.data)).catch(() => {});
   }, [all]);
   useEffect(() => { void load(); }, [load]);
   const act = useAction(load);
-  const tabs = ["My leave", "My expenses", ...(reviewer || payer ? ["Approvals"] : [])];
+  const tabs = ["My leave", "My expenses", "My payslips", ...(reviewer || payer ? ["Approvals"] : [])];
   return (
     <>
       <h1>People</h1>
@@ -60,6 +63,11 @@ export default function HR() {
             <button className="btn primary" disabled={act.busy}>Request</button>
           </form>
         </>
+      )}
+      {tab === "My payslips" && (
+        <Table head={["Month", "Gross", "Deductions", "Income tax", "Net pay"]} empty={slips.length ? undefined : "No payslips yet. They appear once payroll for a month is approved."}>
+          {slips.map((p) => (<tr key={p.id}><td>{p.period}</td><td className="num">{xaf(p.gross)}</td><td className="num">{xaf(p.deductions.reduce((a, l) => a + l.amount, 0))}</td><td className="num">{xaf(p.irpp + p.cac)}</td><td className="num"><strong>{xaf(p.net)}</strong></td></tr>))}
+        </Table>
       )}
       {tab === "My expenses" && (
         <>

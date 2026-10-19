@@ -25,6 +25,7 @@ function Shell({ children }: { children: ReactNode }) {
   if (has("ceo", "manager", "finance", "auditor")) links.push(["/accounting", "Accounting"]);
   if (has("ceo", "manager", "procurement", "finance", "supplier")) links.push(["/procurement", has("supplier") ? "Supplier portal" : "Purchasing"]);
   if (staff) links.push(["/hr", "People"]);
+  if (has("hr", "finance", "manager", "ceo", "auditor")) links.push(["/payroll", "Payroll"]);
   if (staff && has("ceo", "manager", "finance", "sales", "support", "engineer", "logistics", "procurement")) links.push(["/documents", "Documents"]);
   if (has("client_admin", "client_user")) links.push(["/developer", "Developer"]);
   return (

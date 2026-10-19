@@ -26,7 +26,8 @@ ERP, client and supplier portals, public website and mobile app on one API. Requ
 | Projects & Field Service (projects, tasks, interventions with GPS and signature, timesheets) | Built: web; field check-in/out on mobile |
 | Inventory & Assets (stock ledger, serialised equipment, issue to staff, client assets, parts used on interventions) | Built: web |
 | Purchasing & Suppliers (supplier register with call-back-verified bank details, RFQs, POs, receipts, supplier invoices with three-way match, supplier portal) | Built: web |
-| HR (employee records, leave with balances, expense claims) | Built: web. **Payroll not built** |
+| HR (employee records, leave with balances, expense claims) | Built: web |
+| Payroll (salaries, validated rules, monthly runs, payslips, ledger posting) | Built: web. Dual control at every step. **Rates are unvalidated placeholders; no run is possible until a second person validates them** |
 | Documents & Trust (register, references, public verification) | Built: register, public verification, PDFs (invoice, quote, site-visit acceptance) with QR and SHA-256 check on /verify. **PAdES signing not built** |
 | Push notifications | Built (Expo push); real delivery needs credentials |
 | Public website (EN/FR) | Built |
