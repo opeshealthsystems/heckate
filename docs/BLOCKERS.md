@@ -34,10 +34,21 @@ Things I could not do or decide alone. Each says what is needed. Items marked **
 - **Letterhead and company facts** for PDFs: set `HEKATE_LETTERHEAD` (lines separated by `|`).
 - **Fonts:** PDFs use built-in Latin-1 fonts; characters outside cp1252 need an embedded Unicode font.
 - **Placeholders needing sign-off:** SLA times, approval thresholds, leave rules, TVA/CAC rates and the starter chart of accounts.
-- **Payroll rates must be validated by the accountant.** The seeded CNPS, CFC, FNE and income-tax figures (Payroll > Rules) come from public Cameroon rules as I understand them and are not verified. The system refuses to prepare any run until someone other than the editor validates the rules, and a changed rule needs validating again. Also missing: the communal tax table, overtime and bonuses, leave deductions, payslip PDF, and the DIPE/CNPS declaration files. Ledger accounts 422, 431, 447 and 664 are a proposed mapping.
+- **Payroll rates must be validated by the accountant.** The seeded CNPS, CFC, FNE and income-tax figures (Payroll > Rules) come from public Cameroon rules as I understand them and are not verified. The system refuses to prepare any run until someone other than the editor validates the rules, and a changed rule needs validating again. Also missing: the communal tax table, overtime and bonuses, leave deductions, and the DIPE/CNPS declaration files. Ledger accounts 422, 431, 447 and 664 are a proposed mapping.
 - **Bank reconciliation** takes a CSV (date, description, amount, reference); real bank file formats (MT940, CAMT.053) and bank APIs are not wired. Matching is exact-amount within five days only.
 - **Not built:** DSF statements, paid-plan billing, SDKs other than TypeScript (the Python/Java/C# ones the spec lists can be generated from the same contract), Metabase.
 - **Attachments** live in Postgres, not object storage; move to MinIO/S3 if volume grows.
+
+## Needs input for the public website
+
+The site now uses the approved brand pack (see `docs/BRAND_PACK.md`). Still missing, and therefore left out of the pages rather than shown as `[PLACEHOLDER]` or invented:
+
+- **Phone, P.O. box, RCCM and NIU.** Fill them in `site/content/company.ts`; each appears on the site and in the structured data once set.
+- **French copy review.** The French text is my translation of the approved English and has not been read by a native speaker. The guarantee policies are legal text: the French page shows the English original with a notice until an approved French version exists.
+- **Privacy and Terms pages.** The design footer links to them, but the pack has no text for them, so there are no links.
+- **Mobile app store links** (Google Play, App Store) once the app is published.
+- **Founders' photos.**
+- **Fonts and signing keys.** Fonts (Cinzel, IBM Plex) are self-hosted from the OFL `@fontsource` packages. The pack deliberately contains only public verification keys; the signing keys and password for its PDF tools must come from a secret store, never the repository.
 
 ## Needs infrastructure and people
 

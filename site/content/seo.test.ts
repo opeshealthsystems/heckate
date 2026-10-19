@@ -6,21 +6,25 @@ import { fr } from "./fr.ts";
 import { faqLd, organizationLd, sitemapXml, PAGES } from "./seo.ts";
 
 test("organization JSON-LD omits unconfirmed facts", () => {
-  const ld = organizationLd({ ...company, rccm: "", phone: "", founders: [] }, en);
+  const ld = organizationLd({ ...company, rccm: "", niu: "", phone: "", poBox: "" }, en);
   assert.equal(ld.legalName, "HEKATE SYSTEMS SARL");
-  for (const k of ["identifier", "telephone", "founder"]) assert.ok(!(k in ld), `${k} must be absent`);
+  for (const k of ["identifier", "taxID", "telephone"]) assert.ok(!(k in ld), `${k} must be absent`);
 });
 
 test("organization JSON-LD includes facts once supplied", () => {
-  const ld = organizationLd({ ...company, rccm: "RC/DLA/2026/B/1", phone: "+237000", founders: ["A", "B"] }, en) as Record<string, unknown>;
-  assert.ok(ld.identifier && ld.telephone && Array.isArray(ld.founder));
+  const ld = organizationLd({ ...company, rccm: "RC/DLA/2026/B/1", niu: "M0000", phone: "+237000" }, en) as Record<string, unknown>;
+  assert.ok(ld.identifier && ld.taxID && ld.telephone && Array.isArray(ld.founder));
 });
 
 test("FAQPage covers every question in both languages", () => {
   for (const d of [en, fr]) {
-    const n = d.services.items.reduce((a, s) => a + s.faq.length, 0);
-    assert.equal((faqLd(d.services.items).mainEntity as unknown[]).length, n);
+    assert.equal((faqLd(d.services.faq).mainEntity as unknown[]).length, d.services.faq.length);
   }
+});
+
+test("no placeholder values reach the public pages", () => {
+  const all = JSON.stringify([en, fr]);
+  assert.ok(!/\[(NUMBER|PHONE|P\.O\. BOX)\]/.test(all), "placeholders such as [PHONE] must be omitted, not published");
 });
 
 function keyPaths(o: unknown, prefix = ""): string[] {
@@ -29,11 +33,10 @@ function keyPaths(o: unknown, prefix = ""): string[] {
   return [prefix];
 }
 
-test("EN and FR have identical keys, list lengths and service slugs", () => {
-  const strip = (d: typeof en) => ({ ...d, lang: "", locale: "", services: { ...d.services, items: d.services.items.map((s) => ({ slug: s.slug, n: s.faq.length })) } });
+test("EN and FR have identical keys, list lengths and practice slugs", () => {
+  const strip = (d: typeof en) => ({ ...d, lang: "", locale: "", guarantees: { ...d.guarantees, notice: "", intro: "", sections: [] } });
   assert.deepEqual(keyPaths(strip(fr)), keyPaths(strip(en)));
-  assert.deepEqual(fr.services.items.map((s) => s.slug), en.services.items.map((s) => s.slug));
-  assert.deepEqual(fr.services.items.map((s) => s.faq.length), en.services.items.map((s) => s.faq.length));
+  assert.deepEqual(fr.services.practices.map((s) => s.slug), en.services.practices.map((s) => s.slug));
 });
 
 test("sitemap lists both languages with hreflang", () => {

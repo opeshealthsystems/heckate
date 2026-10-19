@@ -3,8 +3,8 @@ import { company } from "@/content/company";
 import { dicts, path } from "@/content";
 import type { Lang } from "@/content/types";
 
-export type PageKey = "home" | "services" | "about" | "contact";
-const route: Record<PageKey, string> = { home: "/", services: "/services/", about: "/about/", contact: "/contact/" };
+export type PageKey = "home" | "services" | "about" | "contact" | "guarantees";
+const route: Record<PageKey, string> = { home: "/", services: "/services/", about: "/about/", contact: "/contact/", guarantees: "/guarantees/" };
 
 export function pageMeta(lang: Lang, key: PageKey): Metadata {
   const d = dicts[lang];
@@ -17,6 +17,7 @@ export function pageMeta(lang: Lang, key: PageKey): Metadata {
     alternates: { canonical: url(lang), languages: { en: url("en"), fr: url("fr"), "x-default": url("en") } },
     openGraph: { title: p.title, description: p.description, url: url(lang), siteName: company.brand, locale: d.locale, type: "website" },
     robots: { index: true, follow: true },
+    icons: { icon: [{ url: "/favicon-32.png", sizes: "32x32" }, { url: "/icon-192.png", sizes: "192x192" }], apple: "/icon-192.png" },
   };
 }
 
