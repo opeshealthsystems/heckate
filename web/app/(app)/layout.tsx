@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { SessionGate, useMe } from "@/lib/session";
 import { clearToken } from "@/lib/auth";
+import { Icon, type IconName } from "@/components/Icon";
 
 function Shell({ children }: { children: ReactNode }) {
   const me = useMe();
@@ -31,29 +32,36 @@ function Shell({ children }: { children: ReactNode }) {
   if (has("hr", "finance", "manager", "ceo", "auditor")) links.push(["/payroll", "Payroll"]);
   if (staff && has("ceo", "manager", "finance", "sales", "support", "engineer", "hr", "logistics", "procurement")) links.push(["/documents", "Documents"]);
   if (has("client_admin", "client_user")) links.push(["/developer", "Developer"]);
+  const icons: Record<string, IconName> = {"/dashboard": "dashboard", "/tickets": "tickets", "/clients": "clients", "/leads": "leads", "/quotes": "quotes", "/invoices": "invoices", "/projects": "projects", "/interventions": "field", "/timesheets": "time", "/inventory": "inventory", "/accounting": "accounting", "/procurement": "purchasing", "/hr": "people", "/payroll": "payroll", "/documents": "documents", "/developer": "developer"};
   return (
     <div className="shell">
-      <header className="top">
-        <Link href="/dashboard" className="logo"><img src="/brand/HEKATE_Logo_White.png" alt="HEKATE SYSTEMS" width={104} height={42} /></Link>
-        <button className="btn menu" aria-expanded={open} aria-label="Menu" onClick={() => setOpen(!open)}>☰</button>
-        <nav className={open ? "open" : ""}>
+      <header className="side">
+        <div className="side-head">
+          <Link href="/dashboard" className="logo"><img src="/brand/HEKATE_Logo_White.png" alt="HEKATE SYSTEMS" width={104} height={42} /></Link>
+          <button className="btn menu" aria-expanded={open} aria-label="Menu" onClick={() => setOpen(!open)}><Icon name={open ? "close" : "menu"} size={20} /></button>
+        </div>
+        <nav className={open ? "open" : ""} aria-label="Main">
           {links.map(([href, label]) => (
-            <Link key={href} href={href} className={path.startsWith(href) ? "active" : ""} onClick={() => setOpen(false)}>
+            <Link key={href} href={href} className={path.startsWith(href) ? "active" : ""} aria-current={path.startsWith(href) ? "page" : undefined} onClick={() => setOpen(false)}>
+              <Icon name={icons[href] ?? "dashboard"} size={18} />
               {label}
             </Link>
           ))}
-          <button
-            className="btn ghost"
-            onClick={() => {
-              clearToken();
-              router.push("/login");
-            }}
-          >
-            Sign out
-          </button>
+          <div className="side-foot">
+            <span className="who">{me.roles.map((r) => (r === "ceo" ? "CEO" : r.replace(/_/g, " "))).join(", ")}</span>
+            <button
+              className="btn ghost"
+              onClick={() => {
+                clearToken();
+                router.push("/login");
+              }}
+            >
+              <Icon name="signout" size={16} /> Sign out
+            </button>
+          </div>
         </nav>
       </header>
-      <main className="content">{children}</main>
+      <main className="content"><div className="page">{children}</div></main>
     </div>
   );
 }

@@ -20,7 +20,7 @@ export default function Dashboard() {
   }, [me]);
   return (
     <>
-      <h1>{staff ? "Staff dashboard" : "Your support"}</h1>
+      <h1>{!portal ? "Dashboard" : staff ? "Staff dashboard" : "Your support"}</h1>
       {report && (
         <section className="stats">
           <div className="stat"><span>{report.open}</span>Open</div>

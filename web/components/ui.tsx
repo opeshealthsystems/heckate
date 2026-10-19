@@ -1,5 +1,6 @@
 "use client";
 import { useState, type ReactNode } from "react";
+import { Icon } from "./Icon";
 
 /** Runs an async action, shows its error, and calls onDone after success. */
 export function useAction(onDone?: () => void | Promise<void>) {
@@ -82,10 +83,10 @@ export function LinesEditor({ lines, onChange }: { lines: LineInput[]; onChange:
           <input aria-label={`Description ${i + 1}`} placeholder="Description" required value={l.description} onChange={(e) => set(i, "description", e.target.value)} />
           <input aria-label={`Quantity ${i + 1}`} type="number" step="0.01" min="0.01" required value={l.quantity} onChange={(e) => set(i, "quantity", e.target.value)} />
           <input aria-label={`Unit price ${i + 1}`} type="number" min="0" step="1" placeholder="Unit price" required value={l.unit_price} onChange={(e) => set(i, "unit_price", e.target.value)} />
-          {lines.length > 1 && <button type="button" className="btn ghost" aria-label={`Remove line ${i + 1}`} onClick={() => onChange(lines.filter((_, j) => j !== i))}>✕</button>}
+          {lines.length > 1 && <button type="button" className="btn ghost" aria-label={`Remove line ${i + 1}`} onClick={() => onChange(lines.filter((_, j) => j !== i))}><Icon name="close" size={16} /></button>}
         </div>
       ))}
-      <button type="button" className="btn" onClick={() => onChange([...lines, emptyLine()])}>Add line</button>
+      <button type="button" className="btn" onClick={() => onChange([...lines, emptyLine()])}><Icon name="plus" size={16} /> Add line</button>
     </fieldset>
   );
 }
