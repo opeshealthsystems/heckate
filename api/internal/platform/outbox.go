@@ -16,11 +16,12 @@ type Publisher interface {
 	Publish(ctx context.Context, subject string, payload []byte, id string) error
 }
 
-// LogPublisher is the default publisher until NATS is wired in.
+// LogPublisher is the default publisher when no broker is configured. It records that an event happened,
+// never its content: payloads can hold personal and financial data, and logs are widely readable.
 type LogPublisher struct{}
 
-func (LogPublisher) Publish(_ context.Context, subject string, payload []byte, _ string) error {
-	slog.Info("event", "subject", subject, "payload", string(payload))
+func (LogPublisher) Publish(_ context.Context, subject string, payload []byte, id string) error {
+	slog.Info("event", "subject", subject, "id", id, "bytes", len(payload))
 	return nil
 }
 

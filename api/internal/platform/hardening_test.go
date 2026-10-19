@@ -85,3 +85,38 @@ func TestSecureHeadersOnEveryResponse(t *testing.T) {
 		t.Error("CSP and HSTS must be set")
 	}
 }
+
+func TestTraceIDFromTheCallerIsValidatedAndLogsNameTheRoute(t *testing.T) {
+	for in, keep := range map[string]bool{
+		"abcd1234":                         true,
+		"4bf92f3577b34da6a3ce929d0e0e4736": true,
+		"short":                            false,
+		"has space in it 12345":            false,
+		"line\nbreak-injected-12345":       false,
+		"<script>alert(1)</script>":        false,
+		strings.Repeat("a", 65):            false,
+		"":                                 false,
+	} {
+		if validTraceID(in) != keep {
+			t.Errorf("validTraceID(%q) = %v, want %v", in, !keep, keep)
+		}
+	}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/things/{id}", func(w http.ResponseWriter, r *http.Request) {})
+	h := Trace(mux)
+	rec := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/v1/things/1", nil)
+	r.Header.Set("X-Trace-Id", "evil\r\ninjected: header")
+	h.ServeHTTP(rec, r)
+	got := rec.Header().Get("X-Trace-Id")
+	if !validTraceID(got) || strings.ContainsAny(got, "\r\n") {
+		t.Errorf("a forged trace id must be replaced, got %q", got)
+	}
+	r = httptest.NewRequest("GET", "/v1/things/2", nil)
+	r.Header.Set("X-Trace-Id", "caller-trace-0001")
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, r)
+	if rec.Header().Get("X-Trace-Id") != "caller-trace-0001" {
+		t.Errorf("a well-formed trace id is kept, got %q", rec.Header().Get("X-Trace-Id"))
+	}
+}
