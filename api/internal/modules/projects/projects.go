@@ -608,3 +608,13 @@ func approveTimesheet(r *http.Request, s *platform.Scope) (*platform.Result, err
 	}
 	return &platform.Result{Status: http.StatusOK, Body: t}, nil
 }
+
+// InterventionTenant returns the tenant of an intervention the caller can see.
+func InterventionTenant(ctx context.Context, s *platform.Scope, id string) (string, error) {
+	var tenant string
+	err := s.Tx.QueryRow(ctx, `SELECT tenant_id FROM projects.interventions WHERE id::text = $1`, id).Scan(&tenant)
+	if isNotFound(err) {
+		return "", nf("intervention")
+	}
+	return tenant, err
+}

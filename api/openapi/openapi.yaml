@@ -2015,6 +2015,55 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Object" }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/attachments:
+    get:
+      operationId: listAttachments
+      summary: List attachments of a ticket, intervention or expense claim
+      parameters:
+        - { name: entity_type, in: query, required: true, schema: { type: string, enum: [ticket, intervention, expense] } }
+        - { name: entity_id, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Attachment metadata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: uploadAttachment
+      summary: "Attach a JPEG, PNG, WebP or PDF (max 10 MB). The type is detected from the bytes."
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [entity_type, entity_id, file]
+              properties:
+                entity_type: { type: string, enum: [ticket, intervention, expense] }
+                entity_id: { type: string, format: uuid }
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: Stored
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/attachments/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: downloadAttachment
+      summary: Download an attachment (sent as a download with nosniff and a sandbox CSP)
+      responses:
+        "200":
+          description: The file
+          content:
+            image/png: { schema: { type: string, format: binary } }
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+            application/pdf: { schema: { type: string, format: binary } }
+        "4XX": { $ref: "#/components/responses/Problem" }
 components:
   securitySchemes:
     oauth2:

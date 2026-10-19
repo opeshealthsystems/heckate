@@ -53,6 +53,8 @@ func token(sub string, tenant string, roles ...string) string {
 
 var idem atomic.Int64
 
+func jsonDecode(r io.Reader, v any) error { return json.NewDecoder(r).Decode(v) }
+
 func (e *env) do(method, path, tok string, body any, hdr ...string) (int, map[string]any, http.Header) {
 	e.t.Helper()
 	var rd *bytes.Reader

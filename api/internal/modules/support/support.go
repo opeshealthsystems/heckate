@@ -422,3 +422,18 @@ func report(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		"open": open, "sla_breached": breached, "p1_open": p1Open, "rated": rated, "avg_rating": avg,
 	}}, nil
 }
+
+// TicketTenant returns the tenant of a ticket the caller is allowed to see (other modules use it to
+// authorise attachments without reading the support schema themselves).
+func TicketTenant(ctx context.Context, s *platform.Scope, id string) (string, error) {
+	var tenant string
+	err := s.Tx.QueryRow(ctx, `SELECT tenant_id FROM support.tickets WHERE id::text = $1`, id).Scan(&tenant)
+	if isMissing(err) {
+		return "", platform.Err(http.StatusNotFound, "Not found", "ticket not found")
+	}
+	return tenant, err
+}
+
+func isMissing(err error) bool {
+	return errors.Is(err, pgx.ErrNoRows) || (err != nil && strings.Contains(err.Error(), "invalid input syntax"))
+}

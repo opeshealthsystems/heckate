@@ -63,6 +63,9 @@ type Result struct {
 	Status int
 	Body   any
 	Header map[string]string
+	// Bytes, when set, is written as-is with ContentType instead of Body as JSON (file downloads).
+	Bytes       []byte
+	ContentType string
 }
 
 type HandlerFunc func(r *http.Request, s *Scope) (*Result, error)
@@ -198,6 +201,12 @@ func (a *App) run(w http.ResponseWriter, r *http.Request, claims *Claims, h Hand
 	}
 	for k, v := range res.Header {
 		w.Header().Set(k, v)
+	}
+	if res.Bytes != nil {
+		w.Header().Set("Content-Type", res.ContentType)
+		w.WriteHeader(res.Status)
+		_, _ = w.Write(res.Bytes)
+		return
 	}
 	if res.Body == nil {
 		w.WriteHeader(res.Status)

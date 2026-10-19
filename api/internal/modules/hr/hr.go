@@ -476,3 +476,13 @@ func payClaim(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	}
 	return &platform.Result{Status: http.StatusOK, Body: c}, nil
 }
+
+// ClaimOwner returns who submitted an expense claim, if the caller can see it.
+func ClaimOwner(ctx context.Context, s *platform.Scope, id string) (string, error) {
+	var actor string
+	err := s.Tx.QueryRow(ctx, `SELECT actor FROM hr.expense_claims WHERE id::text = $1`, id).Scan(&actor)
+	if isNF(err) {
+		return "", nf("expense claim")
+	}
+	return actor, err
+}

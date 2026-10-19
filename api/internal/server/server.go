@@ -11,6 +11,7 @@ import (
 	"github.com/opeshealthsystems/heckate/api/internal/modules/clients"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/crm"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/documents"
+	"github.com/opeshealthsystems/heckate/api/internal/modules/files"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/hr"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/inventory"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/notify"
@@ -52,6 +53,7 @@ func build(cfg platform.Config, pool *pgxpool.Pool) *platform.App {
 	notify.Register(app)
 	projects.Register(app)
 	hr.Register(app)
+	files.Register(app)
 	inventory.Register(app)
 	procurement.Register(app, accounting.ProcurementPoster{})
 	sales.Register(app, accounting.SalesPoster{})
