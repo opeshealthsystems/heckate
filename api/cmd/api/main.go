@@ -16,6 +16,7 @@ import (
 
 	"github.com/opeshealthsystems/heckate/api/internal/modules/accounting"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/auditlog"
+	"github.com/opeshealthsystems/heckate/api/internal/modules/contracts"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/notify"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/sales"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
@@ -97,6 +98,7 @@ func main() {
 	}
 	if cfg.RemindersEvery > 0 {
 		go sales.RunReminderScheduler(ctx, pool, cfg.RemindersEvery)
+		go contracts.RunScheduler(ctx, pool, cfg.RemindersEvery) // contract renewals and warnings follow the same timer
 	}
 
 	if cfg.MetricsAddr != "" {

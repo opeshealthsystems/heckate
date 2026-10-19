@@ -113,6 +113,13 @@ func TestPayrollDualControlAndValidation(t *testing.T) {
 	if slip == nil || slip["gross"] != float64(1_000_000) || slip["net"] != float64(806_126) || slip["irpp"] != float64(148_067) {
 		t.Fatalf("payslip: %v", slip)
 	}
+	// The payroll register exports as CSV for the people who may read payroll, and for nobody else.
+	if resp, b := e.pdf(fin1, "/v1/exports/payroll?run_id="+runID); resp.StatusCode != 200 || !strings.Contains(string(b), emp) || !strings.Contains(string(b), "806126") {
+		t.Errorf("payroll export: %d %s", resp.StatusCode, b)
+	}
+	if resp, _ := e.pdf(me, "/v1/exports/payroll?run_id="+runID); resp.StatusCode != 403 {
+		t.Errorf("an employee must not export payroll: %d", resp.StatusCode)
+	}
 	if c, _, _ := e.do("POST", "/v1/payroll/runs", fin1, map[string]any{"period": pa}); c != 409 {
 		t.Errorf("second run for the month: want 409, got %d", c)
 	}

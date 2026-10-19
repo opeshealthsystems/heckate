@@ -31,6 +31,7 @@ var pdfOptions docs.Options
 
 func Register(a *platform.App, o docs.Options) {
 	pdfOptions = o
+	registerProgress(a)
 	a.Route("POST /v1/projects", managers, platform.Idempotent(createProject))
 	a.Route("GET /v1/projects", platform.Portal, listProjects)
 	a.Route("GET /v1/projects/{id}", platform.Portal, getProject)

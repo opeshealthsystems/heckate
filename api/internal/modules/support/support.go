@@ -138,9 +138,10 @@ func create(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		return nil, platform.Err(http.StatusUnprocessableEntity, "Invalid ticket", "tenant_id is required")
 	}
 	row := s.Tx.QueryRow(r.Context(), `
-		INSERT INTO support.tickets (tenant_id, subject, description, severity, channel, reporter, respond_due_at, sla_due_at)
-		SELECT $1, $2, $3, p.severity, $5, $6, now() + p.respond_minutes * interval '1 minute', now() + p.resolve_minutes * interval '1 minute'
-		FROM support.sla_policies p WHERE p.severity = $4
+		INSERT INTO support.tickets (tenant_id, subject, description, severity, channel, reporter, respond_due_at, sla_due_at, contract_id)
+		SELECT $1, $2, $3, p.severity, $5, $6, now() + COALESCE(c.respond_minutes, p.respond_minutes) * interval '1 minute',
+		       now() + COALESCE(c.resolve_minutes, p.resolve_minutes) * interval '1 minute', c.contract_id
+		FROM support.sla_policies p LEFT JOIN LATERAL contracts.active_sla($1::uuid, p.severity) c ON true WHERE p.severity = $4
 		RETURNING `+ticketCols, tenant, in.Subject, in.Description, in.Severity, in.Channel, s.Claims.Sub)
 	t, err := scanTicket(row)
 	if err != nil {

@@ -12,10 +12,12 @@ import (
 	"github.com/opeshealthsystems/heckate/api/internal/modules/accounting"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/auditlog"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/clients"
+	"github.com/opeshealthsystems/heckate/api/internal/modules/contracts"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/crm"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/devapi"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/documents"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/files"
+	"github.com/opeshealthsystems/heckate/api/internal/modules/forms"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/hr"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/inventory"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/narratives"
@@ -95,6 +97,8 @@ func build(cfg platform.Config, pool *pgxpool.Pool, hub *stream.Hub) *platform.A
 	}
 	projects.Register(app, docOpts)
 	hr.Register(app)
+	contracts.Register(app, docOpts)
+	forms.Register(app)
 	files.Register(app)
 	inventory.Register(app, docOpts)
 	narratives.Register(app, docOpts)

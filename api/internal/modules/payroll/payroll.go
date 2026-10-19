@@ -47,6 +47,7 @@ type mod struct {
 
 func Register(a *platform.App, p Poster, o docs.Options) {
 	m := &mod{poster: p, docs: o}
+	registerExports(a)
 	a.Route("PUT /v1/payroll/compensation/{employee_id}", hrOrCEO, m.setCompensation)
 	a.Route("GET /v1/payroll/compensation", []string{"hr", "finance", "ceo"}, m.listCompensation)
 	a.Route("GET /v1/payroll/config", viewers, m.getConfig)

@@ -16,7 +16,7 @@ const streamName = "HEKATE_EVENTS"
 // which JetStream refuses. A test checks that every Emit call in the code uses a listed domain.
 var EventDomains = []string{
 	"ticket", "client", "lead", "quote", "invoice", "payment", "credit_note", "intervention",
-	"stock", "rfq", "purchase_order", "supplier", "supplier_invoice", "leave", "expense", "payroll", "accounting", "document",
+	"stock", "rfq", "purchase_order", "supplier", "supplier_invoice", "leave", "expense", "payroll", "accounting", "document", "contract", "form",
 }
 
 func eventSubjects() []string {

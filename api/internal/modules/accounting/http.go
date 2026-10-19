@@ -31,6 +31,7 @@ func Register(a *platform.App, o docs.Options) {
 	a.Route("POST /v1/accounting/periods/close", closers, platform.Idempotent(closePeriod))
 	a.Route("GET /v1/accounting/periods", readers, listClosed)
 	registerBank(a)
+	registerBankAccounts(a)
 	registerReports(a, o)
 }
 

@@ -45,6 +45,7 @@ func Register(a *platform.App, o docs.Options) {
 	a.Route("POST /v1/assets/install", keepers, platform.Idempotent(installAsset))
 	a.Route("GET /v1/assets", platform.Portal, listAssets)
 	a.Route("GET /v1/assets/forms/{ref}/pdf", staff, m.assetFormPDF)
+	registerLabels(a, m)
 }
 
 func nf(what string) error { return platform.Err(http.StatusNotFound, "Not found", what+" not found") }

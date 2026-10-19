@@ -62,6 +62,19 @@ func Plan(subject string, p map[string]any) (*Message, *Audience) {
 		n, _ := p["days_late"].(float64)
 		return &Message{title, fmt.Sprintf("Invoice %s is %d days past its due date", str(p, "ref"), int(n)), map[string]any{"screen": "invoice", "id": id}},
 			&Audience{Tenant: str(p, "tenant_id"), Roles: []string{"client_admin"}}
+	case "contract.renewal_due":
+		n, _ := p["days_left"].(float64)
+		return &Message{"Contract ending soon", fmt.Sprintf("%s ends in %d days", str(p, "number"), int(n)), map[string]any{"screen": "contract", "id": id}},
+			&Audience{Roles: []string{"manager", "ceo", "sales"}}
+	case "contract.expired":
+		return &Message{"Contract expired", fmt.Sprintf("%s has expired", str(p, "number")), map[string]any{"screen": "contract", "id": id}},
+			&Audience{Roles: []string{"manager", "ceo", "sales"}}
+	case "form.submitted":
+		return &Message{"Form submitted", str(p, "title"), map[string]any{"screen": "form", "id": id}},
+			&Audience{Roles: []string{"manager", "ceo", "sales", "support"}, Except: str(p, "actor")}
+	case "form.sent", "form.returned":
+		return &Message{"A form needs your input", str(p, "title"), map[string]any{"screen": "form", "id": id}},
+			&Audience{Tenant: str(p, "tenant_id"), Roles: clientRoles}
 	case "leave.approved", "leave.rejected":
 		verdict := "approved"
 		if subject == "leave.rejected" {

@@ -22,6 +22,7 @@ var (
 )
 
 func Register(a *platform.App) {
+	registerFile(a)
 	a.Route("POST /v1/employees", hrRoles, platform.Idempotent(createEmployee))
 	a.Route("GET /v1/employees", reviewers, listEmployees)
 	a.Route("GET /v1/employees/me", staff, myRecord)
