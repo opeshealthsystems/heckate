@@ -3,11 +3,13 @@ package sales
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 )
@@ -122,11 +124,19 @@ func (m *module) setRecurringActive(r *http.Request, s *platform.Scope) (*platfo
 	return &platform.Result{Status: http.StatusOK, Body: x}, nil
 }
 
-// runRecurring creates one draft invoice for every active template that is due, and moves each template
-// on by its interval. A template that missed several periods catches up one draft per call, so nothing is
-// billed twice or skipped silently. It can be called by finance or by a scheduled job with a service token.
+// runRecurring is the endpoint: finance (or a person with the role) triggers a run on demand.
 func (m *module) runRecurring(r *http.Request, s *platform.Scope) (*platform.Result, error) {
-	ctx := r.Context()
+	created, err := runDueRecurring(r.Context(), s)
+	if err != nil {
+		return nil, err
+	}
+	return &platform.Result{Status: http.StatusOK, Body: map[string]any{"created": created}}, nil
+}
+
+// runDueRecurring creates one draft invoice for every active template that is due, and moves each template
+// on by its interval. A template that missed several periods catches up one draft per call, so nothing is
+// billed twice or skipped silently. Drafts only: finance issues them, with the usual dual control.
+func runDueRecurring(ctx context.Context, s *platform.Scope) ([]map[string]any, error) {
 	today := time.Now().UTC().Truncate(24 * time.Hour)
 	rows, err := s.Tx.Query(ctx, `SELECT `+recCols+` FROM sales.recurring WHERE active AND next_run <= $1 ORDER BY next_run, id FOR UPDATE SKIP LOCKED`, today)
 	if err != nil {
@@ -164,7 +174,54 @@ func (m *module) runRecurring(r *http.Request, s *platform.Scope) (*platform.Res
 		}
 		created = append(created, map[string]any{"recurring_id": x.ID, "invoice_id": id, "run_date": x.NextRun})
 	}
-	return &platform.Result{Status: http.StatusOK, Body: map[string]any{"created": created}}, nil
+	return created, nil
+}
+
+// SchedulerActor is the name the audit log shows for drafts the scheduler creates.
+const SchedulerActor = "system:recurring-invoices"
+
+// RunScheduler creates the drafts for due templates on a timer, so recurring billing does not depend on
+// someone remembering to press a button. Safe in every instance: rows are taken with SKIP LOCKED and a
+// template can produce only one draft per date. A failed pass is logged and retried at the next tick.
+func RunScheduler(ctx context.Context, pool *pgxpool.Pool, every time.Duration) {
+	pass := func() {
+		n, err := RunScheduledOnce(ctx, pool)
+		switch {
+		case err != nil && ctx.Err() == nil:
+			slog.Error("recurring invoices", "err", err)
+		case n > 0:
+			slog.Info("recurring invoices: drafts created", "count", n)
+		}
+	}
+	pass() // catch up at start-up instead of waiting a full interval
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			pass()
+		}
+	}
+}
+
+// RunScheduledOnce is one scheduler pass; it returns how many drafts it created.
+func RunScheduledOnce(ctx context.Context, pool *pgxpool.Pool) (int, error) {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, `SELECT set_config('app.tenant_id','',true), set_config('app.role','staff',true), set_config('app.actor',$1,true), set_config('app.roles','finance',true)`, SchedulerActor); err != nil {
+		return 0, err
+	}
+	s := &platform.Scope{Tx: tx, Claims: &platform.Claims{Sub: SchedulerActor, Roles: []string{"finance"}}}
+	created, err := runDueRecurring(ctx, s)
+	if err != nil {
+		return 0, err
+	}
+	return len(created), tx.Commit(ctx)
 }
 
 // ageing groups what clients still owe by how far past due it is, as at a date (today by default).

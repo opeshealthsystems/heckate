@@ -9,6 +9,7 @@ For the person on call. Each alert in `deploy/monitoring/alerts.yml` links to a 
 | Liveness | `GET /livez` | 200, never touches the database. Use for "restart me" probes |
 | Readiness | `GET /readyz` (alias `/healthz`) | 200 within 2 s. Use for "send me traffic" probes |
 | Metrics | `HEKATE_METRICS_ADDR` (internal network only), `/metrics` | see below |
+| Recurring invoices | log line `recurring invoices: drafts created` (actor `system:recurring-invoices` in the audit log) | `HEKATE_RECURRING_INTERVAL` (default `1h`, minimum `1m`, `off` to disable). Creates DRAFTS only; finance issues them. Safe in every instance |
 | Request log | stdout, one line per request: `trace_id`, `route`, `dur` | quote the trace id from any error response (`X-Trace-Id`) to find the request |
 
 Metrics that matter: `hekate_http_requests_total{class="5xx"}`, `hekate_http_request_duration_seconds`, `hekate_db_up`, `hekate_db_pool_connections`, `hekate_outbox_pending` and `hekate_outbox_oldest_pending_seconds` (events not yet published; should hover near 0), `hekate_audit_unsealed` (audit rows not yet in the hash chain; should stay small).

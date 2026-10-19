@@ -17,6 +17,7 @@ import (
 	"github.com/opeshealthsystems/heckate/api/internal/modules/accounting"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/auditlog"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/notify"
+	"github.com/opeshealthsystems/heckate/api/internal/modules/sales"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 	"github.com/opeshealthsystems/heckate/api/internal/server"
 	"github.com/opeshealthsystems/heckate/api/migrations"
@@ -87,6 +88,9 @@ func main() {
 	pub = platform.MultiPublisher{pub, hub} // live events to connected clients, beside the broker
 	go platform.RelayOutbox(ctx, pool, pub, 2*time.Second)
 	go auditlog.Seal(ctx, pool, 3*time.Second)
+	if cfg.RecurringEvery > 0 {
+		go sales.RunScheduler(ctx, pool, cfg.RecurringEvery)
+	}
 
 	if cfg.MetricsAddr != "" {
 		// Internal only: metrics name every route and show load, so they must not face the internet.

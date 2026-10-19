@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	salesmod "github.com/opeshealthsystems/heckate/api/internal/modules/sales"
 )
 
 func lines(price int64) []map[string]any {
@@ -274,5 +276,67 @@ func TestRecurringInvoicesAndAgeing(t *testing.T) {
 	}
 	if c, _, _ := e.do("GET", "/v1/reports/ageing?as_at=nope", fin, nil); c != 400 {
 		t.Errorf("bad as_at: want 400, got %d", c)
+	}
+}
+
+func TestSchedulerCreatesDraftsAsTheSystemActor(t *testing.T) {
+	e := setup(t)
+	pool := testPool(t)
+	sfx := fmt.Sprint(time.Now().UnixNano())
+	sales := token("sch-sales", "", "sales")
+	fin := token("sch-fin", "", "finance")
+	tid := e.newClient(token("m", "", "manager"), "Scheduler Co "+sfx)
+	title := "Scheduled retainer " + sfx
+	c, rec, _ := e.do("POST", "/v1/recurring-invoices", sales, map[string]any{"tenant_id": tid, "title": title, "interval_months": 3, "first_run": time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02"),
+		"lines": []map[string]any{{"description": "Retainer", "quantity": 1, "unit_price": 500_000}}})
+	if c != 201 {
+		t.Fatalf("template: %d %v", c, rec)
+	}
+	drafts := func() []map[string]any {
+		_, all, _ := e.do("GET", "/v1/invoices", fin, nil)
+		var out []map[string]any
+		for _, x := range all["data"].([]any) {
+			if m := x.(map[string]any); m["title"] == title {
+				out = append(out, m)
+			}
+		}
+		return out
+	}
+	if _, err := salesmod.RunScheduledOnce(context.Background(), pool); err != nil {
+		t.Fatal(err)
+	}
+	d := drafts()
+	if len(d) != 1 || d[0]["status"] != "draft" || d[0]["created_by"] != "system:recurring-invoices" {
+		t.Fatalf("one scheduler pass must create one draft owned by the system actor: %v", d)
+	}
+	if _, err := salesmod.RunScheduledOnce(context.Background(), pool); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(drafts()); n != 1 {
+		t.Errorf("a second pass must not bill the same period again, got %d drafts", n)
+	}
+	var next string
+	admin, err := pgx.Connect(context.Background(), adminDSN())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer admin.Close(context.Background())
+	if err := admin.QueryRow(context.Background(), `SELECT to_char(next_run,'YYYY-MM-DD') FROM sales.recurring WHERE id::text = $1`, rec["id"]).Scan(&next); err != nil {
+		t.Fatal(err)
+	}
+	want := time.Now().UTC().AddDate(0, 0, -1).AddDate(0, 3, 0).Format("2006-01-02")
+	if next != want {
+		t.Errorf("the template must move on by its interval: next_run %s, want %s", next, want)
+	}
+	// The audit trail names the scheduler, not a person.
+	_, au, _ := e.do("GET", "/v1/audit?entity=recurring_invoice&limit=50", token("sch-ceo", "", "ceo"), nil)
+	seen := false
+	for _, x := range au["data"].([]any) {
+		if m := x.(map[string]any); m["actor"] == "system:recurring-invoices" && m["entity_id"] == rec["id"] {
+			seen = true
+		}
+	}
+	if !seen {
+		t.Error("the audit log must record the scheduler as the actor of the run")
 	}
 }

@@ -6,27 +6,29 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Config is read from the environment.
 type Config struct {
-	Env            string   // HEKATE_ENV: "production" (the default) or "development". Production refuses unsafe settings.
-	RateLimit      int      // HEKATE_RATE_LIMIT: requests per minute per caller (default 300)
-	MetricsAddr    string   // HEKATE_METRICS_ADDR: where /metrics is served (internal network only); empty disables it
-	TrustedProxies []string // HEKATE_TRUSTED_PROXIES: CIDRs of the load balancers allowed to set X-Forwarded-For
-	Addr           string   // HEKATE_ADDR
-	DatabaseURL    string   // HEKATE_DATABASE_URL (owner role; the pool switches to hekate_app)
-	JWKSURL        string   // HEKATE_JWKS_URL (Keycloak certs endpoint)
-	Issuer         string   // HEKATE_ISSUER (optional exact match)
-	Audience       string   // HEKATE_AUDIENCE (optional)
-	DevSecret      string   // HEKATE_DEV_JWT_SECRET: enables HS256 tokens. Never set in production.
-	CORSOrigins    string   // HEKATE_CORS_ORIGINS, comma separated
-	NATSURL        string   // HEKATE_NATS_URL; empty logs events instead
-	PortalURL      string   // HEKATE_PORTAL_URL: where the QR code on documents points (the web app)
-	Letterhead     []string // HEKATE_LETTERHEAD: lines printed under the company name, separated by |
-	PDFCompress    bool     // HEKATE_PDF_COMPRESS: on unless set to 0 (tests turn it off to read text)
-	PushEnabled    bool     // HEKATE_PUSH=1 sends push notifications through the Expo push service
-	ExpoToken      string   // HEKATE_EXPO_ACCESS_TOKEN, optional
+	Env            string        // HEKATE_ENV: "production" (the default) or "development". Production refuses unsafe settings.
+	RateLimit      int           // HEKATE_RATE_LIMIT: requests per minute per caller (default 300)
+	MetricsAddr    string        // HEKATE_METRICS_ADDR: where /metrics is served (internal network only); empty disables it
+	TrustedProxies []string      // HEKATE_TRUSTED_PROXIES: CIDRs of the load balancers allowed to set X-Forwarded-For
+	Addr           string        // HEKATE_ADDR
+	DatabaseURL    string        // HEKATE_DATABASE_URL (owner role; the pool switches to hekate_app)
+	JWKSURL        string        // HEKATE_JWKS_URL (Keycloak certs endpoint)
+	Issuer         string        // HEKATE_ISSUER (optional exact match)
+	Audience       string        // HEKATE_AUDIENCE (optional)
+	DevSecret      string        // HEKATE_DEV_JWT_SECRET: enables HS256 tokens. Never set in production.
+	CORSOrigins    string        // HEKATE_CORS_ORIGINS, comma separated
+	NATSURL        string        // HEKATE_NATS_URL; empty logs events instead
+	PortalURL      string        // HEKATE_PORTAL_URL: where the QR code on documents points (the web app)
+	Letterhead     []string      // HEKATE_LETTERHEAD: lines printed under the company name, separated by |
+	PDFCompress    bool          // HEKATE_PDF_COMPRESS: on unless set to 0 (tests turn it off to read text)
+	PushEnabled    bool          // HEKATE_PUSH=1 sends push notifications through the Expo push service
+	ExpoToken      string        // HEKATE_EXPO_ACCESS_TOKEN, optional
+	RecurringEvery time.Duration // HEKATE_RECURRING_INTERVAL: how often due recurring invoices become drafts (default 1h; "off" disables)
 
 	PaymentsWebhookSecret string // HEKATE_PAYMENTS_WEBHOOK_SECRET: signs provider callbacks (HMAC-SHA256); callbacks are refused without it
 	PaymentsSandbox       bool   // HEKATE_PAYMENTS_SANDBOX=1: a fake provider that never moves money. Development only.
@@ -68,6 +70,7 @@ func LoadConfig() Config {
 		Letterhead:     splitLetterhead(os.Getenv("HEKATE_LETTERHEAD")),
 		PDFCompress:    os.Getenv("HEKATE_PDF_COMPRESS") != "0",
 		PushEnabled:    os.Getenv("HEKATE_PUSH") == "1",
+		RecurringEvery: durationOr(get("HEKATE_RECURRING_INTERVAL", "1h"), time.Hour),
 		ExpoToken:      os.Getenv("HEKATE_EXPO_ACCESS_TOKEN"),
 
 		PaymentsWebhookSecret: os.Getenv("HEKATE_PAYMENTS_WEBHOOK_SECRET"),
@@ -79,6 +82,19 @@ func LoadConfig() Config {
 			CallbackURL: os.Getenv("HEKATE_MOMO_CALLBACK_URL"),
 		},
 	}
+}
+
+// durationOr parses a Go duration such as "30m"; "off" or "0" gives zero, which disables the job, and a
+// value that does not parse falls back to d rather than silently disabling anything.
+func durationOr(v string, d time.Duration) time.Duration {
+	v = strings.TrimSpace(v)
+	if v == "off" || v == "0" {
+		return 0
+	}
+	if x, err := time.ParseDuration(v); err == nil && x >= time.Minute {
+		return x
+	}
+	return d
 }
 
 func splitLetterhead(v string) []string {
