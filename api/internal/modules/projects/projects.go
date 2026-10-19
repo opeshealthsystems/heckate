@@ -143,7 +143,8 @@ func createProject(r *http.Request, s *platform.Scope) (*platform.Result, error)
 }
 
 func listProjects(r *http.Request, s *platform.Scope) (*platform.Result, error) {
-	rows, err := s.Tx.Query(r.Context(), `SELECT `+projCols+` FROM projects.projects ORDER BY created_at DESC LIMIT 200`)
+	tc, ta := s.TenantFilter("tenant_id", 1)
+	rows, err := s.Tx.Query(r.Context(), `SELECT `+projCols+` FROM projects.projects WHERE true`+tc+` ORDER BY created_at DESC LIMIT 200`, ta...)
 	if err != nil {
 		return nil, err
 	}
@@ -336,13 +337,16 @@ func createIntervention(r *http.Request, s *platform.Scope) (*platform.Result, e
 }
 
 func listInterventions(r *http.Request, s *platform.Scope) (*platform.Result, error) {
-	q := `SELECT ` + ivCols + ` FROM projects.interventions`
+	q := `SELECT ` + ivCols + ` FROM projects.interventions WHERE true`
 	var args []any
 	// Engineers see their own work; support, managers and clients (via RLS) see the rest.
 	if s.Claims.HasAny("engineer") && !s.Claims.HasAny("ceo", "manager", "support") {
-		q += ` WHERE engineer = $1`
 		args = append(args, s.Claims.Sub)
+		q += fmt.Sprintf(` AND engineer = $%d`, len(args))
 	}
+	tc, ta := s.TenantFilter("tenant_id", len(args)+1)
+	q += tc
+	args = append(args, ta...)
 	rows, err := s.Tx.Query(r.Context(), q+` ORDER BY created_at DESC LIMIT 200`, args...)
 	if err != nil {
 		return nil, err

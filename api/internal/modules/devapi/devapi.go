@@ -100,7 +100,8 @@ func putPlan(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 }
 
 func listKeys(r *http.Request, s *platform.Scope) (*platform.Result, error) {
-	rows, err := s.Tx.Query(r.Context(), `SELECT `+keyCols+` FROM devapi.keys ORDER BY created_at DESC LIMIT 200`)
+	tc, ta := s.TenantFilter("tenant_id", 1)
+	rows, err := s.Tx.Query(r.Context(), `SELECT `+keyCols+` FROM devapi.keys WHERE true`+tc+` ORDER BY created_at DESC LIMIT 200`, ta...)
 	if err != nil {
 		return nil, err
 	}

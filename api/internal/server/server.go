@@ -56,7 +56,7 @@ func build(cfg platform.Config, pool *pgxpool.Pool, hub *stream.Hub) *platform.A
 	app := &platform.App{
 		Pool:     pool,
 		Verifier: platform.NewVerifier(cfg),
-		Limiter:  platform.NewLimiter(300, time.Minute),
+		Limiter:  platform.NewLimiter(rateLimit(cfg), time.Minute),
 		Mux:      http.NewServeMux(),
 		Proxies:  platform.ParseProxies(cfg.TrustedProxies),
 	}
@@ -97,4 +97,11 @@ func build(cfg platform.Config, pool *pgxpool.Pool, hub *stream.Hub) *platform.A
 	accounting.Register(app)
 	stream.Register(app, hub, cfg.CORSOrigins)
 	return app
+}
+
+func rateLimit(cfg platform.Config) int {
+	if cfg.RateLimit > 0 {
+		return cfg.RateLimit
+	}
+	return 300
 }

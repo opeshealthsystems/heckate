@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -109,8 +110,12 @@ func TestManualEntriesAndRoles(t *testing.T) {
 	if code, _, _ := e.do("GET", "/v1/accounting/trial-balance", token("c", "", "client_admin"), nil); code != 403 {
 		t.Errorf("client: want 403, got %d", code)
 	}
-	if code, _, _ := e.do("POST", "/v1/accounting/accounts", fin, map[string]any{"code": "6051", "name": "Fournitures"}); code != 201 {
+	code6 := fmt.Sprintf("6%07d", time.Now().UnixNano()/1000%10_000_000) // unique, so the test also passes on a reused database
+	if code, _, _ := e.do("POST", "/v1/accounting/accounts", fin, map[string]any{"code": code6, "name": "Fournitures"}); code != 201 {
 		t.Errorf("add account: want 201, got %d", code)
+	}
+	if code, _, _ := e.do("POST", "/v1/accounting/accounts", fin, map[string]any{"code": code6, "name": "Again"}); code != 409 {
+		t.Errorf("duplicate account: want 409, got %d", code)
 	}
 	if code, _, _ := e.do("POST", "/v1/accounting/accounts", fin, map[string]any{"code": "abc", "name": "x"}); code != 422 {
 		t.Errorf("bad account code: want 422, got %d", code)

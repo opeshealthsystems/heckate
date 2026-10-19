@@ -197,10 +197,12 @@ func list(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	if v := q.Get("severity"); v != "" {
 		sev = &v
 	}
+	args := []any{status, sev, curAt, curID, limit + 1}
+	tc, ta := s.TenantFilter("tenant_id", len(args)+1)
 	rows, err := s.Tx.Query(r.Context(), `SELECT `+ticketCols+` FROM support.tickets
 		WHERE ($1::text IS NULL OR status = $1) AND ($2::text IS NULL OR severity = $2)
-		  AND ($3::timestamptz IS NULL OR (created_at, id) < ($3, $4::uuid))
-		ORDER BY created_at DESC, id DESC LIMIT $5`, status, sev, curAt, curID, limit+1)
+		  AND ($3::timestamptz IS NULL OR (created_at, id) < ($3, $4::uuid))`+tc+`
+		ORDER BY created_at DESC, id DESC LIMIT $5`, append(args, ta...)...)
 	if err != nil {
 		return nil, err
 	}

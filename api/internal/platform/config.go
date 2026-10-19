@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 )
 
 // Config is read from the environment.
 type Config struct {
 	Env            string   // HEKATE_ENV: "production" (the default) or "development". Production refuses unsafe settings.
+	RateLimit      int      // HEKATE_RATE_LIMIT: requests per minute per caller (default 300)
 	MetricsAddr    string   // HEKATE_METRICS_ADDR: where /metrics is served (internal network only); empty disables it
 	TrustedProxies []string // HEKATE_TRUSTED_PROXIES: CIDRs of the load balancers allowed to set X-Forwarded-For
 	Addr           string   // HEKATE_ADDR
@@ -52,6 +54,7 @@ func LoadConfig() Config {
 	return Config{
 		Env:            get("HEKATE_ENV", "production"),
 		MetricsAddr:    os.Getenv("HEKATE_METRICS_ADDR"),
+		RateLimit:      atoiOr(os.Getenv("HEKATE_RATE_LIMIT"), 300),
 		TrustedProxies: splitList(os.Getenv("HEKATE_TRUSTED_PROXIES")),
 		Addr:           get("HEKATE_ADDR", ":8080"),
 		DatabaseURL:    get("HEKATE_DATABASE_URL", "postgres://hekate:dev-only@localhost:5432/hekate?sslmode=disable"),
@@ -132,4 +135,11 @@ func (c Config) Problems() []string {
 		p = append(p, "HEKATE_CORS_ORIGINS must list exact origins, not *")
 	}
 	return p
+}
+
+func atoiOr(v string, d int) int {
+	if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && n > 0 {
+		return n
+	}
+	return d
 }

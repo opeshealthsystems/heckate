@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -123,10 +124,11 @@ func TestFieldInterventionFlow(t *testing.T) {
 
 func TestTimesheets(t *testing.T) {
 	e := setup(t)
-	eng := token("ts-eng", "", "engineer")
+	run := fmt.Sprint(time.Now().UnixNano()) // a fresh engineer each run, so the 24-hour-a-day limit starts clean on a reused database
+	eng := token("ts-eng-"+run, "", "engineer")
 	mgr := token("ts-mgr", "", "manager")
 	hr := token("ts-hr", "", "hr")
-	other := token("ts-other", "", "engineer")
+	other := token("ts-other-"+run, "", "engineer")
 	day := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
 
 	code, ts, _ := e.do("POST", "/v1/timesheets", eng, map[string]any{"work_date": day, "hours": 8, "note": "On site"})

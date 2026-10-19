@@ -235,7 +235,8 @@ func (m *module) createQuote(r *http.Request, s *platform.Scope) (*platform.Resu
 }
 
 func (m *module) listQuotes(r *http.Request, s *platform.Scope) (*platform.Result, error) {
-	rows, err := s.Tx.Query(r.Context(), `SELECT `+quoteCols+` FROM sales.quotes ORDER BY created_at DESC LIMIT 200`)
+	tc, ta := s.TenantFilter("tenant_id", 1)
+	rows, err := s.Tx.Query(r.Context(), `SELECT `+quoteCols+` FROM sales.quotes WHERE true`+tc+` ORDER BY created_at DESC LIMIT 200`, ta...)
 	if err != nil {
 		return nil, err
 	}
@@ -532,7 +533,8 @@ func (m *module) invoiceFromQuote(r *http.Request, s *platform.Scope) (*platform
 }
 
 func (m *module) listInvoices(r *http.Request, s *platform.Scope) (*platform.Result, error) {
-	rows, err := s.Tx.Query(r.Context(), `SELECT `+invCols+` FROM sales.invoices i ORDER BY i.created_at DESC LIMIT 200`)
+	tc, ta := s.TenantFilter("i.tenant_id", 1)
+	rows, err := s.Tx.Query(r.Context(), `SELECT `+invCols+` FROM sales.invoices i WHERE true`+tc+` ORDER BY i.created_at DESC LIMIT 200`, ta...)
 	if err != nil {
 		return nil, err
 	}

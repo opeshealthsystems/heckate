@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -135,6 +136,14 @@ func NewPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 		_, err := c.Exec(ctx, "SET ROLE hekate_app")
 		return err
 	}
+	// pgx would otherwise default to max(4, CPUs) connections, which throttles a busy API to a trickle.
+	// Set pool_max_conns in the URL, or HEKATE_DB_MAX_CONNS, to override the default of 25 per instance;
+	// instances x this value must stay below PostgreSQL's max_connections.
+	if !strings.Contains(dsn, "pool_max_conns") {
+		cfg.MaxConns = int32(atoiOr(os.Getenv("HEKATE_DB_MAX_CONNS"), 25))
+	}
+	cfg.MaxConnLifetime = 30 * time.Minute
+	cfg.MaxConnIdleTime = 5 * time.Minute
 	return pgxpool.NewWithConfig(ctx, cfg)
 }
 
