@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -46,6 +47,9 @@ func Trace(next http.Handler) http.Handler {
 		start := time.Now()
 		r2 := r.WithContext(context.WithValue(r.Context(), ctxKey{}, id))
 		next.ServeHTTP(w, r2)
-		slog.Info("request", "trace_id", id, "route", r2.Pattern, "dur", time.Since(start))
+		// id is already validated; stripping line breaks as well keeps one request on one log line even if
+		// the validation above is ever loosened.
+		logID := strings.ReplaceAll(strings.ReplaceAll(id, "\n", ""), "\r", "")
+		slog.Info("request", "trace_id", logID, "route", r2.Pattern, "dur", time.Since(start))
 	})
 }
