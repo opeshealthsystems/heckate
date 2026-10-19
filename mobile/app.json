@@ -38,6 +38,13 @@
         {
           "locationWhenInUsePermission": "HEKATE records your position when you check in and out at a client site."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "HEKATE lets you attach photos to incidents and expense claims.",
+          "cameraPermission": "HEKATE lets you photograph a problem or a receipt to attach it."
+        }
       ]
     ],
     "scheme": "hekate"

@@ -3,7 +3,7 @@ import type { NewTicket } from "./drafts";
 import type { SendResult } from "./drafts-core";
 import { classify } from "./drafts-core";
 import type { QueuedAction } from "./queue-core";
-import type { Comment, EmployeeRecord, Intervention, Me, Status, StockItem, Ticket, Timesheet, Warehouse } from "./types";
+import type { Attachment, Comment, EmployeeRecord, Intervention, Me, Status, StockItem, Ticket, Timesheet, Warehouse } from "./types";
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -38,6 +38,30 @@ async function call<T>(method: string, path: string, body?: unknown, extra: Reco
   return res.status === 204 ? (undefined as T) : res.json();
 }
 
+/** Uploads a photo taken on the phone. Photos are not queued offline: they are large, so the user retries online. */
+export async function uploadPhoto(entityType: "ticket" | "intervention" | "expense", entityId: string, photo: { uri: string; name: string; type: string }): Promise<Attachment> {
+  const form = new FormData();
+  form.append("entity_type", entityType);
+  form.append("entity_id", entityId);
+  // React Native's FormData takes a { uri, name, type } descriptor in place of a Blob.
+  form.append("file", photo as unknown as Blob);
+  const token = getToken();
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/v1/attachments`, { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: form });
+  } catch {
+    throw new ApiError(null, "Offline", "You are offline. Try again when you have a connection.");
+  }
+  if (!res.ok) {
+    const p = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, p.title ?? res.statusText, p.detail ?? "");
+  }
+  return res.json();
+}
+
+export const attachmentUrl = (id: string) => `${API_URL}/v1/attachments/${id}`;
+export const authHeader = (): Record<string, string> => { const t = getToken(); return t ? { Authorization: `Bearer ${t}` } : {}; };
+
 /** Replays one queued action. The original Idempotency-Key makes a retry after a lost response safe. */
 export async function replay(a: QueuedAction): Promise<SendResult> {
   try {
@@ -68,6 +92,7 @@ export const api = {
   submitTimesheet: (id: string, key: string) => call<Timesheet>("POST", `/v1/timesheets/${id}/submit`, {}, { "Idempotency-Key": key }),
   myRecord: () => call<EmployeeRecord>("GET", "/v1/employees/me"),
   requestLeave: (b: { kind: string; start_date: string; end_date: string; reason: string }, key: string) => call<unknown>("POST", "/v1/leave", b, { "Idempotency-Key": key }),
-  claimExpense: (b: { expense_date: string; category: string; description: string; amount: number }, key: string) => call<unknown>("POST", "/v1/expenses", b, { "Idempotency-Key": key }),
+  attachments: (entityType: string, entityId: string) => call<{ data: Attachment[] }>("GET", `/v1/attachments?entity_type=${entityType}&entity_id=${entityId}`),
+  claimExpense: (b: { expense_date: string; category: string; description: string; amount: number }, key: string) => call<{ id: string }>("POST", "/v1/expenses", b, { "Idempotency-Key": key }),
   registerDevice: (token: string, platform: "ios" | "android" | "expo") => call<void>("PUT", "/v1/devices", { token, platform }),
 };

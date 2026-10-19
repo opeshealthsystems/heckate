@@ -101,3 +101,5 @@ export interface StockItem { id: string; sku: string; name: string; serialised: 
 export interface Warehouse { id: string; name: string }
 export interface Timesheet { id: string; work_date: string; hours: number; note: string; status: string }
 export interface EmployeeRecord { full_name: string; annual_leave_entitlement: number; annual_leave_taken: number; annual_leave_balance: number }
+
+export interface Attachment { id: string; filename: string; content_type: string; size: number; created_at: string }

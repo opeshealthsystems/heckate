@@ -2,6 +2,8 @@ import { useCallback, useState } from "react";
 import { ScrollView, Switch, Text, TextInput, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Button, TicketPills } from "../../components/ui";
+import { AttachmentList } from "../../components/AttachmentList";
+import { PhotoButtons } from "../../components/PhotoButtons";
 import { api } from "../../lib/api";
 import { useSession } from "../../lib/session";
 import { useTheme } from "../../lib/theme";
@@ -17,6 +19,7 @@ export default function TicketScreen() {
   const [body, setBody] = useState("");
   const [internal, setInternal] = useState(false);
   const [err, setErr] = useState("");
+  const [photoKey, setPhotoKey] = useState(0);
   const load = useCallback(async () => {
     try {
       const [tk, cs] = await Promise.all([api.ticket(id), api.comments(id)]);
@@ -43,6 +46,8 @@ export default function TicketScreen() {
         {t.status === "resolved" && <Button primary title={staff ? "Close" : "Confirm resolved"} onPress={() => move("closed")} />}
         {t.status === "resolved" && <Button title="Reopen" onPress={() => move("in_progress")} />}
       </View>
+      <AttachmentList entityType="ticket" entityId={id} refreshKey={photoKey} />
+      {t.status !== "closed" && <PhotoButtons entityType="ticket" entityId={id} onUploaded={() => setPhotoKey((k) => k + 1)} />}
       <Text style={s.label}>Conversation</Text>
       {comments.map((c) => (
         <View key={c.id} style={[s.card, c.internal && { borderStyle: "dashed" }]}>
