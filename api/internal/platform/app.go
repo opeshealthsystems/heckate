@@ -140,7 +140,10 @@ func NewPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	// Set pool_max_conns in the URL, or HEKATE_DB_MAX_CONNS, to override the default of 25 per instance;
 	// instances x this value must stay below PostgreSQL's max_connections.
 	if !strings.Contains(dsn, "pool_max_conns") {
-		cfg.MaxConns = int32(min(max(atoiOr(os.Getenv("HEKATE_DB_MAX_CONNS"), 25), 1), 1000))
+		cfg.MaxConns = 25
+		if n, err := strconv.ParseInt(strings.TrimSpace(os.Getenv("HEKATE_DB_MAX_CONNS")), 10, 16); err == nil && n > 0 && n <= 1000 {
+			cfg.MaxConns = int32(n)
+		}
 	}
 	cfg.MaxConnLifetime = 30 * time.Minute
 	cfg.MaxConnIdleTime = 5 * time.Minute
