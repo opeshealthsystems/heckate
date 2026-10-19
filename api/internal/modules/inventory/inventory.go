@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/opeshealthsystems/heckate/api/internal/docs"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/documents"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 )
@@ -22,7 +23,8 @@ var (
 	staff    = []string{"ceo", "manager", "logistics", "engineer", "support", "sales", "finance", "hr", "employee"}
 )
 
-func Register(a *platform.App) {
+func Register(a *platform.App, o docs.Options) {
+	m := &module{docs: o}
 	a.Route("POST /v1/items", keepers, platform.Idempotent(createItem))
 	a.Route("GET /v1/items", nil, listItems)
 	a.Route("POST /v1/warehouses", keepers, platform.Idempotent(createWarehouse))
@@ -36,6 +38,7 @@ func Register(a *platform.App) {
 	a.Route("POST /v1/assets/return", keepers, platform.Idempotent(returnAsset))
 	a.Route("POST /v1/assets/install", keepers, platform.Idempotent(installAsset))
 	a.Route("GET /v1/assets", nil, listAssets)
+	a.Route("GET /v1/assets/forms/{ref}/pdf", staff, m.assetFormPDF)
 }
 
 func nf(what string) error { return platform.Err(http.StatusNotFound, "Not found", what+" not found") }
@@ -538,4 +541,23 @@ func installAsset(r *http.Request, s *platform.Scope) (*platform.Result, error) 
 		return nil, err
 	}
 	return &platform.Result{Status: http.StatusOK, Body: map[string]any{"serial_id": a.ID, "status": "client_asset", "tenant_id": in.TenantID, "at": time.Now().UTC()}}, nil
+}
+
+type module struct{ docs docs.Options }
+
+// assetFormPDF serves the equipment issue and return form (HS-FRM-38) of one assignment.
+func (m *module) assetFormPDF(r *http.Request, s *platform.Scope) (*platform.Result, error) {
+	ctx := r.Context()
+	ref := r.PathValue("ref")
+	var a docs.Asset
+	err := s.Tx.QueryRow(ctx, `SELECT i.name, sr.serial, g.assignee, g.issued_by, g.issued_at
+		FROM inventory.assignments g JOIN inventory.serials sr ON sr.id = g.serial_id JOIN inventory.items i ON i.id = sr.item_id
+		WHERE g.document_ref = $1`, ref).Scan(&a.Item, &a.Serial, &a.Holder, &a.IssuedBy, &a.IssuedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nf("asset form")
+	}
+	if err != nil {
+		return nil, err
+	}
+	return documents.ServePDF(ctx, s, ref, func() ([]byte, error) { return docs.RenderAssetForm(m.docs, ref, a) })
 }

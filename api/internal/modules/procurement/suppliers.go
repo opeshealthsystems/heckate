@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/opeshealthsystems/heckate/api/internal/docs"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 )
 
@@ -30,7 +31,10 @@ type PaidEntry struct {
 	Date                     time.Time
 }
 
-type module struct{ post Poster }
+type module struct {
+	post Poster
+	docs docs.Options
+}
 
 var (
 	buyers   = []string{"ceo", "manager", "procurement"}
@@ -40,8 +44,8 @@ var (
 	anyStaff = []string{"ceo", "manager", "procurement", "finance"}
 )
 
-func Register(a *platform.App, p Poster) {
-	m := &module{post: p}
+func Register(a *platform.App, p Poster, o docs.Options) {
+	m := &module{post: p, docs: o}
 	a.Route("POST /v1/suppliers", buyers, platform.Idempotent(createSupplier))
 	a.Route("GET /v1/suppliers", anyStaff, listSuppliers)
 	a.Route("GET /v1/suppliers/{id}", append([]string{"supplier"}, anyStaff...), getSupplier)
@@ -60,6 +64,8 @@ func Register(a *platform.App, p Poster) {
 	a.Route("POST /v1/purchase-orders", buyers, platform.Idempotent(createPO))
 	a.Route("GET /v1/purchase-orders", append([]string{"supplier"}, anyStaff...), listPOs)
 	a.Route("GET /v1/purchase-orders/{id}", append([]string{"supplier"}, anyStaff...), getPO)
+	a.Route("GET /v1/purchase-orders/{id}/pdf", append([]string{"supplier"}, anyStaff...), m.poPDF)
+	a.Route("GET /v1/rfqs/{id}/pdf", append([]string{"supplier"}, buyers...), m.rfqPDF)
 	a.Route("POST /v1/purchase-orders/{id}/issue", buyers, platform.Idempotent(issuePO))
 	a.Route("POST /v1/purchase-orders/{id}/approve", approver, platform.Idempotent(approvePO))
 	a.Route("POST /v1/purchase-orders/{id}/receive", receiver, platform.Idempotent(receivePO))

@@ -2646,6 +2646,45 @@ paths:
           content:
             application/pdf: { schema: { type: string, format: binary } }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/purchase-orders/{id}/pdf:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: downloadPurchaseOrderPdf
+      summary: "PDF of an issued purchase order with a verification QR code"
+      responses:
+        "200":
+          description: "The canonical PDF. The first rendering is stored, so every download is the same file; its SHA-256 is in the X-Document-SHA256 header and the public register."
+          headers:
+            X-Document-SHA256: { schema: { type: string } }
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/rfqs/{id}/pdf:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: downloadRfqPdf
+      summary: "PDF of an opened request for quotation (never includes bids)"
+      responses:
+        "200":
+          description: "The canonical PDF. The first rendering is stored, so every download is the same file; its SHA-256 is in the X-Document-SHA256 header and the public register."
+          headers:
+            X-Document-SHA256: { schema: { type: string } }
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/assets/forms/{ref}/pdf:
+    parameters: [{ name: ref, in: path, required: true, schema: { type: string } }]
+    get:
+      operationId: downloadAssetFormPdf
+      summary: "PDF of an equipment issue and return form (HS-FRM-38)"
+      responses:
+        "200":
+          description: "The canonical PDF. The first rendering is stored, so every download is the same file; its SHA-256 is in the X-Document-SHA256 header and the public register."
+          headers:
+            X-Document-SHA256: { schema: { type: string } }
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/invoices/{id}/pdf:
     parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
     get:

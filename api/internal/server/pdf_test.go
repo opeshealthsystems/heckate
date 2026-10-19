@@ -233,3 +233,73 @@ func TestReceiptAndCreditNotePDFs(t *testing.T) {
 		t.Errorf("another client: want 404, got %d", r.StatusCode)
 	}
 }
+
+func TestPurchasingAndAssetPDFs(t *testing.T) {
+	e := setup(t)
+	sfx := fmt.Sprint(time.Now().UnixNano())
+	buyer := token("pdf-buyer", "", "procurement")
+	log := token("pdf-log", "", "logistics")
+	sa := mkSupplier(t, e, buyer, "PDF Supplier A "+sfx)
+	sb := mkSupplier(t, e, buyer, "PDF Supplier B "+sfx)
+	supA := token("pdf-sup-a", sa, "supplier")
+	supB := token("pdf-sup-b", sb, "supplier")
+
+	// RFQ
+	_, rfq, _ := e.do("POST", "/v1/rfqs", buyer, map[string]any{"title": "Routers " + sfx, "suppliers": []string{sa},
+		"lines": []map[string]any{{"description": "Edge router " + sfx, "quantity": 3}}})
+	rid := rfq["id"].(string)
+	if r, _ := e.pdf(buyer, "/v1/rfqs/"+rid+"/pdf"); r.StatusCode != 409 {
+		t.Errorf("draft RFQ: want 409, got %d", r.StatusCode)
+	}
+	_, opened, _ := e.do("POST", "/v1/rfqs/"+rid+"/open", buyer, nil)
+	resp, p := e.pdf(buyer, "/v1/rfqs/"+rid+"/pdf")
+	if resp.StatusCode != 200 || !bytes.Contains(p, []byte(opened["ref"].(string))) || !bytes.Contains(p, []byte("Edge router "+sfx)) {
+		t.Fatalf("rfq pdf: %d", resp.StatusCode)
+	}
+	if r, b := e.pdf(supA, "/v1/rfqs/"+rid+"/pdf"); r.StatusCode != 200 || !bytes.Equal(p, b) {
+		t.Errorf("invited supplier must get the same file, got %d", r.StatusCode)
+	}
+	if r, _ := e.pdf(supB, "/v1/rfqs/"+rid+"/pdf"); r.StatusCode != 404 {
+		t.Errorf("uninvited supplier: want 404, got %d", r.StatusCode)
+	}
+
+	// Purchase order
+	_, po, _ := e.do("POST", "/v1/purchase-orders", buyer, map[string]any{"supplier_id": sa, "title": "Cables " + sfx,
+		"lines": []map[string]any{{"description": "Cat6 cable", "quantity": 10, "unit_price": 5000}}})
+	pid := po["id"].(string)
+	if r, _ := e.pdf(buyer, "/v1/purchase-orders/"+pid+"/pdf"); r.StatusCode != 409 {
+		t.Errorf("draft PO: want 409, got %d", r.StatusCode)
+	}
+	_, issued, _ := e.do("POST", "/v1/purchase-orders/"+pid+"/issue", buyer, nil)
+	resp, p = e.pdf(buyer, "/v1/purchase-orders/"+pid+"/pdf")
+	if resp.StatusCode != 200 || !bytes.Contains(p, []byte(issued["ref"].(string))) || !bytes.Contains(p, []byte("50 000 XAF")) || !bytes.Contains(p, []byte("PDF Supplier A "+sfx)) {
+		t.Fatalf("po pdf: %d", resp.StatusCode)
+	}
+	if r, b := e.pdf(supA, "/v1/purchase-orders/"+pid+"/pdf"); r.StatusCode != 200 || !bytes.Equal(p, b) {
+		t.Errorf("the supplier must get the same file, got %d", r.StatusCode)
+	}
+	if r, _ := e.pdf(supB, "/v1/purchase-orders/"+pid+"/pdf"); r.StatusCode != 404 {
+		t.Errorf("another supplier: want 404, got %d", r.StatusCode)
+	}
+
+	// Asset issue form
+	item := mkItem(t, e, log, "LAP-"+sfx, true)
+	wh := mkWarehouse(t, e, log, "PDF store "+sfx)
+	e.do("POST", "/v1/stock/receipts", log, map[string]any{"item_id": item, "warehouse_id": wh, "qty": 1, "serials": []string{"SN-" + sfx}})
+	_, assets, _ := e.do("GET", "/v1/assets", log, nil)
+	var sid string
+	for _, a := range assets["data"].([]any) {
+		if m := a.(map[string]any); m["serial"] == "SN-"+sfx {
+			sid = m["id"].(string)
+		}
+	}
+	_, iss, _ := e.do("POST", "/v1/assets/issue", log, map[string]any{"serial_id": sid, "assignee": "Eng " + sfx})
+	fref := iss["document_ref"].(string)
+	resp, p = e.pdf(log, "/v1/assets/forms/"+fref+"/pdf")
+	if resp.StatusCode != 200 || !bytes.Contains(p, []byte(fref)) || !bytes.Contains(p, []byte("SN-"+sfx)) || !bytes.Contains(p, []byte("Eng "+sfx)) {
+		t.Fatalf("asset form pdf: %d", resp.StatusCode)
+	}
+	if r, _ := e.pdf(log, "/v1/assets/forms/HS-FRM-38-2000-000001/pdf"); r.StatusCode != 404 {
+		t.Errorf("unknown form: want 404, got %d", r.StatusCode)
+	}
+}

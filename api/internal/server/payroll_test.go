@@ -13,7 +13,7 @@ import (
 func TestPayrollDualControlAndValidation(t *testing.T) {
 	e := setup(t)
 	n := time.Now().UnixNano()
-	period := func(k int64) string { return fmt.Sprintf("%d-%02d", 1995+(n/1000+k*7)%25, 1+(n/1000/25+k*5)%12) }
+	period := func(k int64) string { return fmt.Sprintf("%d-%02d", 1990+(n/1000+k*7)%35, 1+(n/1000/25+k*5)%12) }
 	pa, pb := period(1), period(2)
 	emp := fmt.Sprintf("pay-emp-%d", n)
 	hr := token("pay-hr", "", "hr")

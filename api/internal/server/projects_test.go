@@ -126,7 +126,7 @@ func TestTimesheets(t *testing.T) {
 	e := setup(t)
 	run := fmt.Sprint(time.Now().UnixNano()) // a fresh engineer each run, so the 24-hour-a-day limit starts clean on a reused database
 	eng := token("ts-eng-"+run, "", "engineer")
-	mgr := token("ts-mgr", "", "manager")
+	mgr := token("ts-mgr-"+run, "", "manager")
 	hr := token("ts-hr", "", "hr")
 	other := token("ts-other-"+run, "", "engineer")
 	day := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
@@ -165,7 +165,7 @@ func TestTimesheets(t *testing.T) {
 	if c, _, _ := e.do("POST", "/v1/timesheets/"+own["id"].(string)+"/approve", mgr, nil); c != 403 {
 		t.Errorf("self approval: want 403, got %d", c)
 	}
-	if c, b, _ := e.do("POST", "/v1/timesheets/"+id+"/approve", mgr, nil); c != 200 || b["approved_by"] != "ts-mgr" {
+	if c, b, _ := e.do("POST", "/v1/timesheets/"+id+"/approve", mgr, nil); c != 200 || b["approved_by"] != "ts-mgr-"+run {
 		t.Fatalf("approve: %d %v", c, b)
 	}
 	// Visibility: own only, unless a reviewer asks for all.
