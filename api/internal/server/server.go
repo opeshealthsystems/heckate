@@ -2,6 +2,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -36,9 +37,16 @@ func New(cfg platform.Config, pool *pgxpool.Pool) http.Handler {
 
 // NewWithHub also returns the live-event hub, which the outbox relay must feed.
 func NewWithHub(cfg platform.Config, pool *pgxpool.Pool) (http.Handler, *stream.Hub) {
+	h, hub, _ := NewObserved(cfg, pool, "dev")
+	return h, hub
+}
+
+// NewObserved is NewWithHub plus the metrics registry, which main serves on an internal listener.
+func NewObserved(cfg platform.Config, pool *pgxpool.Pool, version string) (http.Handler, *stream.Hub, *platform.Metrics) {
 	hub := stream.NewHub()
 	app := build(cfg, pool, hub)
-	return platform.Trace(platform.SecureHeaders(platform.CORS(cfg.CORSOrigins, app.Mux))), hub
+	m := platform.NewMetrics(version, pool)
+	return platform.Trace(m.Middleware(platform.SecureHeaders(platform.CORS(cfg.CORSOrigins, app.Mux)))), hub, m
 }
 
 // Patterns lists every route the server registers ("METHOD /path"), without needing a database.
@@ -52,14 +60,25 @@ func build(cfg platform.Config, pool *pgxpool.Pool, hub *stream.Hub) *platform.A
 		Mux:      http.NewServeMux(),
 		Proxies:  platform.ParseProxies(cfg.TrustedProxies),
 	}
-	app.Patterns = append(app.Patterns, "GET /healthz")
-	app.Mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-		if err := pool.Ping(r.Context()); err != nil {
+	// Liveness: the process answers. Never touches the database, so a database outage does not make an
+	// orchestrator restart healthy application servers.
+	app.Patterns = append(app.Patterns, "GET /livez")
+	app.Mux.HandleFunc("GET /livez", func(w http.ResponseWriter, r *http.Request) {
+		platform.WriteJSON(w, http.StatusOK, map[string]string{"status": "alive"})
+	})
+	// Readiness: safe to send traffic (the database answers within two seconds). /healthz is kept as an alias.
+	ready := func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		if err := pool.Ping(ctx); err != nil {
 			platform.WriteProblem(w, r, http.StatusServiceUnavailable, "Database unavailable", "")
 			return
 		}
 		platform.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-	})
+	}
+	app.Patterns = append(app.Patterns, "GET /readyz", "GET /healthz")
+	app.Mux.HandleFunc("GET /readyz", ready)
+	app.Mux.HandleFunc("GET /healthz", ready)
 	clients.Register(app)
 	crm.Register(app)
 	support.Register(app)

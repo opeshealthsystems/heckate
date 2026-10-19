@@ -38,6 +38,20 @@ jobs:
       - name: Tests as a superuser
         run: make test
       - run: make build
+      # A backup nobody has restored is a hope, not a backup: back up a database with real ledger and audit
+      # rows, restore it, and require both integrity reports (hash chains, every row count) to match.
+      - name: Backup and restore drill
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq age postgresql-client
+          export PGPASSWORD=postgres
+          psql -h localhost -U postgres -c "CREATE DATABASE drilldb"
+          export DRILL_URL=postgres://postgres:postgres@localhost:5432/drilldb?sslmode=disable
+          (cd api && go build -o /tmp/hekate-api ./cmd/api)
+          (cd api && HEKATE_TEST_DB=$DRILL_URL HEKATE_TEST_ADMIN_DB=$DRILL_URL go test ./internal/server -run 'TestSalesPostToTheLedger|TestAuditTrail|TestPayroll' -count=1)
+          export HEKATE_ENV=development HEKATE_DATABASE_URL=$DRILL_URL HEKATE_API=/tmp/hekate-api
+          export DRILL_ADMIN_URL=postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+          deploy/backup/test.sh
+          deploy/backup/drill.sh
   openapi:
     runs-on: ubuntu-latest
     steps:

@@ -10,6 +10,7 @@ import (
 // Config is read from the environment.
 type Config struct {
 	Env            string   // HEKATE_ENV: "production" (the default) or "development". Production refuses unsafe settings.
+	MetricsAddr    string   // HEKATE_METRICS_ADDR: where /metrics is served (internal network only); empty disables it
 	TrustedProxies []string // HEKATE_TRUSTED_PROXIES: CIDRs of the load balancers allowed to set X-Forwarded-For
 	Addr           string   // HEKATE_ADDR
 	DatabaseURL    string   // HEKATE_DATABASE_URL (owner role; the pool switches to hekate_app)
@@ -50,6 +51,7 @@ func LoadConfig() Config {
 	}
 	return Config{
 		Env:            get("HEKATE_ENV", "production"),
+		MetricsAddr:    os.Getenv("HEKATE_METRICS_ADDR"),
 		TrustedProxies: splitList(os.Getenv("HEKATE_TRUSTED_PROXIES")),
 		Addr:           get("HEKATE_ADDR", ":8080"),
 		DatabaseURL:    get("HEKATE_DATABASE_URL", "postgres://hekate:dev-only@localhost:5432/hekate?sslmode=disable"),

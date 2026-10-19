@@ -1,12 +1,15 @@
 package accounting
 
 import (
+	"context"
 	"net/http"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 )
@@ -217,17 +220,34 @@ func ledger(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 
 // verify recomputes the whole hash chain and reports the first entry that does not match.
 func verify(r *http.Request, s *platform.Scope) (*platform.Result, error) {
-	rows, err := s.Tx.Query(r.Context(), `SELECT e.seq, e.journal, e.entry_date, e.ref, e.narration, e.source, e.source_ref, e.created_by, e.prev_hash, e.hash,
+	count, brokenAt, err := VerifyChain(r.Context(), s.Tx)
+	if err != nil {
+		return nil, err
+	}
+	body := map[string]any{"entries": count, "intact": brokenAt == 0}
+	if brokenAt != 0 {
+		body["first_broken_seq"] = brokenAt
+	}
+	return &platform.Result{Status: http.StatusOK, Body: body}, nil
+}
+
+// Querier is satisfied by a pgx transaction and by a pool.
+type Querier interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+}
+
+// VerifyChain recomputes the whole ledger hash chain and returns how many entries were checked and the
+// first sequence number that does not match (0 when the chain is intact).
+func VerifyChain(ctx context.Context, q Querier) (count int, brokenAt int64, err error) {
+	rows, err := q.Query(ctx, `SELECT e.seq, e.journal, e.entry_date, e.ref, e.narration, e.source, e.source_ref, e.created_by, e.prev_hash, e.hash,
 		l.account, l.debit, l.credit, coalesce(l.party::text,'')
 		FROM accounting.entries e JOIN accounting.entry_lines l ON l.entry_seq = e.seq ORDER BY e.seq, l.position`)
 	if err != nil {
-		return nil, err
+		return 0, 0, err
 	}
 	defer rows.Close()
 	var cur *Entry
 	prev := genesis
-	count := 0
-	var brokenAt int64
 	check := func() {
 		if cur == nil || brokenAt != 0 {
 			return
@@ -243,7 +263,7 @@ func verify(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		var e Entry
 		var l Line
 		if err := rows.Scan(&e.Seq, &e.Journal, &e.Date, &e.Ref, &e.Narration, &e.Source, &e.SourceRef, &e.CreatedBy, &e.PrevHash, &e.Hash, &l.Account, &l.Debit, &l.Credit, &l.Party); err != nil {
-			return nil, err
+			return 0, 0, err
 		}
 		if cur != nil && cur.Seq == e.Seq {
 			cur.Lines = append(cur.Lines, l)
@@ -254,12 +274,5 @@ func verify(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		cur = &e
 	}
 	check()
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	body := map[string]any{"entries": count, "intact": brokenAt == 0}
-	if brokenAt != 0 {
-		body["first_broken_seq"] = brokenAt
-	}
-	return &platform.Result{Status: http.StatusOK, Body: body}, nil
+	return count, brokenAt, rows.Err()
 }

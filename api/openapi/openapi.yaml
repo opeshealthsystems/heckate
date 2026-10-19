@@ -12,10 +12,40 @@ security:
   - oauth2: []
   - apiKey: []
 paths:
+  /livez:
+    get:
+      operationId: getLiveness
+      summary: Liveness - the process is running (never touches the database)
+      security: []
+      responses:
+        "200":
+          description: Alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /readyz:
+    get:
+      operationId: getReadiness
+      summary: Readiness - safe to send traffic (the database answers)
+      security: []
+      responses:
+        "200":
+          description: Ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /healthz:
     get:
       operationId: getHealth
-      summary: Liveness and database check
+      summary: Alias of /readyz
       security: []
       responses:
         "200":

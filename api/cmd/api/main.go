@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -11,12 +12,18 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/opeshealthsystems/heckate/api/internal/modules/accounting"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/auditlog"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/notify"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 	"github.com/opeshealthsystems/heckate/api/internal/server"
 	"github.com/opeshealthsystems/heckate/api/migrations"
 )
+
+// version is stamped at build time: -ldflags "-X main.version=...".
+var version = "dev"
 
 func main() {
 	cfg := platform.LoadConfig()
@@ -25,6 +32,8 @@ func main() {
 		case "devtoken": // heckate devtoken <role[,role]> [tenant_id]
 			devToken(cfg)
 			return
+		case "verify-data": // heckate verify-data: integrity report for a database (used by backup restore drills)
+			os.Exit(verifyData(cfg))
 		case "migrate":
 			if err := platform.Migrate(context.Background(), cfg.DatabaseURL, migrations.FS); err != nil {
 				slog.Error("migrate", "err", err)
@@ -74,10 +83,25 @@ func main() {
 		pub = platform.MultiPublisher{pub, platform.BestEffort{Inner: notify.NewNotifier(pool, notify.NewExpoSender(cfg.ExpoToken))}}
 		slog.Info("push notifications enabled")
 	}
-	handler, hub := server.NewWithHub(cfg, pool)
+	handler, hub, metrics := server.NewObserved(cfg, pool, version)
 	pub = platform.MultiPublisher{pub, hub} // live events to connected clients, beside the broker
 	go platform.RelayOutbox(ctx, pool, pub, 2*time.Second)
 	go auditlog.Seal(ctx, pool, 3*time.Second)
+
+	if cfg.MetricsAddr != "" {
+		// Internal only: metrics name every route and show load, so they must not face the internet.
+		ms := &http.Server{Addr: cfg.MetricsAddr, Handler: metrics.Handler(), ReadHeaderTimeout: 5 * time.Second}
+		go func() {
+			<-ctx.Done()
+			_ = ms.Close()
+		}()
+		go func() {
+			if err := ms.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				slog.Error("metrics listener", "err", err)
+			}
+		}()
+		slog.Info("metrics on", "addr", cfg.MetricsAddr)
+	}
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,
@@ -115,4 +139,78 @@ func devToken(cfg platform.Config) {
 		claims["tenant_id"] = os.Args[3]
 	}
 	fmt.Println(platform.SignDevToken(cfg.DevSecret, claims))
+}
+
+// verifyData proves a database is whole: both hash chains recompute, nothing waits to be sealed that
+// should not, and every table's row count is printed so a restore can be compared with its source.
+// Exit status 0 means intact; the report is JSON on stdout.
+func verifyData(cfg platform.Config) int {
+	ctx := context.Background()
+	pool, err := platform.NewPool(ctx, cfg.DatabaseURL)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "connect:", err)
+		return 2
+	}
+	defer pool.Close()
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 2
+	}
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, `SELECT set_config('app.role','staff',true), set_config('app.roles','auditor,ceo',true), set_config('app.actor','verify-data',true), set_config('app.tenant_id','',true)`); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 2
+	}
+	entries, brokenLedger, err := accounting.VerifyChain(ctx, tx)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "ledger:", err)
+		return 2
+	}
+	var auditChecked, unsealed int64
+	var brokenAudit *int64
+	if err := tx.QueryRow(ctx, `SELECT checked, first_broken, unsealed FROM platform.verify_audit()`).Scan(&auditChecked, &brokenAudit, &unsealed); err != nil {
+		fmt.Fprintln(os.Stderr, "audit:", err)
+		return 2
+	}
+	// Row counts need to see every row, so they use the owner connection, not the restricted role.
+	conn, err := pgx.Connect(ctx, cfg.DatabaseURL)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "connect:", err)
+		return 2
+	}
+	defer conn.Close(ctx)
+	rows, err := conn.Query(ctx, `SELECT table_schema, table_name FROM information_schema.tables
+		WHERE table_type='BASE TABLE' AND table_schema NOT IN ('pg_catalog','information_schema') ORDER BY 1,2`)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 2
+	}
+	type tn struct{ s, t string }
+	var tables []tn
+	for rows.Next() {
+		var x tn
+		_ = rows.Scan(&x.s, &x.t)
+		tables = append(tables, x)
+	}
+	rows.Close()
+	counts := map[string]int64{}
+	for _, x := range tables {
+		var n int64
+		if err := conn.QueryRow(ctx, fmt.Sprintf(`SELECT count(*) FROM %s.%s`, pgx.Identifier{x.s}.Sanitize(), pgx.Identifier{x.t}.Sanitize())).Scan(&n); err != nil {
+			fmt.Fprintln(os.Stderr, x.s+"."+x.t+":", err)
+			return 2
+		}
+		counts[x.s+"."+x.t] = n
+	}
+	intact := brokenLedger == 0 && brokenAudit == nil
+	out, _ := json.MarshalIndent(map[string]any{
+		"intact": intact, "ledger_entries": entries, "ledger_first_broken": brokenLedger,
+		"audit_rows_checked": auditChecked, "audit_first_broken": brokenAudit, "audit_unsealed": unsealed, "row_counts": counts,
+	}, "", "  ")
+	fmt.Println(string(out))
+	if !intact {
+		return 1
+	}
+	return 0
 }
