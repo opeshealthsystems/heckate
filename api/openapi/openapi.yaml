@@ -190,6 +190,169 @@ paths:
                         month: { type: string }
                         calls: { type: integer }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/payroll/compensation:
+    get:
+      operationId: listCompensation
+      summary: Current salary per employee (HR, finance, CEO)
+      responses:
+        "200":
+          description: Compensation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Object" } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/payroll/compensation/{employee_id}:
+    parameters: [{ name: employee_id, in: path, required: true, schema: { type: string, format: uuid } }]
+    put:
+      operationId: setCompensation
+      summary: Set an employee's salary from a date (HR, CEO). Earlier dates are never rewritten.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [effective_from, base_salary]
+              properties:
+                effective_from: { type: string, format: date }
+                base_salary: { type: integer }
+                allowances: { type: integer }
+      responses:
+        "201": { description: Set }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/payroll/config:
+    get:
+      operationId: getPayrollConfig
+      summary: The payroll rules (contribution rates, ceilings, tax brackets) and who validated them
+      responses:
+        "200":
+          description: Rules
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    put:
+      operationId: putPayrollConfig
+      summary: Replace the payroll rules (finance, CEO). Clears the validation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Object" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/payroll/config/validate:
+    post:
+      operationId: validatePayrollConfig
+      summary: Validate the current rules (finance, CEO; not the person who edited them)
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      responses:
+        "200":
+          description: Validated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/payroll/runs:
+    get:
+      operationId: listPayrollRuns
+      summary: Payroll runs (HR, finance, management, auditor)
+      responses:
+        "200":
+          description: Runs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/PayrollRun" } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createPayrollRun
+      summary: Prepare a month's payroll as a draft. Needs validated rules.
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [period]
+              properties:
+                period: { type: string, example: "2026-10" }
+      responses:
+        "201":
+          description: Draft run with payslips
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PayrollRun" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/payroll/runs/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: getPayrollRun
+      summary: A run with its payslips
+      responses:
+        "200":
+          description: Run
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PayrollRun" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: discardPayrollRun
+      summary: Discard a draft run
+      responses:
+        "204": { description: Discarded }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/payroll/runs/{id}/approve:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      operationId: approvePayrollRun
+      summary: Approve a run and post it to the ledger (finance, management; not the preparer)
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PayrollRun" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/payroll/runs/{id}/pay:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      operationId: payPayrollRun
+      summary: Record that net salaries were paid (finance, management; not the preparer or approver)
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      responses:
+        "200":
+          description: Paid
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PayrollRun" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/payslips/me:
+    get:
+      operationId: listMyPayslips
+      summary: The caller's own payslips, once their run is approved
+      responses:
+        "200":
+          description: Payslips
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Payslip" } }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/clients:
     get:
       operationId: listClients
@@ -2260,6 +2423,46 @@ components:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
   schemas:
+    PayrollRun:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        period: { type: string }
+        status: { type: string, enum: [draft, approved, paid] }
+        prepared_by: { type: string }
+        approved_by: { type: [string, "null"] }
+        paid_by: { type: [string, "null"] }
+        total_gross: { type: integer }
+        total_net: { type: integer }
+        total_cost: { type: integer }
+        created_at: { type: string, format: date-time }
+        approved_at: { type: [string, "null"], format: date-time }
+        paid_at: { type: [string, "null"], format: date-time }
+        payslips: { type: array, items: { $ref: "#/components/schemas/Payslip" } }
+        skipped: { type: array, items: { type: string }, description: Active employees with no salary on file }
+    Payslip:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        run_id: { type: string, format: uuid }
+        period: { type: string }
+        actor: { type: string }
+        full_name: { type: string }
+        gross: { type: integer }
+        deductions: { type: array, items: { $ref: "#/components/schemas/PayLine" } }
+        irpp: { type: integer }
+        cac: { type: integer }
+        net: { type: integer }
+        employer_lines: { type: array, items: { $ref: "#/components/schemas/PayLine" } }
+        employer_cost: { type: integer }
+    PayLine:
+      type: object
+      properties:
+        code: { type: string }
+        label: { type: string }
+        base: { type: integer }
+        rate_bp: { type: integer }
+        amount: { type: integer }
     ApiPlan:
       type: object
       required: [code, name, rate_per_min, monthly_quota]

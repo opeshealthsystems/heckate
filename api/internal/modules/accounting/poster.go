@@ -2,7 +2,9 @@ package accounting
 
 import (
 	"context"
+	"time"
 
+	"github.com/opeshealthsystems/heckate/api/internal/modules/payroll"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/procurement"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/sales"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
@@ -91,6 +93,34 @@ func (ProcurementPoster) SupplierInvoicePaid(ctx context.Context, s *platform.Sc
 		Lines: []Line{
 			{Account: "401", Debit: e.Total, Party: e.Supplier},
 			{Account: account, Credit: e.Total},
+		}})
+	return err
+}
+
+// PayrollPoster books an approved payroll run (the accrual) and its payment.
+type PayrollPoster struct{}
+
+var _ payroll.Poster = PayrollPoster{}
+
+func (PayrollPoster) RunApproved(ctx context.Context, s *platform.Scope, e payroll.RunEntry) error {
+	ref := "PAY-" + e.Period.Format("2006-01")
+	_, err := Post(ctx, s, Entry{Journal: "OD", Date: e.Period, Ref: ref, Narration: "Payroll " + e.Period.Format("2006-01"), Source: "payroll", SourceRef: ref,
+		Lines: nz(
+			Line{Account: "661", Debit: e.Gross},
+			Line{Account: "664", Debit: e.EmployerContrib},
+			Line{Account: "422", Credit: e.Net},
+			Line{Account: "431", Credit: e.EmployeeContrib + e.EmployerContrib},
+			Line{Account: "447", Credit: e.Tax},
+		)})
+	return err
+}
+
+func (PayrollPoster) RunPaid(ctx context.Context, s *platform.Scope, e payroll.RunEntry) error {
+	ref := "PAY-" + e.Period.Format("2006-01")
+	_, err := Post(ctx, s, Entry{Journal: "BQ", Date: time.Now().UTC(), Ref: ref, Narration: "Net salaries paid " + e.Period.Format("2006-01"), Source: "payroll_payment", SourceRef: ref,
+		Lines: []Line{
+			{Account: "422", Debit: e.Net},
+			{Account: "521", Credit: e.Net},
 		}})
 	return err
 }
