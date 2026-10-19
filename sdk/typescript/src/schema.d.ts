@@ -2303,6 +2303,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/payslips/{id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** PDF payslip. Visible to payroll staff, and to the employee once the run is approved */
+        get: operations["downloadPayslipPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/invoices/{id}/pdf": {
         parameters: {
             query?: never;
@@ -6820,6 +6839,30 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description The canonical PDF. The first rendering is stored, so every download is the same file; its SHA-256 is in the X-Document-SHA256 header and the public register. */
+            200: {
+                headers: {
+                    "X-Document-SHA256"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    downloadPayslipPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The canonical PDF; its SHA-256 is in the X-Document-SHA256 header. */
             200: {
                 headers: {
                     "X-Document-SHA256"?: string;

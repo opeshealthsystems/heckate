@@ -169,3 +169,75 @@ func (d *doc) netTotal(net int64) {
 	p.CellFormat(35, 6, "Total (net)", "", 0, "L", false, 0, "")
 	p.CellFormat(50, 6, XAF(net), "", 1, "R", false, 0, "")
 }
+
+// PayLine is one deduction or contribution on a payslip. RateBP is in basis points; zero means "no rate".
+type PayLine struct {
+	Label  string
+	Base   int64
+	RateBP int64
+	Amount int64
+}
+
+// Payslip is the content of one employee's payslip for one month.
+type Payslip struct {
+	Period, Employee string
+	Gross            int64
+	Deductions       []PayLine
+	IRPP, CAC, Net   int64
+	Employer         []PayLine
+}
+
+// RenderPayslip draws a payslip. It is confidential: the reference reveals nothing but the month.
+func RenderPayslip(o Options, ref string, issued time.Time, p Payslip) ([]byte, error) {
+	d := newDoc(o, ref, "Payslip", issued)
+	d.title("PAYSLIP / BULLETIN DE PAIE", ref)
+	d.kv("Period", p.Period)
+	d.kv("Employee", p.Employee)
+	d.pdf.Ln(2)
+	row := func(label, base, rate, amount string, bold bool) {
+		st := ""
+		if bold {
+			st = "B"
+		}
+		d.pdf.SetFont("Helvetica", st, 9.5)
+		d.pdf.CellFormat(88, 6, d.tr(label), "", 0, "L", false, 0, "")
+		d.pdf.CellFormat(32, 6, d.tr(base), "", 0, "R", false, 0, "")
+		d.pdf.CellFormat(20, 6, d.tr(rate), "", 0, "R", false, 0, "")
+		d.pdf.CellFormat(40, 6, d.tr(amount), "", 1, "R", false, 0, "")
+	}
+	rate := func(bp int64) string {
+		if bp == 0 {
+			return ""
+		}
+		return fmt.Sprintf("%.2f %%", float64(bp)/100)
+	}
+	base := func(b int64) string {
+		if b == 0 {
+			return ""
+		}
+		return XAF(b)
+	}
+	row("Description", "Base", "Rate", "Amount", true)
+	d.pdf.Line(10, d.pdf.GetY(), 190, d.pdf.GetY())
+	row("Gross salary", "", "", XAF(p.Gross), true)
+	for _, l := range p.Deductions {
+		row(l.Label, base(l.Base), rate(l.RateBP), "-"+XAF(l.Amount), false)
+	}
+	row("Income tax (IRPP)", "", "", "-"+XAF(p.IRPP), false)
+	row("Council tax (CAC)", "", "", "-"+XAF(p.CAC), false)
+	d.pdf.Line(10, d.pdf.GetY(), 190, d.pdf.GetY())
+	d.pdf.Ln(1)
+	d.pdf.SetFont("Helvetica", "B", 13)
+	d.pdf.CellFormat(0, 9, d.tr("Net pay: "+XAF(p.Net)), "", 1, "R", false, 0, "")
+	if len(p.Employer) > 0 {
+		d.pdf.Ln(3)
+		d.pdf.SetFont("Helvetica", "B", 9.5)
+		d.pdf.CellFormat(0, 6, d.tr("Employer contributions (for information, not deducted)"), "", 1, "L", false, 0, "")
+		for _, l := range p.Employer {
+			row(l.Label, base(l.Base), rate(l.RateBP), XAF(l.Amount), false)
+		}
+	}
+	d.pdf.Ln(5)
+	d.note("Confidential. Calculated from the payroll rules approved for this period; amounts are in CFA francs (XAF). Verify it by entering its reference on the HEKATE verification page.")
+	return d.bytes()
+}

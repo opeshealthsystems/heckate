@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
@@ -123,6 +124,17 @@ func TestPayrollDualControlAndValidation(t *testing.T) {
 	_, mine, _ := e.do("GET", "/v1/payslips/me", me, nil)
 	if len(mine["data"].([]any)) != 1 || mine["data"].([]any)[0].(map[string]any)["net"] != float64(806_126) {
 		t.Errorf("employee should now see their payslip: %v", mine)
+	}
+	slipID := mine["data"].([]any)[0].(map[string]any)["id"].(string)
+	resp, pdfA := e.pdf(me, "/v1/payslips/"+slipID+"/pdf")
+	if resp.StatusCode != 200 || !bytes.HasPrefix(pdfA, []byte("%PDF-")) || !bytes.Contains(pdfA, []byte("806 126 XAF")) {
+		t.Fatalf("employee payslip pdf: %d", resp.StatusCode)
+	}
+	if _, pdfB := e.pdf(fin2, "/v1/payslips/"+slipID+"/pdf"); !bytes.Equal(pdfA, pdfB) {
+		t.Error("payroll staff must get the same file as the employee")
+	}
+	if r, _ := e.pdf(token("pay-nosy-"+emp, "", "employee"), "/v1/payslips/"+slipID+"/pdf"); r.StatusCode != 404 {
+		t.Errorf("another employee: want 404, got %d", r.StatusCode)
 	}
 
 	// Pay: neither the preparer nor the approver.

@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/opeshealthsystems/heckate/api/internal/docs"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 )
 
@@ -39,10 +40,13 @@ var (
 	staff    = []string{"ceo", "manager", "finance", "sales", "support", "engineer", "hr", "employee", "logistics", "procurement"}
 )
 
-type mod struct{ poster Poster }
+type mod struct {
+	poster Poster
+	docs   docs.Options
+}
 
-func Register(a *platform.App, p Poster) {
-	m := &mod{p}
+func Register(a *platform.App, p Poster, o docs.Options) {
+	m := &mod{poster: p, docs: o}
 	a.Route("PUT /v1/payroll/compensation/{employee_id}", hrOrCEO, m.setCompensation)
 	a.Route("GET /v1/payroll/compensation", []string{"hr", "finance", "ceo"}, m.listCompensation)
 	a.Route("GET /v1/payroll/config", viewers, m.getConfig)
@@ -55,6 +59,7 @@ func Register(a *platform.App, p Poster) {
 	a.Route("POST /v1/payroll/runs/{id}/approve", decide, platform.Idempotent(m.approve))
 	a.Route("POST /v1/payroll/runs/{id}/pay", decide, platform.Idempotent(m.pay))
 	a.Route("GET /v1/payslips/me", staff, m.mySlips)
+	a.Route("GET /v1/payslips/{id}/pdf", staff, m.slipPDF)
 }
 
 func nf(what string) error { return platform.Err(http.StatusNotFound, "Not found", what+" not found") }
@@ -459,6 +464,9 @@ func (m *mod) approve(r *http.Request, s *platform.Scope) (*platform.Result, err
 		return nil, err
 	}
 	if err := m.poster.RunApproved(ctx, s, e); err != nil {
+		return nil, err
+	}
+	if err := issueSlipDocs(ctx, s, run); err != nil {
 		return nil, err
 	}
 	if err := s.Audit(ctx, "approve", "payroll_run", run.ID); err != nil {

@@ -2685,6 +2685,19 @@ paths:
           content:
             application/pdf: { schema: { type: string, format: binary } }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/payslips/{id}/pdf:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: downloadPayslipPdf
+      summary: "PDF payslip. Visible to payroll staff, and to the employee once the run is approved"
+      responses:
+        "200":
+          description: "The canonical PDF; its SHA-256 is in the X-Document-SHA256 header."
+          headers:
+            X-Document-SHA256: { schema: { type: string } }
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/invoices/{id}/pdf:
     parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
     get:

@@ -91,7 +91,7 @@ func build(cfg platform.Config, pool *pgxpool.Pool, hub *stream.Hub) *platform.A
 	hr.Register(app)
 	files.Register(app)
 	inventory.Register(app, docOpts)
-	payroll.Register(app, accounting.PayrollPoster{})
+	payroll.Register(app, accounting.PayrollPoster{}, docOpts)
 	procurement.Register(app, accounting.ProcurementPoster{}, docOpts)
 	payments.Register(app, sales.Register(app, accounting.SalesPoster{}, docOpts), cfg)
 	accounting.Register(app)

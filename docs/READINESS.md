@@ -10,8 +10,8 @@ What exists today (counted):
 
 | | |
 | --- | --- |
-| API operations in the OpenAPI contract | 159 |
-| Database migrations | 21 |
+| API operations in the OpenAPI contract | 160 |
+| Database migrations | 22 |
 | Go tests (integration tests run against a real PostgreSQL, as a superuser **and** as an ordinary database owner) | 94 |
 | Browser end-to-end scripts (Playwright) | 8 |
 | Languages / apps | Go API, Next.js web ERP and portals, Expo mobile app, static bilingual site, TypeScript SDK |
@@ -26,7 +26,7 @@ A module counts as production ready only when **all** of these are true. Today t
 | 2 | Data integrity enforced in the database, not only the app | Build (done for most modules) |
 | 3 | Access control tested, including cross-tenant and wrong-role cases | Build (done for most modules) |
 | 4 | Automated tests, run in CI on every change | Build (done) |
-| 5 | Printable documents the business needs, with verification | Build (8 of ~36, see below) |
+| 5 | Printable documents the business needs, with verification | Build (9 of ~36, see below) |
 | 6 | Dependency, secret and code scanning gating every change | Build (added with this file) |
 | 7 | Domain sign-off: the accountant (tax, ledger, payroll), a lawyer (contracts, retention) | **People** |
 | 8 | Independent penetration test and fixes | **External firm** |
@@ -46,7 +46,7 @@ A module counts as production ready only when **all** of these are true. Today t
 | **Accounting** | Append-only hash-chained ledger, balanced entries enforced in the database, posting from sales, purchasing and payroll, trial balance, ledger integrity check, bank reconciliation | Balance sheet and income statement, DSF filing, period close and lock, VAT return, fixed assets, ageing. **Chart of accounts is a starter set** |
 | **Purchasing & Suppliers** | Supplier register with call-back-verified bank details, RFQs with sealed bids, purchase orders with dual control, goods receipt, supplier invoices with three-way match, supplier portal | supplier registration and evaluation forms (HS-FRM-39, 41), contract management |
 | **Inventory & Assets** | Append-only stock ledger, no negative stock, serialised equipment, issue to staff, client-held assets, parts on interventions | Stock counts, reorder levels, barcode scanning, depreciation |
-| **HR & Payroll** | Employee records, leave with live balances, expense claims with receipts, payroll engine (rates are data, a second person must validate them, dual control to approve and pay, posts to the ledger), payslips for employees | Recruitment and offers (HS-FRM-32, 33), appraisals, payslip PDF, CNPS / tax declaration files, overtime, bonuses, contracts. **Payroll rates are unvalidated** |
+| **HR & Payroll** | Employee records, leave with live balances, expense claims with receipts, payroll engine (rates are data, a second person must validate them, dual control to approve and pay, posts to the ledger), payslips for employees | Recruitment and offers (HS-FRM-32, 33), appraisals, CNPS / tax declaration files, overtime, bonuses, contracts. **Payroll rates are unvalidated** |
 | **Documents & Trust** | Document register, references with check characters, public verification page, PDF hash recorded and checkable in the browser | **Digital signatures (PAdES) need a certificate**; letter and certificate templates; retention rules |
 | **Reporting** | Per-module reports and a dashboard | BI tool (Metabase), exports to CSV / Excel, scheduled reports, cross-module KPIs |
 
@@ -56,8 +56,8 @@ Also built, outside the ten: identity and roles, an API-as-a-product layer (keys
 
 The specification lists about **36** document templates (quotation, proposal, order confirmation, statement of work, invoice, receipt, credit note, 24 numbered forms, penetration test report, purchase order, RFQ, letter, certificate).
 
-- **Rendered as real PDFs today: 8**: invoice (HS-INV), quotation (HS-QT), site-visit acceptance (HS-FRM-27), payment receipt (HS-RCT), credit note (HS-CN), purchase order (HS-PO), request for quotation (HS-RFQ), asset issue and return form (HS-FRM-38). Each has a QR code to the public verification page and its SHA-256 recorded; the first rendering is stored so one reference is always one file.
-- **Not started: about 28.**
+- **Rendered as real PDFs today: 9**: invoice (HS-INV), quotation (HS-QT), site-visit acceptance (HS-FRM-27), payment receipt (HS-RCT), credit note (HS-CN), purchase order (HS-PO), request for quotation (HS-RFQ), asset issue and return form (HS-FRM-38), payslip (HS-PAY, confidential; reference issued when the run is approved). Each has a QR code to the public verification page and its SHA-256 recorded; the first rendering is stored so one reference is always one file.
+- **Not started: about 27.**
 
 The company letterhead lines are configuration (`HEKATE_LETTERHEAD`), and PDFs use built-in Latin-1 fonts. Cryptographic signing (PAdES) is not done because it needs a signing certificate.
 
