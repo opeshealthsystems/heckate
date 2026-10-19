@@ -1,3 +1,5 @@
+// Note: Playwright evaluates strings in the page, which the strict CSP rightly blocks, so these scripts bypass it.
+// csp.mjs is the one script that runs WITHOUT the bypass and fails on any CSP violation.
 // Drives the ERP screens end to end: quote -> client approval -> invoice -> payment -> ledger.
 // Needs the API (HEKATE_DEV_JWT_SECRET set) and the web app running, as described in e2e/README.md.
 import { chromium } from "playwright-core";
@@ -23,7 +25,7 @@ const waitText = (p, text) => p.waitForFunction((t) => document.body.innerText.r
 const ok = (c, m) => { console.log(c ? "PASS" : "FAIL", m); if (!c) process.exitCode = 1; };
 const b = await chromium.launch({ executablePath: process.env.CHROMIUM ?? "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
 async function session(tok, width = 1280) {
-  const ctx = await b.newContext({ viewport: { width, height: 900 } });
+  const ctx = await b.newContext({ bypassCSP: true, viewport: { width, height: 900 } });
   const p = await ctx.newPage();
   p.on("pageerror", (e) => console.log("pageerror:", e.message));
   await go(p, "/login");

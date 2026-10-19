@@ -9,6 +9,7 @@ import (
 
 	"github.com/opeshealthsystems/heckate/api/internal/docs"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/accounting"
+	"github.com/opeshealthsystems/heckate/api/internal/modules/auditlog"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/clients"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/crm"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/devapi"
@@ -37,7 +38,7 @@ func New(cfg platform.Config, pool *pgxpool.Pool) http.Handler {
 func NewWithHub(cfg platform.Config, pool *pgxpool.Pool) (http.Handler, *stream.Hub) {
 	hub := stream.NewHub()
 	app := build(cfg, pool, hub)
-	return platform.Trace(platform.CORS(cfg.CORSOrigins, app.Mux)), hub
+	return platform.Trace(platform.SecureHeaders(platform.CORS(cfg.CORSOrigins, app.Mux))), hub
 }
 
 // Patterns lists every route the server registers ("METHOD /path"), without needing a database.
@@ -49,6 +50,7 @@ func build(cfg platform.Config, pool *pgxpool.Pool, hub *stream.Hub) *platform.A
 		Verifier: platform.NewVerifier(cfg),
 		Limiter:  platform.NewLimiter(300, time.Minute),
 		Mux:      http.NewServeMux(),
+		Proxies:  platform.ParseProxies(cfg.TrustedProxies),
 	}
 	app.Patterns = append(app.Patterns, "GET /healthz")
 	app.Mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -64,6 +66,7 @@ func build(cfg platform.Config, pool *pgxpool.Pool, hub *stream.Hub) *platform.A
 	documents.Register(app)
 	notify.Register(app)
 	devapi.Register(app)
+	auditlog.Register(app)
 	docOpts := docs.Options{PortalURL: cfg.PortalURL, Letterhead: cfg.Letterhead, Compress: cfg.PDFCompress}
 	projects.Register(app, docOpts)
 	hr.Register(app)

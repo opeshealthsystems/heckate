@@ -525,6 +525,43 @@ paths:
       responses:
         "200": { description: Accepted (repeated deliveries are harmless) }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/audit:
+    get:
+      operationId: listAuditTrail
+      summary: The audit trail, newest first (CEO, manager, auditor)
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 500, default: 100 } }
+        - { name: before, in: query, schema: { type: integer }, description: Only entries older than this id }
+        - { name: actor, in: query, schema: { type: string } }
+        - { name: entity, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/AuditEntry" } }
+                  next_before: { type: [integer, "null"] }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/audit/verify:
+    get:
+      operationId: verifyAuditTrail
+      summary: Recompute the audit hash chain and report the first row that does not match
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checked: { type: integer }
+                  intact: { type: boolean }
+                  first_broken_seq: { type: [integer, "null"] }
+                  waiting_to_be_sealed: { type: integer }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/clients:
     get:
       operationId: listClients
@@ -2595,6 +2632,19 @@ components:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
   schemas:
+    AuditEntry:
+      type: object
+      properties:
+        id: { type: integer }
+        at: { type: string, format: date-time }
+        tenant_id: { type: [string, "null"], format: uuid }
+        actor: { type: string }
+        action: { type: string }
+        entity: { type: string }
+        entity_id: { type: [string, "null"] }
+        trace_id: { type: [string, "null"] }
+        chain_seq: { type: [integer, "null"] }
+        hash: { type: [string, "null"] }
     OnlinePayment:
       type: object
       properties:

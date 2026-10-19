@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -120,7 +121,8 @@ type App struct {
 	Limiter  *Limiter
 	Mux      *http.ServeMux
 	keyLim   keyLimiters
-	Patterns []string // every registered "METHOD /path", used to check the code against the OpenAPI contract
+	Proxies  []*net.IPNet // load balancers whose X-Forwarded-For is believed
+	Patterns []string     // every registered "METHOD /path", used to check the code against the OpenAPI contract
 }
 
 // NewPool connects with the owner credentials, then drops to hekate_app so RLS applies.
@@ -222,7 +224,7 @@ func (a *App) runKey(w http.ResponseWriter, r *http.Request, pattern, tok string
 func (a *App) Public(pattern string, h HandlerFunc) {
 	a.Patterns = append(a.Patterns, pattern)
 	a.Mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
-		if !a.limit(w, r, clientIP(r)) {
+		if !a.limit(w, r, a.ClientIP(r)) {
 			return
 		}
 		a.run(w, r, nil, h)
@@ -265,11 +267,66 @@ func (a *App) Handle(pattern string, h http.HandlerFunc) {
 	a.Mux.HandleFunc(pattern, h)
 }
 
-func clientIP(r *http.Request) string {
-	if f := r.Header.Get("X-Forwarded-For"); f != "" {
-		return strings.TrimSpace(strings.Split(f, ",")[0])
+// ClientIP is the address of the real caller. X-Forwarded-For is believed only when the request came
+// from a configured trusted proxy, and then the right-most entry that is not itself a trusted proxy
+// is used: anything to its left was supplied by the caller and can be forged.
+func (a *App) ClientIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
 	}
-	return r.RemoteAddr
+	if !a.trusted(host) {
+		return host
+	}
+	parts := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
+	for i := len(parts) - 1; i >= 0; i-- {
+		ip := strings.TrimSpace(parts[i])
+		if net.ParseIP(ip) == nil {
+			return host // malformed: fall back to the proxy itself rather than trust it
+		}
+		if !a.trusted(ip) {
+			return ip
+		}
+	}
+	return host
+}
+
+func (a *App) trusted(ip string) bool {
+	p := net.ParseIP(ip)
+	for _, n := range a.Proxies {
+		if p != nil && n.Contains(p) {
+			return true
+		}
+	}
+	return false
+}
+
+// ParseProxies turns CIDR strings into networks; invalid entries are reported by Config.Problems.
+func ParseProxies(cidrs []string) []*net.IPNet {
+	var out []*net.IPNet
+	for _, c := range cidrs {
+		if _, n, err := net.ParseCIDR(c); err == nil {
+			out = append(out, n)
+		}
+	}
+	return out
+}
+
+// SecureHeaders sets the response headers an API should always send. Handlers that serve files override
+// Cache-Control and Content-Type themselves.
+func SecureHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("Cache-Control", "no-store")
+		h.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+		h.Set("Referrer-Policy", "no-referrer")
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
+		h.Set("Cross-Origin-Resource-Policy", "same-site")
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (a *App) run(w http.ResponseWriter, r *http.Request, claims *Claims, h HandlerFunc) {

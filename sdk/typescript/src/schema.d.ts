@@ -482,6 +482,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The audit trail, newest first (CEO, manager, auditor) */
+        get: operations["listAuditTrail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/audit/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recompute the audit hash chain and report the first row that does not match */
+        get: operations["verifyAuditTrail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/clients": {
         parameters: {
             query?: never;
@@ -2200,6 +2234,20 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AuditEntry: {
+            id?: number;
+            /** Format: date-time */
+            at?: string;
+            /** Format: uuid */
+            tenant_id?: string | null;
+            actor?: string;
+            action?: string;
+            entity?: string;
+            entity_id?: string | null;
+            trace_id?: string | null;
+            chain_seq?: number | null;
+            hash?: string | null;
+        };
         OnlinePayment: {
             /** Format: uuid */
             id?: string;
@@ -3311,6 +3359,62 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    listAuditTrail: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description Only entries older than this id */
+                before?: number;
+                actor?: string;
+                entity?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AuditEntry"][];
+                        next_before?: number | null;
+                    };
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    verifyAuditTrail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        checked?: number;
+                        intact?: boolean;
+                        first_broken_seq?: number | null;
+                        waiting_to_be_sealed?: number;
+                    };
+                };
             };
             "4XX": components["responses"]["Problem"];
         };

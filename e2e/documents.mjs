@@ -23,7 +23,7 @@ const ok = (c, m) => { console.log(c ? "PASS" : "FAIL", m); if (!c) process.exit
 
 const b = await chromium.launch({ executablePath: process.env.CHROMIUM ?? "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
 async function session(tok) {
-  const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
+  const ctx = await b.newContext({ bypassCSP: true, viewport: { width: 1280, height: 900 }, acceptDownloads: true });
   const p = await ctx.newPage();
   await p.goto(`${WEB}/login`);
   await p.fill("#tok", tok);

@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: "1.26"
       # First as an ordinary database owner, in a fresh cluster: production should not own the schema
       # with a superuser, and superusers hide row-level-security mistakes. Raw-SQL trigger tests use the
       # admin connection (HEKATE_TEST_ADMIN_DB).

@@ -28,7 +28,7 @@ await post("2026-03-05", 125000, 0);
 await post("2026-03-09", 0, 40000);
 
 const b = await chromium.launch({ executablePath: process.env.CHROMIUM ?? "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
-const p = await (await b.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+const p = await (await b.newContext({ bypassCSP: true, viewport: { width: 1280, height: 900 } })).newPage();
 await p.goto(`${WEB}/login`);
 await p.fill("#tok", fin);
 await p.click("text=Continue");

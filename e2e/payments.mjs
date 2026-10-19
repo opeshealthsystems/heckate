@@ -33,7 +33,7 @@ const inv = (await api("POST", "/v1/invoices", fin, { tenant_id: tid, title: `Su
 await api("POST", `/v1/invoices/${inv.id}/issue`, fin);
 
 const b = await chromium.launch({ executablePath: process.env.CHROMIUM ?? "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
-const p = await (await b.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+const p = await (await b.newContext({ bypassCSP: true, viewport: { width: 1280, height: 900 } })).newPage();
 await p.goto(`${WEB}/login`);
 await p.fill("#tok", admin);
 await p.click("text=Continue");

@@ -16,7 +16,7 @@ const b = await chromium.launch({ executablePath: process.env.CHROMIUM ?? "/opt/
 const ok = (c, m) => { console.log(c ? "PASS" : "FAIL", m); if (!c) process.exitCode = 1; };
 
 async function login(tok, w = 1280) {
-  const ctx = await b.newContext({ viewport: { width: w, height: 800 } });
+  const ctx = await b.newContext({ bypassCSP: true, viewport: { width: w, height: 800 } });
   const p = await ctx.newPage();
   p.on("pageerror", (e) => console.log("pageerror", e.message));
   await p.goto("http://localhost:3000/login");

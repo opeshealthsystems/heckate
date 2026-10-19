@@ -10,6 +10,7 @@ Drive the real web app against a real API and Postgres with Playwright (Chromium
 | `payroll.mjs` | Payroll: finance prepares a month, a second finance user approves, a third person pays, and the employee finds their payslip. Each role sees only the buttons it may press |
 | `bank.mjs` | Bank reconciliation: statement import, automatic matching of unambiguous lines, manual choice for an ambiguous one, outstanding ledger lines |
 | `payments.mjs` | Paying an invoice by mobile money against the sandbox provider: nothing is booked until a correctly signed callback arrives. Start the API with `HEKATE_PAYMENTS_SANDBOX=1 HEKATE_PAYMENTS_WEBHOOK_SECRET=e2e-pay` |
+| `csp.mjs` | Runs with the real Content-Security-Policy (the others bypass it, because Playwright evaluates strings): fails on any blocked resource across 12 screens, checks CORS |
 
 ## Run
 
@@ -17,7 +18,7 @@ Drive the real web app against a real API and Postgres with Playwright (Chromium
 # 1. Database and API (HEKATE_DEV_JWT_SECRET enables dev tokens; never set it in production)
 createdb hekate_e2e
 HEKATE_DATABASE_URL='postgres://USER@localhost:5432/hekate_e2e?sslmode=disable' \
-HEKATE_DEV_JWT_SECRET=e2e-secret HEKATE_CORS_ORIGINS=http://localhost:3000 go run ./api/cmd/api
+HEKATE_ENV=development HEKATE_DEV_JWT_SECRET=e2e-secret HEKATE_CORS_ORIGINS=http://localhost:3000 go run ./api/cmd/api
 
 # 2. Web (build with the API address baked in)
 cd web && NEXT_PUBLIC_API_URL=http://localhost:8080 NEXT_PUBLIC_DEV_LOGIN=1 npm run build && npm start

@@ -45,7 +45,7 @@ Every endpoint is in `api/openapi/openapi.yaml`, and a test fails if the code an
 # database (or: make up for the full dev infrastructure)
 createdb hekate
 export HEKATE_DATABASE_URL='postgres://USER@localhost:5432/hekate?sslmode=disable'
-export HEKATE_DEV_JWT_SECRET=dev-secret HEKATE_CORS_ORIGINS=http://localhost:3000,http://localhost:3001
+export HEKATE_ENV=development HEKATE_DEV_JWT_SECRET=dev-secret HEKATE_CORS_ORIGINS=http://localhost:3000,http://localhost:3001
 
 go run ./api/cmd/api                                    # API on :8080, migrates itself
 go run ./api/cmd/api devtoken manager,support > staff.tok
@@ -54,7 +54,7 @@ go run ./api/cmd/api devtoken manager,support > staff.tok
 (cd mobile && npm install && npx expo start)
 ```
 
-`HEKATE_DEV_JWT_SECRET` enables HS256 dev tokens; never set it in production. With it unset the API accepts only Keycloak RS256 tokens (`HEKATE_JWKS_URL`).
+`HEKATE_ENV=development` is needed to run on a laptop: the API starts in **production mode by default and refuses to start** with a dev token secret, the payment sandbox, a database connection without TLS, a wildcard CORS origin, or without `HEKATE_JWKS_URL`, `HEKATE_ISSUER` and `HEKATE_AUDIENCE`. `HEKATE_DEV_JWT_SECRET` enables HS256 dev tokens (development only). With it unset the API accepts only Keycloak RS256 tokens (`HEKATE_JWKS_URL`).
 
 ## Test
 

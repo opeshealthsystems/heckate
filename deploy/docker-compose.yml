@@ -43,6 +43,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
     environment:
+      HEKATE_ENV: development   # this file is a developer stack; production uses deploy/production.md
       HEKATE_DATABASE_URL: postgres://hekate:dev-only@postgres:5432/hekate?sslmode=disable
       HEKATE_JWKS_URL: http://keycloak:8080/realms/hekate/protocol/openid-connect/certs
       HEKATE_ISSUER: http://localhost:8081/realms/hekate

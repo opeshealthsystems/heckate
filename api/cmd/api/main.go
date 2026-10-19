@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/opeshealthsystems/heckate/api/internal/modules/auditlog"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/notify"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 	"github.com/opeshealthsystems/heckate/api/internal/server"
@@ -31,6 +32,17 @@ func main() {
 			}
 			return
 		}
+	}
+
+	if problems := cfg.Problems(); len(problems) > 0 {
+		for _, m := range problems {
+			slog.Error("unsafe configuration", "problem", m)
+		}
+		slog.Error("refusing to start; fix the settings above, or set HEKATE_ENV=development on a developer machine")
+		os.Exit(1)
+	}
+	if !cfg.Production() {
+		slog.Warn("running in DEVELOPMENT mode: weaker authentication and fake payments may be enabled")
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -65,11 +77,16 @@ func main() {
 	handler, hub := server.NewWithHub(cfg, pool)
 	pub = platform.MultiPublisher{pub, hub} // live events to connected clients, beside the broker
 	go platform.RelayOutbox(ctx, pool, pub, 2*time.Second)
+	go auditlog.Seal(ctx, pool, 3*time.Second)
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second, // PDFs and downloads are the slowest responses
+		IdleTimeout:       90 * time.Second,
+		MaxHeaderBytes:    32 << 10,
 	}
 	go func() {
 		<-ctx.Done()
