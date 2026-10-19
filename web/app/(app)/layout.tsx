@@ -14,15 +14,17 @@ function Shell({ children }: { children: ReactNode }) {
   const has = (...r: string[]) => me.roles.some((x) => r.includes(x));
   const links: [string, string][] = [
     ["/dashboard", "Dashboard"],
-    ["/tickets", staff ? "Ticket queue" : "Support"],
   ];
+  // Auditors and suppliers have no ticket queue; every other signed-in role does.
+  if (has("ceo", "manager", "finance", "sales", "support", "engineer", "hr", "employee", "logistics", "procurement", "client_admin", "client_user")) links.push(["/tickets", staff ? "Ticket queue" : "Support"]);
   if (staff && has("ceo", "manager", "sales")) links.push(["/clients", "Clients"], ["/leads", "Leads"]);
   else if (staff && has("support", "finance", "engineer")) links.push(["/clients", "Clients"]);
   // Money is for management, finance and sales, and for the client themselves; other staff do not see it.
   if (has("ceo", "manager", "finance", "sales", "client_user", "client_admin")) links.push(["/quotes", "Quotes"], ["/invoices", "Invoices"]);
   if (staff || has("client_user", "client_admin")) links.push(["/projects", "Projects"], ["/interventions", has("client_user", "client_admin") ? "Site visits" : "Field"]);
-  if (staff) links.push(["/timesheets", "Time"], ["/inventory", "Inventory"]);
-  else if (has("client_user", "client_admin")) links.push(["/inventory", "Equipment"]);
+  if (has("ceo", "manager", "finance", "sales", "support", "engineer", "hr", "employee")) links.push(["/timesheets", "Time"]);
+  if (has("ceo", "manager", "finance", "sales", "support", "engineer", "hr", "employee", "logistics")) links.push(["/inventory", "Inventory"]);
+  if (has("client_user", "client_admin")) links.push(["/inventory", "Equipment"]);
   if (has("ceo", "manager", "finance", "auditor")) links.push(["/accounting", "Accounting"]);
   if (has("ceo", "manager", "procurement", "finance", "supplier")) links.push(["/procurement", has("supplier") ? "Supplier portal" : "Purchasing"]);
   if (staff) links.push(["/hr", "People"]);

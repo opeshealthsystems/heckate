@@ -11,7 +11,7 @@ interface Asset { id: string; item_id: string; item: string; serial: string; sta
 
 export default function Inventory() {
   const me = useMe();
-  const staff = me.scope === "staff";
+  const staff = me.scope === "staff" && me.roles.some((r) => ["ceo", "manager", "logistics", "engineer", "support", "sales", "finance", "hr", "employee"].includes(r));
   const keeper = me.roles.some((r) => ["logistics", "manager", "ceo"].includes(r));
   const [tab, setTab] = useState(staff ? "Items" : "Equipment");
   const [items, setItems] = useState<Item[]>([]);

@@ -29,11 +29,11 @@ export default function Procurement() {
   const load = useCallback(async () => {
     const get = <T,>(p: string, set: (v: T) => void) => raw.get<{ data: T }>(p).then((r) => set(r.data)).catch((e) => { if (e.status !== 403) setErr(e.message); });
     if (!supplier) void get<Supplier[]>("/v1/suppliers", setSups);
-    void get<RFQ[]>("/v1/rfqs", setRfqs);
+    if (supplier || buyer) void get<RFQ[]>("/v1/rfqs", setRfqs);
     void get<PO[]>("/v1/purchase-orders", setPos);
     void get<Inv[]>("/v1/supplier-invoices", setInvs);
-    if (buyer) void get<WH[]>("/v1/warehouses", setWhs);
-  }, [supplier, buyer]);
+    if (me.roles.some((r) => ["ceo", "manager"].includes(r))) void get<WH[]>("/v1/warehouses", setWhs);
+  }, [supplier, buyer, me.roles]);
   useEffect(() => { void load(); }, [load]);
   const act = useAction(load);
 

@@ -9,10 +9,12 @@ import { SeverityBadge, SlaChip, StatusBadge } from "@/components/Badges";
 export default function Dashboard() {
   const me = useMe();
   const staff = me.scope === "staff";
+  const portal = me.roles.some((r) => !["auditor", "supplier"].includes(r));
   const [report, setReport] = useState<SupportReport | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [err, setErr] = useState("");
   useEffect(() => {
+    if (!portal) return;
     api.tickets().then((r) => setTickets(r.data.filter((t) => t.status !== "closed").slice(0, 8))).catch((e) => setErr(e.message));
     if (me.roles.some((r) => ["ceo", "manager", "support"].includes(r))) api.report().then(setReport).catch(() => {});
   }, [me]);
@@ -27,12 +29,13 @@ export default function Dashboard() {
           <div className="stat"><span>{report.avg_rating?.toFixed(1) ?? "–"}</span>Avg rating</div>
         </section>
       )}
-      <div className="row">
+      {!portal && <p className="notice">Your role has no ticket queue. Use the menu to open {me.roles.includes("supplier") ? "the supplier portal" : "accounting and payroll (read-only)"}.</p>}
+      {portal && <div className="row">
         <h2>{staff ? "Latest tickets" : "Your open tickets"}</h2>
         <Link className="btn primary" href="/tickets/new">{staff ? "New ticket" : "Report an incident"}</Link>
-      </div>
+      </div>}
       {err && <p className="error">{err}</p>}
-      <div className="scroll">
+      {portal && <div className="scroll">
         <table>
           <thead><tr><th>Subject</th><th>Sev</th><th>Status</th><th>SLA</th></tr></thead>
           <tbody>
@@ -47,7 +50,7 @@ export default function Dashboard() {
             {!tickets.length && !err && <tr><td colSpan={4} className="muted">Nothing open.</td></tr>}
           </tbody>
         </table>
-      </div>
+      </div>}
     </>
   );
 }

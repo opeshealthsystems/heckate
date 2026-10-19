@@ -21,8 +21,8 @@ export default function NewTicket() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   useEffect(() => {
-    if (staff) api.clients().then((r) => setClients(r.data)).catch(() => {});
-  }, [staff]);
+    if (staff && me.roles.some((r) => ["ceo", "manager", "sales", "support", "finance", "engineer"].includes(r))) api.clients().then((r) => setClients(r.data)).catch(() => {});
+  }, [staff, me.roles]);
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
