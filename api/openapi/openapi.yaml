@@ -2,6 +2,9 @@ openapi: 3.1.0
 info:
   title: HEKATE Platform API
   version: 1.0.0
+  license:
+    name: Proprietary
+    identifier: LicenseRef-HEKATE
   description: Single API for the web ERP, portals and mobile app. Contract-first; SDKs are generated from this file.
 servers:
   - url: https://api.hekatesystems.com
@@ -11,6 +14,7 @@ paths:
   /healthz:
     get:
       operationId: getHealth
+      summary: Liveness check
       security: []
       responses:
         "200":
@@ -21,9 +25,11 @@ paths:
                 type: object
                 properties:
                   status: { type: string }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/tickets:
     get:
       operationId: listTickets
+      summary: List tickets
       parameters:
         - { name: cursor, in: query, schema: { type: string } }
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
@@ -37,9 +43,11 @@ paths:
                 properties:
                   data: { type: array, items: { $ref: "#/components/schemas/Ticket" } }
                   next_cursor: { type: [string, "null"] }
+        "4XX": { $ref: "#/components/responses/Problem" }
         default: { $ref: "#/components/responses/Problem" }
     post:
       operationId: createTicket
+      summary: Open a ticket or incident
       parameters:
         - { name: Idempotency-Key, in: header, required: true, schema: { type: string } }
       requestBody:
@@ -53,6 +61,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Ticket" }
+        "4XX": { $ref: "#/components/responses/Problem" }
         default: { $ref: "#/components/responses/Problem" }
 components:
   securitySchemes:
