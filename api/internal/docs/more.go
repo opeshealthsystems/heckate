@@ -251,8 +251,22 @@ type Section struct {
 // RenderNarrative draws a text document made of titled sections: proposal, order confirmation,
 // statement of work, letter or certificate. kind is the heading printed at the top.
 func RenderNarrative(o Options, ref, kind string, issued time.Time, title string, client Party, sections []Section, signedBy string) ([]byte, error) {
-	d := newDoc(o, ref, kind, issued)
-	d.title(strings.ToUpper(kind), ref)
+	return renderNarrative(o, ref, kind, issued, title, client, sections, signedBy, false)
+}
+
+// RenderNarrativeDraft shows an unissued document as it will print, marked as a draft that is not valid. It has
+// no reference and no QR code, so it can never be mistaken for, or verified as, an issued document.
+func RenderNarrativeDraft(o Options, kind string, at time.Time, title string, client Party, sections []Section, signedBy string) ([]byte, error) {
+	return renderNarrative(o, "DRAFT", kind, at, title, client, sections, signedBy, true)
+}
+
+func renderNarrative(o Options, ref, kind string, issued time.Time, title string, client Party, sections []Section, signedBy string, draft bool) ([]byte, error) {
+	d := newDocMode(o, ref, kind, issued, draft)
+	sub := ref
+	if draft {
+		sub = "Draft - not issued"
+	}
+	d.title(strings.ToUpper(kind), sub)
 	d.kv("Date", date(issued))
 	d.kv("Subject", title)
 	d.pdf.Ln(2)

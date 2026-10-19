@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { downloadFile, raw } from "@/lib/api";
+import { raw } from "@/lib/api";
+import { PdfActions } from "@/components/PdfActions";
 import { when } from "@/lib/format";
 import { Pill, Err, useAction } from "@/components/ui";
 import { Attachments } from "@/components/Attachments";
@@ -20,7 +21,6 @@ export default function InterventionPage() {
   const me = useMe();
   const [v, setV] = useState<Detail | null>(null);
   const [err, setErr] = useState("");
-  const dl = useAction();
   useEffect(() => { raw.get<Detail>(`/v1/interventions/${id}`).then(setV).catch((e) => setErr(e.message)); }, [id]);
   if (err) return <p className="error">{err}</p>;
   if (!v) return <p className="muted">Loading…</p>;
@@ -37,9 +37,8 @@ export default function InterventionPage() {
       </dl>
       <Attachments entityType="intervention" entityId={id} canUpload={me.scope === "staff" && v.status !== "completed"} />
       {v.status === "completed" && v.document_ref && (
-        <p><button className="btn" disabled={dl.busy} onClick={() => dl.run(() => downloadFile(`/v1/interventions/${id}/pdf`, `${v.document_ref}.pdf`))}>Download PDF</button></p>
+        <p><PdfActions path={`/v1/interventions/${id}/pdf`} reference={v.document_ref} title="Intervention report" /></p>
       )}
-      <Err msg={dl.err} />
       {v.report && <><h2>Report</h2><p className="card pre">{v.report}</p></>}
       {v.signature && (
         <>

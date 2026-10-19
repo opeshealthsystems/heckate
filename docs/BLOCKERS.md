@@ -61,3 +61,9 @@ The site now uses the approved brand pack (see `docs/BRAND_PACK.md`). Still miss
 ## Known gaps in what was built
 
 See the status table in the README for what exists per module. Everything in the spec not listed there as built is not built.
+
+## Documents and forms: decisions for the company
+
+* **Reference format.** The pack gives two schemes (`documents.md`: six-digit serial and `HS-CRT-A`; the register's ID Scheme sheet: four-digit serial and `HS-CERT`). The platform follows `documents.md`. Decide before the first real document is issued; see `FORMS_GLOSSARY.md`.
+* **Exact form layouts.** Filled forms print in the brand frame from the entered fields; they are not copies of the pack's boxes and bilingual labels. The pack's signed originals are available for preview, unmodified.
+* **Signing.** Issued PDFs carry a QR code and a recorded SHA-256 but are not PAdES-signed until a signing certificate exists (see `SECURITY.md`).

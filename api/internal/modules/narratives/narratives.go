@@ -77,6 +77,7 @@ func Register(a *platform.App, o docs.Options) {
 	a.Route("PUT /v1/narratives/{id}", writers, update)
 	a.Route("POST /v1/narratives/{id}/issue", writers, platform.Idempotent(issue))
 	a.Route("GET /v1/narratives/{id}/pdf", platform.Portal, m.pdf)
+	a.Route("GET /v1/narratives/{id}/preview", platform.Portal, m.preview)
 }
 
 // notAllowed turns a row-level-security refusal into a 403 that names the problem; other errors pass through.
@@ -280,6 +281,37 @@ func (m *module) pdf(r *http.Request, s *platform.Scope) (*platform.Result, erro
 		}
 		return docs.RenderNarrative(m.docs, *n.Ref, label, entry.IssuedAt, n.Title, client, secs, signed)
 	})
+}
+
+// preview renders a draft as it will print, marked "draft, not valid". Nothing is stored, numbered or logged.
+func (m *module) preview(r *http.Request, s *platform.Scope) (*platform.Result, error) {
+	ctx := r.Context()
+	n, err := scan(s.Tx.QueryRow(ctx, `SELECT `+cols+` FROM documents.narratives WHERE id::text=$1`, r.PathValue("id")))
+	if err != nil {
+		return nil, err
+	}
+	if n.Ref != nil {
+		return nil, platform.Err(http.StatusConflict, "Already issued", "this document is issued; download its PDF instead")
+	}
+	client, err := clients.Party(ctx, s, n.TenantID)
+	if err != nil {
+		return nil, err
+	}
+	_, label := n.codeAndLabel()
+	secs := make([]docs.Section, len(n.Sections))
+	for i, x := range n.Sections {
+		secs[i] = docs.Section{Heading: x.Heading, Body: x.Body}
+	}
+	signed := ""
+	if n.SignedBy != nil {
+		signed = *n.SignedBy
+	}
+	b, err := docs.RenderNarrativeDraft(m.docs, label, time.Now().UTC(), n.Title, client, secs, signed)
+	if err != nil {
+		return nil, err
+	}
+	return &platform.Result{Status: http.StatusOK, Bytes: b, ContentType: "application/pdf", Header: map[string]string{
+		"Content-Disposition": `inline; filename="draft-preview.pdf"`, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"}}, nil
 }
 
 func (n *Narrative) codeAndLabel() (code, label string) {

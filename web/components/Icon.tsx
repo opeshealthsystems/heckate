@@ -19,6 +19,10 @@ const PATHS: Record<string, string> = {
   menu: "M4 7h16M4 12h16M4 17h16",
   close: "M6 6l12 12M18 6L6 18",
   signout: "M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3",
+  print: "M7 9V3h10v6M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v7H7z",
+  download: "M12 3v12M7 10l5 5 5-5M4 21h16",
+  eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
+  search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3",
   plus: "M12 5v14M5 12h14",
 };
 

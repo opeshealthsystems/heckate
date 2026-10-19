@@ -333,6 +333,14 @@ func TestNarrativeDocuments(t *testing.T) {
 	if c, _, _ := e.do("GET", "/v1/narratives/"+id, alice, nil); c != 404 {
 		t.Errorf("client must not see a draft, got %d", c)
 	}
+	// A draft can be previewed as it will print, but is plainly marked, has no reference and no QR code.
+	if r, b := e.pdf(sales, "/v1/narratives/"+id+"/preview"); r.StatusCode != 200 || !bytes.HasPrefix(b, []byte("%PDF")) ||
+		!bytes.Contains(b, []byte("DRAFT PREVIEW")) || bytes.Contains(b, []byte("Scan to verify")) || bytes.Contains(b, []byte("/verify?ref=")) {
+		t.Errorf("draft preview: status %d, marked draft, no verification: %q", r.StatusCode, b[:min(len(b), 80)])
+	}
+	if r, _ := e.pdf(alice, "/v1/narratives/"+id+"/preview"); r.StatusCode != 404 {
+		t.Errorf("a client previewing someone else's draft: want 404, got %d", r.StatusCode)
+	}
 	body["title"] = "Network upgrade v2 " + sfx
 	if c, _, _ := e.do("PUT", "/v1/narratives/"+id, sales, body); c != 200 {
 		t.Fatalf("edit draft: %d", c)

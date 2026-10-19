@@ -66,13 +66,18 @@ func (o Options) VerifyURL(ref string) string {
 }
 
 type doc struct {
-	pdf *fpdf.Fpdf
-	tr  func(string) string
-	o   Options
-	ref string
+	pdf   *fpdf.Fpdf
+	tr    func(string) string
+	o     Options
+	ref   string
+	draft bool // a preview of something not yet issued: no reference, no QR code, marked as not valid
 }
 
 func newDoc(o Options, ref, kind string, at time.Time) *doc {
+	return newDocMode(o, ref, kind, at, false)
+}
+
+func newDocMode(o Options, ref, kind string, at time.Time, draft bool) *doc {
 	pdf := fpdf.New("P", "mm", "A4", "")
 	pdf.SetCompression(o.Compress)
 	pdf.SetCatalogSort(true) // font and image tables are written in sorted order, not map order: deterministic bytes
@@ -83,14 +88,20 @@ func newDoc(o Options, ref, kind string, at time.Time) *doc {
 	pdf.SetMargins(15, 15, 15)
 	pdf.SetAutoPageBreak(true, 22)
 	pdf.AliasNbPages("{nb}")
-	d := &doc{pdf: pdf, tr: pdf.UnicodeTranslatorFromDescriptor(""), o: o, ref: ref}
+	d := &doc{pdf: pdf, tr: pdf.UnicodeTranslatorFromDescriptor(""), o: o, ref: ref, draft: draft}
 
 	var qr []byte
-	if o.PortalURL != "" {
+	if o.PortalURL != "" && !draft {
 		qr, _ = qrcode.Encode(o.VerifyURL(ref), qrcode.Medium, 256)
 	}
 	class := Classification(ref)
+	if draft {
+		class = "DRAFT PREVIEW - NOT ISSUED - NOT VALID"
+	}
 	col := classColour[class]
+	if draft {
+		col = [3]int{169, 101, 0} // the same contrast-safe amber as the CONFIDENTIAL banner
+	}
 	pdf.RegisterImageOptionsReader("logo", fpdf.ImageOptions{ImageType: "PNG"}, bytes.NewReader(logoPNG))
 	pdf.SetHeaderFunc(func() {
 		// Classification banner across the top of every page.
@@ -122,6 +133,15 @@ func newDoc(o Options, ref, kind string, at time.Time) *doc {
 		pdf.Line(15, 43, 195, 43)
 		pdf.SetLineWidth(0.2)
 		pdf.SetDrawColor(0, 0, 0)
+		if draft {
+			pdf.SetFont("Helvetica", "B", 96)
+			pdf.SetTextColor(232, 232, 232)
+			pdf.TransformBegin()
+			pdf.TransformRotate(45, 105, 165)
+			pdf.Text(42, 175, "DRAFT")
+			pdf.TransformEnd()
+			pdf.SetTextColor(0, 0, 0)
+		}
 		pdf.SetY(47)
 	})
 	pdf.SetFooterFunc(func() {
@@ -134,7 +154,9 @@ func newDoc(o Options, ref, kind string, at time.Time) *doc {
 		pdf.SetTextColor(90, 90, 90)
 		pdf.SetX(15)
 		line := class + "  |  Reference " + ref
-		if o.PortalURL != "" {
+		if draft {
+			line = "Draft preview  |  not issued, has no reference and cannot be verified"
+		} else if o.PortalURL != "" {
 			line += "  |  Verify at " + o.VerifyURL(ref)
 		}
 		pdf.CellFormat(150, 4, d.tr(line), "", 0, "L", false, 0, "")

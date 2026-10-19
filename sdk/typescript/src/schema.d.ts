@@ -2644,6 +2644,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/narratives/{id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** PDF preview of a draft text document, marked as a draft that is not valid. It has no reference or QR code and nothing is stored */
+        get: operations["previewNarrative"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/invoices/{id}/pdf": {
         parameters: {
             query?: never;
@@ -7783,6 +7802,29 @@ export interface operations {
             200: {
                 headers: {
                     "X-Document-SHA256"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    previewNarrative: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The preview */
+            200: {
+                headers: {
                     [name: string]: unknown;
                 };
                 content: {

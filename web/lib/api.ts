@@ -72,8 +72,8 @@ export async function downloadAttachment(a: Pick<Attachment, "id" | "filename">)
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-/** Downloads a file from an authenticated endpoint (such as a PDF) and hands it to the browser. */
-export async function downloadFile(path: string, filename: string): Promise<void> {
+/** Fetches a file (such as a PDF) from an authenticated endpoint. */
+export async function fetchFile(path: string): Promise<Blob> {
   const token = getToken();
   let res: Response;
   try {
@@ -85,12 +85,21 @@ export async function downloadFile(path: string, filename: string): Promise<void
     const p = await res.json().catch(() => ({}));
     throw new ApiError(res.status, p.title ?? "Download failed", p.detail ?? "");
   }
-  const url = URL.createObjectURL(await res.blob());
+  return res.blob();
+}
+
+export function saveBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/** Downloads a file from an authenticated endpoint (such as a PDF) and hands it to the browser. */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  saveBlob(await fetchFile(path), filename);
 }
 
 /** Generic call for endpoints without a hand-written wrapper. */

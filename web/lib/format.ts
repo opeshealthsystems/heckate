@@ -4,3 +4,4 @@ export const xaf = (n: number | null | undefined) =>
 
 export const day = (s: string | null | undefined) => (s ? new Date(s).toLocaleDateString() : "–");
 export const when = (s: string | null | undefined) => (s ? new Date(s).toLocaleString() : "–");
+export const roleLabel = (r: string) => (r === "ceo" ? "CEO" : r.charAt(0).toUpperCase() + r.slice(1).replace(/_/g, " "));

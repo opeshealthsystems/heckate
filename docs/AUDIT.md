@@ -72,7 +72,7 @@ End-to-end scripts (erp, documents, payroll, bank, attachments, csp, live) pass 
 ## 5. Known gaps (not fixed in this pass)
 
 * No icon set in the ERP: controls use text labels (✕ and ☰ are the only glyphs). This is consistent and accessible; a brand icon set would be a design task.
-* Mobile screens were checked for theme tokens, not pixel-compared with the phone designs.
+* Mobile screens were checked for theme tokens, not pixel-compared with the phone designs. The web dashboards now follow the approved staff and client layouts.
 * Pack form layouts (exact positions), certificate security print and PAdES signing remain open (see `BLOCKERS.md`).
 * Payment reminders are built (push to the client's admins at 1, 7 and 30 days late). The Orange Money client is built but off and unverified against the real service; the redirect to its payment page is not wired into the UI.
 * Independent penetration test, Keycloak in production, off-site backups and monitoring remain pre-requisites for regulated clients (see `READINESS.md`).

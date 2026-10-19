@@ -35,8 +35,8 @@ export default function ProjectPage() {
       )}
       <Err msg={act.err} />
       <h2>Tasks</h2>
-      <Table head={["Task", "Assignee", "Due", "Status"]} empty={p.tasks.length ? undefined : "No tasks yet."}>
-        {p.tasks.map((t) => (
+      <Table head={["Task", "Assignee", "Due", "Status"]} empty={(p.tasks ?? []).length ? undefined : "No tasks yet."}>
+        {(p.tasks ?? []).map((t) => (
           <tr key={t.id}>
             <td>{t.title}</td><td>{t.assignee ?? "–"}</td><td>{day(t.due_date)}</td>
             <td>

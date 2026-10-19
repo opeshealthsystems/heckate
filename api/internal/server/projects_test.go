@@ -235,3 +235,22 @@ func TestProjectsAndTasks(t *testing.T) {
 		t.Errorf("other client must not see the project, got %d", c)
 	}
 }
+
+// The project page reads tasks.length, so a project with no tasks must send an empty list, not leave the field out.
+func TestProjectWithoutTasksSendsAnEmptyList(t *testing.T) {
+	e := setup(t)
+	mgr := token("pm-empty", "", "manager")
+	ta := e.newClient(mgr, "ProjEmpty "+t.Name())
+	_, p, _ := e.do("POST", "/v1/projects", mgr, map[string]any{"tenant_id": ta, "name": "No tasks yet"})
+	_, got, _ := e.do("GET", "/v1/projects/"+p["id"].(string), mgr, nil)
+	tasks, ok := got["tasks"].([]any)
+	if !ok || len(tasks) != 0 {
+		t.Fatalf("a project with no tasks must send \"tasks\": [], got %v", got["tasks"])
+	}
+	_, list, _ := e.do("GET", "/v1/projects", mgr, nil)
+	for _, x := range list["data"].([]any) {
+		if _, has := x.(map[string]any)["tasks"]; has {
+			t.Fatal("the list view stays light and must not carry tasks")
+		}
+	}
+}

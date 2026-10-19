@@ -3037,6 +3037,17 @@ paths:
           content:
             application/pdf: { schema: { type: string, format: binary } }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/narratives/{id}/preview:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: previewNarrative
+      summary: "PDF preview of a draft text document, marked as a draft that is not valid. It has no reference or QR code and nothing is stored"
+      responses:
+        "200":
+          description: "The preview"
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/invoices/{id}/pdf:
     parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
     get:

@@ -80,7 +80,7 @@ type Project struct {
 	EndDate   *time.Time `json:"end_date"`
 	Budget    *int64     `json:"budget"`
 	CreatedAt time.Time  `json:"created_at"`
-	Tasks     []Task     `json:"tasks,omitempty"`
+	Tasks     *[]Task    `json:"tasks,omitempty"` // a pointer so an empty list is still sent on the detail view
 }
 
 type Task struct {
@@ -171,14 +171,15 @@ func getProject(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	p.Tasks = []Task{}
+	tasks := []Task{}
 	for rows.Next() {
 		var t Task
 		if err := rows.Scan(&t.ID, &t.Title, &t.Status, &t.Assignee, &t.DueDate); err != nil {
 			return nil, err
 		}
-		p.Tasks = append(p.Tasks, t)
+		tasks = append(tasks, t)
 	}
+	p.Tasks = &tasks
 	return &platform.Result{Status: http.StatusOK, Body: p}, rows.Err()
 }
 

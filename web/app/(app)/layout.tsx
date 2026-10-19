@@ -1,10 +1,13 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { SessionGate, useMe } from "@/lib/session";
 import { clearToken } from "@/lib/auth";
 import { Icon, type IconName } from "@/components/Icon";
+
+const WORK = new Set(["/dashboard", "/tickets", "/projects", "/interventions", "/timesheets"]);
+const groupOf = (href: string) => (WORK.has(href) ? "Work" : "Business");
 
 function Shell({ children }: { children: ReactNode }) {
   const me = useMe();
@@ -32,20 +35,24 @@ function Shell({ children }: { children: ReactNode }) {
   if (has("hr", "finance", "manager", "ceo", "auditor")) links.push(["/payroll", "Payroll"]);
   if (staff && has("ceo", "manager", "finance", "sales", "support", "engineer", "hr", "logistics", "procurement")) links.push(["/documents", "Documents"]);
   if (has("client_admin", "client_user")) links.push(["/developer", "Developer"]);
+  const ordered = [...links].sort((a, b) => Number(groupOf(a[0]) !== "Work") - Number(groupOf(b[0]) !== "Work"));
   const icons: Record<string, IconName> = {"/dashboard": "dashboard", "/tickets": "tickets", "/clients": "clients", "/leads": "leads", "/quotes": "quotes", "/invoices": "invoices", "/projects": "projects", "/interventions": "field", "/timesheets": "time", "/inventory": "inventory", "/accounting": "accounting", "/procurement": "purchasing", "/hr": "people", "/payroll": "payroll", "/documents": "documents", "/developer": "developer"};
   return (
     <div className="shell">
       <header className="side">
         <div className="side-head">
-          <Link href="/dashboard" className="logo"><img src="/brand/HEKATE_Logo_White.png" alt="HEKATE SYSTEMS" width={104} height={42} /></Link>
+          <Link href="/dashboard" className="logo"><img src="/brand/HEKATE_Seal_White.png" alt="HEKATE SYSTEMS" width={72} height={72} /></Link>
           <button className="btn menu" aria-expanded={open} aria-label="Menu" onClick={() => setOpen(!open)}><Icon name={open ? "close" : "menu"} size={20} /></button>
         </div>
         <nav className={open ? "open" : ""} aria-label="Main">
-          {links.map(([href, label]) => (
-            <Link key={href} href={href} className={path.startsWith(href) ? "active" : ""} aria-current={path.startsWith(href) ? "page" : undefined} onClick={() => setOpen(false)}>
+          {ordered.map(([href, label], i) => (
+            <Fragment key={href}>
+            {(i === 0 || groupOf(href) !== groupOf(ordered[i - 1][0])) && <span className="side-group">{groupOf(href)}</span>}
+            <Link href={href} className={path.startsWith(href) ? "active" : ""} aria-current={path.startsWith(href) ? "page" : undefined} onClick={() => setOpen(false)}>
               <Icon name={icons[href] ?? "dashboard"} size={18} />
               {label}
             </Link>
+            </Fragment>
           ))}
           <div className="side-foot">
             <span className="who">{me.roles.map((r) => (r === "ceo" ? "CEO" : r.replace(/_/g, " "))).join(", ")}</span>
