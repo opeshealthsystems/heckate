@@ -3,9 +3,9 @@ import { StyleSheet } from "react-native";
 // Brand tokens (HEKATE brand pack): navy + gold + white; status colours for pills only.
 // The brand defines no dark theme, so the app is always light (app.json: userInterfaceStyle "light").
 const c = {
-  bg: "#F4F7FB", fg: "#0B1B33", muted: "#5B6675", card: "#ffffff", line: "#DCE4EE", inputBorder: "#A9B7CA",
+  bg: "#F4F7FB", fg: "#0B1B33", muted: "#5B6675", card: "#ffffff", line: "#DCE4EE", inputBorder: "#788EAC",
   brand: "#062245", brandFg: "#ffffff", navyRaised: "#0E2F5A", navyLine: "#1B3A66", onNavyMuted: "#C9D6E8",
-  gold: "#B8913F", goldText: "#9A7630", goldOnNavy: "#C9A75A",
+  gold: "#B8913F", goldText: "#8B6B2B", goldOnNavy: "#C9A75A",
   ok: "#1E6B3E", bad: "#B3261E", warn: "#8A5300",
 };
 export type Theme = typeof c;

@@ -9,7 +9,7 @@ export const fr: Dict = {
   nav: { services: "Services", platform: "Plateforme", identity: "Identité", about: "À propos", contact: "Contact", portal: "Espace client", report: "Signaler un incident", verify: "Vérifier un document" },
   home: {
     title: "HEKATE SYSTEMS — Des systèmes sûrs pour les institutions africaines",
-    description: "HEKATE SYSTEMS protège, construit et exploite les technologies dont dépendent les banques, les hôpitaux, les entreprises et les États — des opérations de sécurité aux plateformes ERP et aux systèmes d’identité nationale.",
+    description: "HEKATE SYSTEMS protège, construit et exploite les technologies des banques, hôpitaux, entreprises et États : sécurité, plateformes ERP et systèmes d’identité nationale.",
     eyebrow: "CYBERSÉCURITÉ · PLATEFORMES · IDENTITÉ",
     h1: "Des systèmes sûrs pour les institutions africaines.",
     lead: "HEKATE SYSTEMS protège, construit et exploite les technologies dont dépendent les banques, les hôpitaux, les entreprises et les États — des opérations de sécurité aux plateformes ERP et aux systèmes d’identité nationale.",
@@ -162,7 +162,7 @@ export const fr: Dict = {
   },
   about: {
     title: "À propos — HEKATE SYSTEMS",
-    description: "HEKATE SYSTEMS SARL est une société d’ingénierie camerounaise basée à Douala, qui protège et exploite les systèmes dont dépendent les institutions au Cameroun et dans la zone CEMAC.",
+    description: "HEKATE SYSTEMS SARL, société d’ingénierie camerounaise basée à Douala : sécurité, systèmes et identité pour les institutions du Cameroun et de la zone CEMAC.",
     label: "À PROPOS DE HEKATE",
     h1: "Une société d’ingénierie camerounaise, conçue pour protéger ce sur quoi reposent les institutions.",
     lead: "HEKATE SYSTEMS SARL est basée à Douala et intervient au Cameroun et dans la zone CEMAC. Nous réunissons dans une seule équipe les tests de sécurité, l’infrastructure, le logiciel et l’ingénierie de l’identité : ceux qui évaluent un système sont ceux qui peuvent le corriger.",
@@ -216,7 +216,7 @@ export const fr: Dict = {
   },
   guarantees: {
     title: "Politiques de garantie — HEKATE SYSTEMS",
-    description: "Politiques de garantie HEKATE HS-GP-2026-01 : niveaux de service, disponibilité de l’hébergement, installation, matériel, tests de sécurité, réponse aux incidents, confidentialité, formation et authenticité des documents.",
+    description: "Politiques de garantie HEKATE (HS-GP-2026-01) : niveaux de service, hébergement, installation, matériel, tests de sécurité, incidents et protection des données.",
     h1: "Politiques de garantie HEKATE",
     meta: "HS-GP-2026-01 · Version 1.0 · 19 octobre 2026 · Classification : Public",
     intro: "",

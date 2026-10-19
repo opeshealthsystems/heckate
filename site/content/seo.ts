@@ -35,6 +35,19 @@ export function organizationLd(c: Company, d: Dict) {
   return ld;
 }
 
+/** A page about the organisation: its contact details, or a policy it publishes. */
+export function pageLd(c: Company, type: "ContactPage" | "WebPage", name: string, description: string, url: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": type,
+    name,
+    description,
+    url,
+    publisher: { "@type": "Organization", name: c.legalName, url: c.url },
+    inLanguage: url.includes("/fr/") ? "fr" : "en",
+  };
+}
+
 export function serviceLd(c: Company, s: Service) {
   return {
     "@context": "https://schema.org",

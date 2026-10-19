@@ -44,3 +44,11 @@ test("sitemap lists both languages with hreflang", () => {
   assert.match(x, /<loc>https:\/\/example.com\/fr\/services\/<\/loc>/);
   assert.match(x, /hreflang="fr"/);
 });
+
+test("every meta description fits a search result in both languages", () => {
+  for (const d of [en, fr]) {
+    for (const [name, text] of [["home", d.home.description], ["services", d.services.description], ["about", d.about.description], ["contact", d.contact.description], ["guarantees", d.guarantees.description]]) {
+      assert.ok(text.length >= 50 && text.length <= 175, `${d.lang} ${name} description is ${text.length} characters`);
+    }
+  }
+});

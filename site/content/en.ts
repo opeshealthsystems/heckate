@@ -7,7 +7,7 @@ export const en: Dict = {
   nav: { services: "Services", platform: "Platform", identity: "Identity", about: "About", contact: "Contact", portal: "Client portal", report: "Report an incident", verify: "Verify a document" },
   home: {
     title: "HEKATE SYSTEMS — Secure systems for Africa’s institutions",
-    description: "HEKATE SYSTEMS protects, builds and runs the technology that banks, hospitals, businesses and governments depend on — from security operations to ERP platforms and national identity systems.",
+    description: "HEKATE SYSTEMS protects, builds and runs the technology that banks, hospitals, businesses and governments depend on: security, ERP platforms and national ID systems.",
     eyebrow: "CYBERSECURITY · PLATFORMS · IDENTITY",
     h1: "Secure systems for Africa’s institutions.",
     lead: "HEKATE SYSTEMS protects, builds and runs the technology that banks, hospitals, businesses and governments depend on — from security operations to ERP platforms and national identity systems.",
@@ -214,7 +214,7 @@ export const en: Dict = {
   },
   guarantees: {
     title: "Guarantee policies — HEKATE SYSTEMS",
-    description: "HEKATE guarantee policies HS-GP-2026-01: service levels, hosting availability, workmanship, hardware, security testing, incident response, confidentiality, training and document authenticity.",
+    description: "HEKATE guarantee policies (HS-GP-2026-01): service levels, hosting availability, workmanship, hardware, security testing, incident response and data protection.",
     h1: "HEKATE Guarantee Policies",
     meta: "HS-GP-2026-01 · Version 1.0 · 19 October 2026 · Classification: Public",
     intro: "HEKATE SYSTEMS SARL guarantees the services, software, installations and documents it delivers on the terms below. These policies form part of every Master Services Agreement (MSA), Statement of Work (SOW), quotation (HS-QT) and invoice (HS-INV). Where a signed contract sets a different term, the contract prevails.",

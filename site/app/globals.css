@@ -9,9 +9,9 @@
 /* Tokens from the HEKATE brand pack (brand/tokens.css). Navy + gold + white; no gradients, glows or shadows. */
 :root {
   --hs-navy: #062245; --hs-navy-deep: #041A36; --hs-navy-raised: #0E2F5A; --hs-navy-line: #1B3A66;
-  --hs-gold: #B8913F; --hs-gold-text: #9A7630; --hs-gold-on-navy: #C9A75A;
+  --hs-gold: #B8913F; --hs-gold-text: #8B6B2B; --hs-gold-on-navy: #C9A75A;
   --hs-ink: #0B1B33; --hs-body: #3B4A60; --hs-slate: #5B6675; --hs-on-navy-muted: #C9D6E8;
-  --hs-band: #F4F7FB; --hs-rule: #DCE4EE; --hs-input-border: #A9B7CA; --hs-white: #FFFFFF;
+  --hs-band: #F4F7FB; --hs-rule: #DCE4EE; --hs-input-border: #788EAC; --hs-white: #FFFFFF;
   --hs-success: #1E6B3E; --hs-success-bg: #E6F3EA; --hs-warning: #8A5300; --hs-warning-bg: #FFF3DC; --hs-danger: #B3261E;
   --hs-font-display: Cinzel, serif;
   --hs-font-body: "IBM Plex Sans", system-ui, sans-serif;

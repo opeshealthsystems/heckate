@@ -11,9 +11,9 @@
    no gradients, glows or shadows. The brand defines no dark theme, so there is none. */
 :root {
   --hs-navy: #062245; --hs-navy-deep: #041A36; --hs-navy-raised: #0E2F5A; --hs-navy-line: #1B3A66;
-  --hs-gold: #B8913F; --hs-gold-text: #9A7630; --hs-gold-on-navy: #C9A75A;
+  --hs-gold: #B8913F; --hs-gold-text: #8B6B2B; --hs-gold-on-navy: #C9A75A;
   --hs-ink: #0B1B33; --hs-body: #3B4A60; --hs-slate: #5B6675; --hs-on-navy-muted: #C9D6E8;
-  --hs-band: #F4F7FB; --hs-rule: #DCE4EE; --hs-input-border: #A9B7CA;
+  --hs-band: #F4F7FB; --hs-rule: #DCE4EE; --hs-input-border: #788EAC;
   --hs-success: #1E6B3E; --hs-success-bg: #E6F3EA; --hs-warning: #8A5300; --hs-warning-bg: #FFF3DC; --hs-danger: #B3261E; --hs-danger-bg: #FDF3F2;
   --bg: var(--hs-band); --fg: var(--hs-ink); --muted: var(--hs-slate); --card: #fff; --line: var(--hs-rule);
   --brand: var(--hs-navy); --brand-fg: #fff; --ok: var(--hs-success); --bad: var(--hs-danger); --warn: var(--hs-warning);
@@ -112,3 +112,5 @@ tbody tr:last-child td { border-bottom: 0; }
 .signin-form { flex: 1 1 420px; display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
 .signin-form > div { width: 100%; max-width: 400px; }
 .signin-form h2 { font-family: Cinzel, serif; font-weight: 700; font-size: 30px; color: var(--hs-navy); margin: 0 0 6px; }
+
+.sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

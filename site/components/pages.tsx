@@ -1,6 +1,6 @@
 import { company } from "@/content/company";
 import { dicts, path } from "@/content";
-import { faqLd, organizationLd, serviceLd } from "@/content/seo";
+import { faqLd, organizationLd, pageLd, serviceLd } from "@/content/seo";
 import type { Block, Lang } from "@/content/types";
 import { ContactForm } from "./ContactForm";
 import { JsonLd } from "./seo";
@@ -210,6 +210,8 @@ export function ContactPage({ lang }: { lang: Lang }) {
   const c = d.contact;
   return (
     <Shell lang={lang} here="/contact/">
+      <JsonLd data={organizationLd(company, d)} />
+      <JsonLd data={pageLd(company, "ContactPage", c.title, c.description, `${company.url}${path(lang, "/contact/")}`)} />
       <section className="wrap section stack">
         <h1 className="page-h">{c.h1}</h1>
         <p className="lead dark">{c.intro}</p>
@@ -219,7 +221,7 @@ export function ContactPage({ lang }: { lang: Lang }) {
         </div>
         <div className="split contact">
           <ContactForm t={c} services={d.services.practices.map((p) => p.name)} />
-          <aside className="stack">
+          <div className="stack">
             <div><h2 className="h3">{c.officeH}</h2><p>{company.addressLines.map((l) => <span key={l}>{l}<br /></span>)}{company.latitude}° N, {company.longitude}° E</p></div>
             <div>
               <h2 className="h3">{c.departmentsH}</h2>
@@ -229,7 +231,7 @@ export function ContactPage({ lang }: { lang: Lang }) {
               <div><h2 className="h3">{c.phonePostH}</h2><p>{[company.phone, company.poBox && `P.O. Box ${company.poBox}`].filter(Boolean).join(" · ")}</p></div>
             )}
             <div><h2 className="h3">{c.hoursH}</h2><p>{c.hours}</p></div>
-          </aside>
+          </div>
         </div>
       </section>
     </Shell>
@@ -244,7 +246,7 @@ function Blocks({ blocks }: { blocks: Block[] }) {
         if (b.t === "ul") return <ul key={i}>{b.items.map((x) => <li key={x}>{x}</li>)}</ul>;
         if (b.t === "ol") return <ol key={i}>{b.items.map((x) => <li key={x}>{x}</li>)}</ol>;
         return (
-          <div key={i} className="table-wrap">
+          <div key={i} className="table-wrap" tabIndex={0} role="region" aria-label={b.head.join(", ")}>
             <table>
               <thead><tr>{b.head.map((h) => <th key={h} scope="col">{h}</th>)}</tr></thead>
               <tbody>{b.rows.map((r) => (<tr key={r[0]}>{r.map((c, j) => (j === 0 ? <th key={j} scope="row">{c}</th> : <td key={j}>{c}</td>))}</tr>))}</tbody>
@@ -262,6 +264,7 @@ export function GuaranteesPage({ lang }: { lang: Lang }) {
   const sections = g.sections.length ? g.sections : en.sections;
   return (
     <Shell lang={lang} here="/guarantees/">
+      <JsonLd data={pageLd(company, "WebPage", g.title, g.description, `${company.url}${path(lang, "/guarantees/")}`)} />
       <article className="wrap section prose">
         <h1 className="page-h">{g.h1}</h1>
         <p className="mono small">{g.meta}</p>

@@ -23,7 +23,7 @@ var (
 var classColour = map[string][3]int{
 	"PUBLIC":       {46, 125, 50},
 	"INTERNAL":     {21, 101, 192},
-	"CONFIDENTIAL": {178, 106, 0},
+	"CONFIDENTIAL": {169, 101, 0}, // the pack gives #B26A00, which is only 4.2:1 against white text; this is the darkest-needed 4.6:1 variant
 	"RESTRICTED":   {198, 40, 40},
 }
 

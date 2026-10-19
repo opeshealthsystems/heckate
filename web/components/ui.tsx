@@ -36,7 +36,7 @@ export function Table({ head, children, empty }: { head: string[]; children: Rea
   return (
     <div className="scroll">
       <table>
-        <thead><tr>{head.map((h) => <th key={h}>{h}</th>)}</tr></thead>
+        <thead><tr>{head.map((h, i) => <th key={`${i}-${h}`} scope="col">{h || <span className="sr">Actions</span>}</th>)}</tr></thead>
         <tbody>{children}</tbody>
       </table>
       {empty && <p className="muted pad">{empty}</p>}
