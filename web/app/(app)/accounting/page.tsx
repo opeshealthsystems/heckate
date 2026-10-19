@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { raw } from "@/lib/api";
 import { day, xaf } from "@/lib/format";
 import { Err, Pill, Table, Tabs, useAction } from "@/components/ui";
+import { Bank } from "@/components/Bank";
 
 interface TB { rows: { account: string; name: string; debit: number; credit: number; balance: number }[]; total_debit: number; total_credit: number; balanced: boolean }
 interface Entry { seq: number; journal: string; entry_date: string; ref: string; narration: string; hash: string; lines: { account: string; debit: number; credit: number }[] }
@@ -29,7 +30,7 @@ export default function Accounting() {
     <>
       <h1>Accounting</h1>
       <Err msg={err} />
-      <Tabs tabs={["Trial balance", "Journal", "Integrity"]} value={tab} onChange={setTab} />
+      <Tabs tabs={["Trial balance", "Journal", "Bank", "Integrity"]} value={tab} onChange={setTab} />
       {tab === "Trial balance" && tb && (
         <>
           <div className="filters">
@@ -55,6 +56,7 @@ export default function Accounting() {
           ))}
         </Table>
       )}
+      {tab === "Bank" && <Bank />}
       {tab === "Integrity" && (
         <>
           <p>Every ledger entry is chained to the one before it by a hash. Verifying recomputes the whole chain and reports the first entry that does not match.</p>

@@ -353,6 +353,92 @@ paths:
                 properties:
                   data: { type: array, items: { $ref: "#/components/schemas/Payslip" } }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/bank/statements:
+    get:
+      operationId: listBankStatements
+      summary: Imported bank statements with how many lines are matched (finance, management, auditor)
+      responses:
+        "200":
+          description: Statements
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/BankStatement" } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: importBankStatement
+      summary: Import a statement from CSV (date, description, amount, reference). Opening plus lines must equal closing.
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [account, opening, closing, csv]
+              properties:
+                account: { type: string, description: A treasury account (class 5) from the chart, for example 521 }
+                opening: { type: integer }
+                closing: { type: integer }
+                csv: { type: string }
+      responses:
+        "201":
+          description: Imported
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Reconciliation" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/bank/statements/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: getBankStatement
+      summary: A statement with suggested matches, unmatched ledger lines and the reconciliation summary
+      responses:
+        "200":
+          description: Statement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Reconciliation" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/bank/statements/{id}/auto-match:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      operationId: autoMatchBankStatement
+      summary: Match every bank line that has exactly one possible ledger line
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      responses:
+        "200":
+          description: Updated statement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Reconciliation" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/bank/lines/{id}/match:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      operationId: matchBankLine
+      summary: Match a bank line to a ledger line of the same account and amount
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entry_line_id]
+              properties:
+                entry_line_id: { type: integer }
+      responses:
+        "204": { description: Matched }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: unmatchBankLine
+      summary: Undo a match
+      responses:
+        "204": { description: Unmatched }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/clients:
     get:
       operationId: listClients
@@ -2423,6 +2509,26 @@ components:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
   schemas:
+    BankStatement:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        account: { type: string }
+        period_from: { type: string, format: date }
+        period_to: { type: string, format: date }
+        opening: { type: integer }
+        closing: { type: integer }
+        imported_by: { type: string }
+        lines: { type: integer }
+        matched: { type: integer }
+    Reconciliation:
+      type: object
+      properties:
+        statement: { $ref: "#/components/schemas/BankStatement" }
+        lines: { type: array, items: { $ref: "#/components/schemas/Object" } }
+        unmatched_ledger: { type: array, items: { $ref: "#/components/schemas/Object" } }
+        summary: { $ref: "#/components/schemas/Object" }
+        auto_matched: { type: integer }
     PayrollRun:
       type: object
       properties:

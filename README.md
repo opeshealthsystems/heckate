@@ -22,7 +22,7 @@ ERP, client and supplier portals, public website and mobile app on one API. Requ
 | Clients, CRM (leads from the website form) | Built |
 | Support & Incidents (tickets, SLA, comments, internal notes, rating, report) | Built: web and mobile |
 | Sales & Invoicing (quotes, client approval, invoices, payments, credit notes, TVA+CAC, dual control above a threshold) | Built: web |
-| Accounting (append-only hash-chained double-entry ledger, auto-posting from sales and purchases, trial balance, chain verification) | Built: web. Starter chart only; accountant must validate |
+| Accounting (append-only hash-chained double-entry ledger, auto-posting from sales, purchases and payroll, trial balance, chain verification, bank reconciliation) | Built: web. Starter chart only; accountant must validate |
 | Projects & Field Service (projects, tasks, interventions with GPS and signature, timesheets) | Built: web; field check-in/out on mobile |
 | Inventory & Assets (stock ledger, serialised equipment, issue to staff, client assets, parts used on interventions) | Built: web |
 | Purchasing & Suppliers (supplier register with call-back-verified bank details, RFQs, POs, receipts, supplier invoices with three-way match, supplier portal) | Built: web |

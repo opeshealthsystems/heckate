@@ -22,6 +22,7 @@ func Register(a *platform.App) {
 	a.Route("GET /v1/accounting/trial-balance", readers, trialBalance)
 	a.Route("GET /v1/accounting/ledger/{account}", readers, ledger)
 	a.Route("GET /v1/accounting/verify", readers, verify)
+	registerBank(a)
 }
 
 var accountRe = regexp.MustCompile(`^[1-9][0-9]{0,7}$`)

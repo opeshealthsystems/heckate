@@ -331,6 +331,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/bank/statements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Imported bank statements with how many lines are matched (finance, management, auditor) */
+        get: operations["listBankStatements"];
+        put?: never;
+        /** Import a statement from CSV (date, description, amount, reference). Opening plus lines must equal closing. */
+        post: operations["importBankStatement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/bank/statements/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** A statement with suggested matches, unmatched ledger lines and the reconciliation summary */
+        get: operations["getBankStatement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/bank/statements/{id}/auto-match": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Match every bank line that has exactly one possible ledger line */
+        post: operations["autoMatchBankStatement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/bank/lines/{id}/match": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Match a bank line to a ledger line of the same account and amount */
+        post: operations["matchBankLine"];
+        /** Undo a match */
+        delete: operations["unmatchBankLine"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/clients": {
         parameters: {
             query?: never;
@@ -2049,6 +2125,27 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        BankStatement: {
+            /** Format: uuid */
+            id?: string;
+            account?: string;
+            /** Format: date */
+            period_from?: string;
+            /** Format: date */
+            period_to?: string;
+            opening?: number;
+            closing?: number;
+            imported_by?: string;
+            lines?: number;
+            matched?: number;
+        };
+        Reconciliation: {
+            statement?: components["schemas"]["BankStatement"];
+            lines?: components["schemas"]["Object"][];
+            unmatched_ledger?: components["schemas"]["Object"][];
+            summary?: components["schemas"]["Object"];
+            auto_matched?: number;
+        };
         PayrollRun: {
             /** Format: uuid */
             id?: string;
@@ -2828,6 +2925,160 @@ export interface operations {
                         data?: components["schemas"]["Payslip"][];
                     };
                 };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    listBankStatements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Statements */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["BankStatement"][];
+                    };
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    importBankStatement: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    account: "521" | "5211" | "571";
+                    opening: number;
+                    closing: number;
+                    csv: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Imported */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reconciliation"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    getBankStatement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Statement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reconciliation"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    autoMatchBankStatement: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Updated statement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reconciliation"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    matchBankLine: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    entry_line_id: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Matched */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    unmatchBankLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unmatched */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             "4XX": components["responses"]["Problem"];
         };

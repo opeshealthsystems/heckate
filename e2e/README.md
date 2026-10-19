@@ -8,6 +8,7 @@ Drive the real web app against a real API and Postgres with Playwright (Chromium
 | `erp.mjs` | ERP: quote, client approval, invoice, mobile-money payment, ledger and hash-chain check, leave request and approval, and no sideways scroll at 360 px on every dense screen. It also asserts the session is not dropped |
 | `documents.mjs` | Downloading an invoice PDF, checking that exact file (and a tampered copy) on `/verify`, and a client admin creating, using and revoking an API key |
 | `payroll.mjs` | Payroll: finance prepares a month, a second finance user approves, a third person pays, and the employee finds their payslip. Each role sees only the buttons it may press |
+| `bank.mjs` | Bank reconciliation: statement import, automatic matching of unambiguous lines, manual choice for an ambiguous one, outstanding ledger lines |
 
 ## Run
 
