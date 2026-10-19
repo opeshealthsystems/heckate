@@ -3,6 +3,7 @@ package accounting
 import (
 	"context"
 
+	"github.com/opeshealthsystems/heckate/api/internal/modules/procurement"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/sales"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 )
@@ -63,5 +64,33 @@ func (SalesPoster) CreditNoteIssued(ctx context.Context, s *platform.Scope, e sa
 			Line{Account: "4439", Debit: e.CAC},
 			Line{Account: "411", Credit: e.Total, Party: e.Tenant},
 		)})
+	return err
+}
+
+// ProcurementPoster books supplier invoices and their payment.
+type ProcurementPoster struct{}
+
+var _ procurement.Poster = ProcurementPoster{}
+
+func (ProcurementPoster) SupplierInvoiceApproved(ctx context.Context, s *platform.Scope, e procurement.InvoiceEntry) error {
+	_, err := Post(ctx, s, Entry{Journal: "AC", Date: e.Date, Ref: e.Number, Narration: "Supplier invoice " + e.Number, Source: "supplier_invoice", SourceRef: e.Number,
+		Lines: nz(
+			Line{Account: "601", Debit: e.Net},
+			Line{Account: "4452", Debit: e.VAT},
+			Line{Account: "401", Credit: e.Total, Party: e.Supplier},
+		)})
+	return err
+}
+
+func (ProcurementPoster) SupplierInvoicePaid(ctx context.Context, s *platform.Scope, e procurement.PaidEntry) error {
+	journal, account := "BQ", "521"
+	if e.Method == "cash" {
+		journal, account = "CA", "571"
+	}
+	_, err := Post(ctx, s, Entry{Journal: journal, Date: e.Date, Ref: e.Number, Narration: "Payment of supplier invoice " + e.Number, Source: "supplier_payment", SourceRef: e.Number,
+		Lines: []Line{
+			{Account: "401", Debit: e.Total, Party: e.Supplier},
+			{Account: account, Credit: e.Total},
+		}})
 	return err
 }

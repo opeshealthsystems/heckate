@@ -258,6 +258,21 @@ func Issue(ctx context.Context, s *platform.Scope, item, wh string, qty int, ref
 	return move(ctx, s, item, wh, -qty, "issue", ref, nil)
 }
 
+// Receive adds non-serialised stock. The procurement module calls it when goods arrive against a purchase order.
+func Receive(ctx context.Context, s *platform.Scope, item, wh string, qty int, ref string) error {
+	if qty <= 0 {
+		return bad("qty must be positive")
+	}
+	it, err := lookupItem(ctx, s, item)
+	if err != nil {
+		return err
+	}
+	if it.serialised {
+		return bad("serialised items are received with their serial numbers through /v1/stock/receipts")
+	}
+	return move(ctx, s, item, wh, qty, "receipt", ref, nil)
+}
+
 func issue(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	var in qtyReq
 	if err := platform.DecodeBody(r, &in); err != nil {
