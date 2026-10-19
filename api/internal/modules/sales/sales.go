@@ -84,6 +84,11 @@ func Register(a *platform.App, p Poster, o docs.Options) Recorder {
 	a.Route("POST /v1/invoices/{id}/payments", financeRoles, platform.Idempotent(m.recordPayment))
 	a.Route("POST /v1/invoices/{id}/credit-notes", financeRoles, platform.Idempotent(m.creditNote))
 	a.Route("GET /v1/reports/sales", financeRoles, report)
+	a.Route("GET /v1/reports/ageing", financeRoles, ageing)
+	a.Route("POST /v1/recurring-invoices", invoiceWriters, platform.Idempotent(m.createRecurring))
+	a.Route("GET /v1/recurring-invoices", invoiceWriters, m.listRecurring)
+	a.Route("POST /v1/recurring-invoices/run", financeRoles, platform.Idempotent(m.runRecurring))
+	a.Route("POST /v1/recurring-invoices/{id}/active", invoiceWriters, m.setRecurringActive)
 	return m
 }
 
@@ -459,18 +464,8 @@ func (m *module) createInvoice(r *http.Request, s *platform.Scope) (*platform.Re
 		return nil, err
 	}
 	ctx := r.Context()
-	var id string
-	if err := s.Tx.QueryRow(ctx, `INSERT INTO sales.invoices (tenant_id, title, due_date, created_by) VALUES ($1,$2,$3,$4) RETURNING id`,
-		in.TenantID, strings.TrimSpace(in.Title), due, s.Claims.Sub).Scan(&id); err != nil {
-		if strings.Contains(err.Error(), "foreign key") {
-			return nil, platform.Err(http.StatusUnprocessableEntity, "Invalid invoice", "unknown tenant")
-		}
-		return nil, err
-	}
-	if err := writeLines(ctx, s, "invoice_lines", "invoice_id", id, in.TenantID, in.Lines); err != nil {
-		return nil, err
-	}
-	if err := retotal(ctx, s, id); err != nil {
+	id, err := newDraftInvoice(ctx, s, in.TenantID, strings.TrimSpace(in.Title), due, in.Lines)
+	if err != nil {
 		return nil, err
 	}
 	v, err := loadInvoice(ctx, s, id, false, true)
@@ -481,6 +476,25 @@ func (m *module) createInvoice(r *http.Request, s *platform.Scope) (*platform.Re
 		return nil, err
 	}
 	return &platform.Result{Status: http.StatusCreated, Body: v}, nil
+}
+
+// newDraftInvoice inserts a draft invoice with its lines and totals and returns its id.
+func newDraftInvoice(ctx context.Context, s *platform.Scope, tenantID, title string, due any, lines []Line) (string, error) {
+	var id string
+	if err := s.Tx.QueryRow(ctx, `INSERT INTO sales.invoices (tenant_id, title, due_date, created_by) VALUES ($1,$2,$3,$4) RETURNING id`,
+		tenantID, title, due, s.Claims.Sub).Scan(&id); err != nil {
+		if strings.Contains(err.Error(), "foreign key") {
+			return "", platform.Err(http.StatusUnprocessableEntity, "Invalid invoice", "unknown tenant")
+		}
+		return "", err
+	}
+	if err := writeLines(ctx, s, "invoice_lines", "invoice_id", id, tenantID, lines); err != nil {
+		return "", err
+	}
+	if err := retotal(ctx, s, id); err != nil {
+		return "", err
+	}
+	return id, nil
 }
 
 func parseDue(v string) (any, error) {

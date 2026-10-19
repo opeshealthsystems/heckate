@@ -10,9 +10,9 @@ What exists today (counted):
 
 | | |
 | --- | --- |
-| API operations in the OpenAPI contract | 175 |
-| Database migrations | 26 |
-| Go tests (integration tests run against a real PostgreSQL, as a superuser **and** as an ordinary database owner) | 99 |
+| API operations in the OpenAPI contract | 180 |
+| Database migrations | 27 |
+| Go tests (integration tests run against a real PostgreSQL, as a superuser **and** as an ordinary database owner) | 100 |
 | Browser end-to-end scripts (Playwright) | 8 |
 | Languages / apps | Go API, Next.js web ERP and portals, Expo mobile app, static bilingual site, TypeScript SDK |
 
@@ -42,8 +42,8 @@ A module counts as production ready only when **all** of these are true. Today t
 | **CRM** | Client accounts, contacts, leads from the website form, KYC status field | Contracts, KYC / onboarding forms (HS-FRM-07, 13), pipeline reporting, consent records |
 | **Support & Incidents** | Tickets, SLA clocks, comments, private staff notes, rating, support report, live updates, push, attachments; web and mobile | Incident report form (HS-FRM-14), on-call roster, SLA calendars and pauses, email intake, knowledge base. **SLA times are placeholders** |
 | **Projects & Field** | Projects, tasks, site visits with GPS, signature, parts used; offline queue on mobile; timesheets with approval; acceptance PDF | Kick-off, change request, closure forms (HS-FRM-23, 26, 31), statements of work, milestone billing |
-| **Sales & Invoicing** | Quotes, client approval, invoices, dual control above a threshold, payments, credit notes, TVA + CAC, PDF invoice and quote, online mobile-money payment framework | Proposals, order confirmation, reminders, recurring invoices, rate card. **Tax figures need the accountant** |
-| **Accounting** | Append-only hash-chained ledger, balanced entries enforced in the database, posting from sales, purchasing and payroll, trial balance, permanent month close that locks the period in the database, ledger integrity check, bank reconciliation | DSF filing, SYSCOHADA presentation of the statements (a class-based income statement and balance sheet exist), the filed VAT return (a working VAT summary from the ledger exists), fixed assets, ageing. **Chart of accounts is a starter set** |
+| **Sales & Invoicing** | Quotes, client approval, invoices, dual control above a threshold, payments, credit notes, TVA + CAC, PDF invoice and quote, online mobile-money payment framework | Proposals, order confirmation, payment reminders, rate card. (Recurring invoice templates exist: a run makes drafts, finance still issues them; nothing is sent automatically, and the run is triggered by a person or an external schedule, not by the API itself.) **Tax figures need the accountant** |
+| **Accounting** | Append-only hash-chained ledger, balanced entries enforced in the database, posting from sales, purchasing and payroll, trial balance, permanent month close that locks the period in the database, ledger integrity check, bank reconciliation | DSF filing, SYSCOHADA presentation of the statements (a class-based income statement and balance sheet exist), the filed VAT return (a working VAT summary from the ledger exists), fixed assets, a receivables ageing report exists. **Chart of accounts is a starter set** |
 | **Purchasing & Suppliers** | Supplier register with call-back-verified bank details, RFQs with sealed bids, purchase orders with dual control, goods receipt, supplier invoices with three-way match, supplier portal | supplier registration and evaluation forms (HS-FRM-39, 41), contract management |
 | **Inventory & Assets** | Append-only stock ledger, no negative stock, serialised equipment, issue to staff, client-held assets, parts on interventions, stock counts approved by a second person, reorder report from minimum levels | Counting serialised equipment, barcode scanning, depreciation |
 | **HR & Payroll** | Employee records, leave with live balances, expense claims with receipts, payroll engine (rates are data, a second person must validate them, dual control to approve and pay, posts to the ledger), payslips for employees | Recruitment and offers (HS-FRM-32, 33), appraisals, CNPS / tax declaration files, overtime, bonuses, contracts. **Payroll rates are unvalidated** |

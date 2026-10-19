@@ -2,8 +2,10 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -186,5 +188,91 @@ func TestIssuedInvoicesAreImmutableInTheDatabase(t *testing.T) {
 		} else if !strings.Contains(err.Error(), "immutable") && !strings.Contains(err.Error(), "cannot") {
 			t.Errorf("%s: unexpected error %v", name, err)
 		}
+	}
+}
+
+func TestRecurringInvoicesAndAgeing(t *testing.T) {
+	e := setup(t)
+	sfx := fmt.Sprint(time.Now().UnixNano())
+	fin := token("rec-fin", "", "finance")
+	sales := token("rec-sales", "", "sales")
+	sup := token("rec-support", "", "support")
+	name := "Recurring Co " + sfx
+	tid := e.newClient(token("m", "", "manager"), name)
+	body := func(first string, months int) map[string]any {
+		return map[string]any{"tenant_id": tid, "title": "Managed IT " + sfx, "interval_months": months, "first_run": first, "due_days": 30,
+			"lines": []map[string]any{{"description": "Monthly support", "quantity": 1, "unit_price": 200_000}}}
+	}
+	long := time.Now().UTC().AddDate(0, 0, -45).Format("2006-01-02")
+	if c, _, _ := e.do("POST", "/v1/recurring-invoices", sup, body(long, 1)); c != 403 {
+		t.Errorf("support creating: want 403, got %d", c)
+	}
+	if c, _, _ := e.do("POST", "/v1/recurring-invoices", sales, body(long, 2)); c != 422 {
+		t.Errorf("a 2-month interval: want 422, got %d", c)
+	}
+	if c, _, _ := e.do("POST", "/v1/recurring-invoices", sales, body("tomorrow", 1)); c != 422 {
+		t.Errorf("a bad date: want 422, got %d", c)
+	}
+	c, rec, _ := e.do("POST", "/v1/recurring-invoices", sales, body(long, 1))
+	if c != 201 {
+		t.Fatalf("create template: %d %v", c, rec)
+	}
+	rid := rec["id"].(string)
+	if c, _, _ := e.do("POST", "/v1/recurring-invoices/run", sales, nil); c != 403 {
+		t.Errorf("sales running: want 403, got %d", c)
+	}
+	mine := func(res map[string]any) []map[string]any {
+		var out []map[string]any
+		for _, x := range res["created"].([]any) {
+			if m := x.(map[string]any); m["recurring_id"] == rid {
+				out = append(out, m)
+			}
+		}
+		return out
+	}
+	// 45 days overdue with a monthly cycle: each run bills one period and moves the template on.
+	_, run1, _ := e.do("POST", "/v1/recurring-invoices/run", fin, nil)
+	if len(mine(run1)) != 1 {
+		t.Fatalf("first run must create one draft for the template: %v", run1)
+	}
+	_, inv, _ := e.do("GET", "/v1/invoices/"+mine(run1)[0]["invoice_id"].(string), fin, nil)
+	if inv["status"] != "draft" || inv["total"] != float64(238_500) {
+		t.Errorf("the run must create a draft of 200,000 + TVA + CAC = 238,500: %v", inv)
+	}
+	_, run2, _ := e.do("POST", "/v1/recurring-invoices/run", fin, nil)
+	if len(mine(run2)) != 1 {
+		t.Errorf("a template that is still due catches up one period per run: %v", run2)
+	}
+	_, run3, _ := e.do("POST", "/v1/recurring-invoices/run", fin, nil)
+	if len(mine(run3)) != 0 {
+		t.Errorf("once caught up nothing more is created: %v", run3)
+	}
+	if c, b, _ := e.do("POST", "/v1/recurring-invoices/"+rid+"/active", sales, map[string]any{"active": false}); c != 200 || b["active"] != false {
+		t.Errorf("pause: %d %v", c, b)
+	}
+
+	// Ageing: an issued invoice due 40 days ago sits in the 31-60 band.
+	due := time.Now().UTC().AddDate(0, 0, -40).Format("2006-01-02")
+	_, drafted, _ := e.do("POST", "/v1/invoices", fin, map[string]any{"tenant_id": tid, "title": "Late " + sfx, "due_date": due, "lines": lines(1_000_000)})
+	e.do("POST", "/v1/invoices/"+drafted["id"].(string)+"/issue", fin, nil)
+	e.do("POST", "/v1/invoices/"+drafted["id"].(string)+"/payments", fin, map[string]any{"amount": 192_500, "method": "bank"})
+	code, ag, _ := e.do("GET", "/v1/reports/ageing", fin, nil)
+	if code != 200 {
+		t.Fatalf("ageing: %d %v", code, ag)
+	}
+	found := false
+	for _, x := range ag["clients"].([]any) {
+		if m := x.(map[string]any); m["client"] == name {
+			found = m["d31_60"] == float64(1_000_000) && m["current"] == float64(0) && m["total"] == float64(1_000_000)
+		}
+	}
+	if !found {
+		t.Errorf("1,000,000 still owed and 40 days late must be in the 31-60 band: %v", ag)
+	}
+	if c, _, _ := e.do("GET", "/v1/reports/ageing", sales, nil); c != 403 {
+		t.Errorf("sales reading ageing: want 403, got %d", c)
+	}
+	if c, _, _ := e.do("GET", "/v1/reports/ageing?as_at=nope", fin, nil); c != 400 {
+		t.Errorf("bad as_at: want 400, got %d", c)
 	}
 }

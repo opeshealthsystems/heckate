@@ -1055,6 +1055,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/recurring-invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recurring invoice templates, soonest next run first */
+        get: operations["listRecurringInvoices"];
+        put?: never;
+        /** Create a recurring invoice template. Runs produce drafts that finance issues as usual */
+        post: operations["createRecurringInvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/recurring-invoices/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create one DRAFT invoice for every active template that is due and move each on by its interval. Safe to repeat */
+        post: operations["runRecurringInvoices"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/recurring-invoices/{id}/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pause or resume a template */
+        post: operations["setRecurringInvoiceActive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/ageing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What clients still owe, by client and by how many days past due (current, 1-30, 31-60, 61-90, over 90) */
+        get: operations["getReceivablesAgeing"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/reports/sales": {
         parameters: {
             query?: never;
@@ -4832,6 +4903,144 @@ export interface operations {
         responses: {
             /** @description Success */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    listRecurringInvoices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Templates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    createRecurringInvoice: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    tenant_id: string;
+                    title: string;
+                    /** @enum {integer} */
+                    interval_months: 1 | 3 | 6 | 12;
+                    /** @description Days from the run date to the due date, 30 by default */
+                    due_days?: number;
+                    /** Format: date */
+                    first_run: string;
+                    lines: {
+                        description?: string;
+                        quantity?: number;
+                        unit_price?: number;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description The template */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    runRecurringInvoices: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The drafts created */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    setRecurringInvoiceActive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    active: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description The template */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    getReceivablesAgeing: {
+        parameters: {
+            query?: {
+                as_at?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ageing in XAF */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
