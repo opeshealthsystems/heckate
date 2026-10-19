@@ -3,6 +3,7 @@
 package documents
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -94,6 +95,27 @@ func Register(a *platform.App) {
 	a.Public("GET /v1/public/verify/{ref}", verify)
 }
 
+// Issue allocates the next reference for code and registers the document. Other modules call it
+// inside their own transaction so a document and its register entry commit together.
+func Issue(ctx context.Context, s *platform.Scope, code, title, tenantID, sha string) (*Document, error) {
+	year := time.Now().UTC().Year()
+	var seq int
+	if err := s.Tx.QueryRow(ctx, `INSERT INTO documents.counters (code, year, last) VALUES ($1,$2,1)
+		ON CONFLICT (code, year) DO UPDATE SET last = documents.counters.last + 1 RETURNING last`, code, year).Scan(&seq); err != nil {
+		return nil, err
+	}
+	ref := FormatRef(code, year, seq)
+	d, err := scan(s.Tx.QueryRow(ctx, `INSERT INTO documents.register (ref, code, title, tenant_id, sha256, issued_by)
+		VALUES ($1,$2,$3,NULLIF($4,'')::uuid,NULLIF($5,''),$6) RETURNING `+cols, ref, code, title, tenantID, sha, s.Claims.Sub))
+	if err != nil {
+		if strings.Contains(err.Error(), "foreign key") {
+			return nil, platform.Err(http.StatusUnprocessableEntity, "Invalid document", "unknown tenant")
+		}
+		return nil, err
+	}
+	return d, nil
+}
+
 func issue(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	var in struct {
 		Code     string `json:"code"`
@@ -111,21 +133,11 @@ func issue(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	if in.SHA256 != "" && !regexp.MustCompile(`^[0-9a-f]{64}$`).MatchString(in.SHA256) {
 		return nil, platform.Err(http.StatusUnprocessableEntity, "Invalid document", "sha256 must be 64 hex chars")
 	}
-	year := time.Now().UTC().Year()
-	var seq int
-	if err := s.Tx.QueryRow(r.Context(), `INSERT INTO documents.counters (code, year, last) VALUES ($1,$2,1)
-		ON CONFLICT (code, year) DO UPDATE SET last = documents.counters.last + 1 RETURNING last`, code, year).Scan(&seq); err != nil {
-		return nil, err
-	}
-	ref := FormatRef(code, year, seq)
-	d, err := scan(s.Tx.QueryRow(r.Context(), `INSERT INTO documents.register (ref, code, title, tenant_id, sha256, issued_by)
-		VALUES ($1,$2,$3,NULLIF($4,'')::uuid,NULLIF($5,''),$6) RETURNING `+cols, ref, code, strings.TrimSpace(in.Title), in.TenantID, in.SHA256, s.Claims.Sub))
+	d, err := Issue(r.Context(), s, code, strings.TrimSpace(in.Title), in.TenantID, in.SHA256)
 	if err != nil {
-		if strings.Contains(err.Error(), "foreign key") {
-			return nil, platform.Err(http.StatusUnprocessableEntity, "Invalid document", "unknown tenant")
-		}
 		return nil, err
 	}
+	ref := d.Ref
 	if err := s.Audit(r.Context(), "issue", "document", ref); err != nil {
 		return nil, err
 	}
