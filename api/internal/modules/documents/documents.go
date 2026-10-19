@@ -30,15 +30,23 @@ func IsCertificate(code string) bool {
 	return strings.HasPrefix(code, "CRT") || strings.HasPrefix(code, "ASM")
 }
 
-// CheckChar is a position-weighted mod-36 checksum over the reference body.
+// CheckChar is the ISO/IEC 7064 MOD 37,36 check character over the alphanumerics of the reference body, the same
+// calculation as the brand pack's certificate generators (HS-ASM-2026-000148 gets P, as on the approved design).
 func CheckChar(body string) byte {
-	sum := 0
-	for i, c := range body {
-		if v := strings.IndexRune(alphabet, c); v >= 0 {
-			sum += (i + 1) * (v + 1)
+	const m = 36
+	p := m
+	for _, c := range body {
+		v := strings.IndexRune(alphabet, c)
+		if v < 0 {
+			continue // hyphens are not part of the calculation
 		}
+		p = (p + v) % m
+		if p == 0 {
+			p = m
+		}
+		p = p * 2 % (m + 1)
 	}
-	return alphabet[sum%36]
+	return alphabet[(m+1-p)%m]
 }
 
 // FormatRef builds the reference for a code, year and sequence number.
@@ -90,12 +98,22 @@ func scan(row pgx.Row) (*Document, error) {
 
 var issuers = []string{"ceo", "manager", "sales", "finance", "support", "engineer", "hr"}
 
-func Register(a *platform.App) {
+func Register(a *platform.App, portalURL string) {
 	a.Route("POST /v1/documents", issuers, platform.Idempotent(issue))
 	a.Route("GET /v1/documents/{ref}", nil, get)
 	a.Route("POST /v1/documents/{ref}/revoke", []string{"ceo", "manager"}, revoke)
-	a.Public("GET /v1/public/verify/{ref}", verify)
+	m := &module{portal: strings.TrimRight(portalURL, "/")}
+	a.Public("GET /v1/public/verify/{ref}", m.verify)
+	a.Public("GET /v1/public/verify-qr/{token}", m.verifyQR)
+	a.Public("POST /v1/public/access-requests", m.requestAccess)
+	a.Public("GET /v1/public/access/{token}", m.download)
+	a.Route("GET /v1/documents/{ref}/verifications", issuers, m.verifications)
+	a.Route("GET /v1/access-requests", deciders, m.listRequests)
+	a.Route("POST /v1/access-requests/{id}/approve", deciders, platform.Idempotent(m.approve))
+	a.Route("POST /v1/access-requests/{id}/deny", deciders, platform.Idempotent(m.deny))
 }
+
+type module struct{ portal string }
 
 // Issue allocates the next reference for code and registers the document. Other modules call it
 // inside their own transaction so a document and its register entry commit together.
@@ -163,39 +181,6 @@ func revoke(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		return nil, err
 	}
 	return &platform.Result{Status: http.StatusOK, Body: d}, nil
-}
-
-// verify is public: it exposes only reference, type, title, status and issue date.
-func verify(r *http.Request, s *platform.Scope) (*platform.Result, error) {
-	ref := strings.ToUpper(r.PathValue("ref"))
-	if !ValidRef(ref) {
-		return &platform.Result{Status: http.StatusOK, Body: map[string]any{"valid": false, "reason": "malformed reference"}}, nil
-	}
-	var d struct {
-		Ref, Code, Title, Status string
-		IssuedAt                 time.Time
-		SHA256                   *string
-	}
-	err := s.Tx.QueryRow(r.Context(), `SELECT ref, code, title, status, issued_at, sha256 FROM documents.verify($1)`, ref).Scan(&d.Ref, &d.Code, &d.Title, &d.Status, &d.IssuedAt, &d.SHA256)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return &platform.Result{Status: http.StatusOK, Body: map[string]any{"valid": false, "reason": "not found"}}, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	body := map[string]any{"valid": d.Status == "valid", "ref": d.Ref, "code": d.Code, "title": d.Title, "status": d.Status, "issued_at": d.IssuedAt}
-	if d.SHA256 != nil {
-		body["sha256"] = *d.SHA256 // lets anyone check a file they hold against the original
-	}
-	// A replaced document stays authentic; say so, and point to the one that replaced it.
-	var newer *string
-	if err := s.Tx.QueryRow(r.Context(), `SELECT documents.superseded_by($1)`, ref).Scan(&newer); err != nil {
-		return nil, err
-	}
-	if newer != nil {
-		body["superseded_by"] = *newer
-	}
-	return &platform.Result{Status: http.StatusOK, Body: body}, nil
 }
 
 // Lookup returns a register entry the caller is allowed to see.

@@ -93,6 +93,10 @@ Approved version of every entry above: **1.0**. SHA-256 of each approved origina
 * Every create, edit, issue and revise is also in the tamper-evident audit log. Screens: Documents, My documents, History and Revise. API: `GET /v1/narratives/{id}/versions`, `POST /v1/narratives/{id}/revise`.
 * Not yet covered: documents produced by other modules (invoices, quotes, payslips and so on) are frozen at issue and corrected with credit notes or new documents, as accounting requires; they do not have draft histories. The pack's *Revision Log* sheet (document, version, date, author, change, approver, hash) is not imported: the platform keeps its own history, and approver sign-off on a revision is not modelled.
 
+## Verification page
+
+`/verify` (and `/v/<code>` for a scanned QR code) is public. It shows the HEKATE seal and one of: **Authentic**, **Genuine but replaced** (naming the newer version), **Withdrawn**, or **Not valid** (unknown reference, or a code whose signature is not HEKATE's or does not match the record). For a genuine document it shows the official document type, title, reference, version, issue date, classification, issuer, how often it has been verified, whether the QR signature was checked, and the original file's fingerprint (a file you hold can be compared in your own browser; it is never uploaded). It never shows the client or the content. From the page, someone can **request access** with a reason; managers decide under Documents, Access requests. Staff see how often each document was verified in its History panel.
+
 ## Reference numbers: a difference in the pack that needs a decision
 
 The pack describes document references in two ways:

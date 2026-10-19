@@ -202,3 +202,38 @@ td code { white-space: nowrap; }
 .diff .d-add { background: var(--hs-success-bg); color: var(--hs-success); display: block; }
 .diff .d-del { background: var(--hs-danger-bg); color: var(--hs-danger); display: block; }
 .diff .d-same { color: var(--hs-body); display: block; }
+
+/* Public verification pages */
+.pub { min-height: 100dvh; display: flex; flex-direction: column; background: var(--hs-band); position: relative; }
+.pub::before { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .7; background: url(/brand/HEKATE_Seal_Watermark.png) center 55% / min(78vmin, 760px) no-repeat; }
+.pub-head { position: relative; z-index: 1; background: var(--hs-navy); color: #fff; padding: 12px 20px; border-bottom: 3px solid var(--hs-gold); }
+.pub-brand { display: inline-flex; align-items: center; gap: 12px; color: #fff; text-decoration: none; }
+.pub-brand span { display: flex; flex-direction: column; line-height: 1.2; }
+.pub-brand small { color: var(--hs-on-navy-muted); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.pub-main { position: relative; z-index: 1; flex: 1; width: min(100%, 860px); margin: 0 auto; padding: 24px 16px 40px; display: flex; flex-direction: column; gap: 20px; }
+.pub-foot { position: relative; z-index: 1; text-align: center; padding: 16px; font-size: 12px; color: var(--muted); }
+.vr-form h1 { margin-top: 0; }
+.vr-input { display: flex; gap: 8px; flex-wrap: wrap; } .vr-input input { flex: 1 1 260px; width: auto; }
+.vr { background: var(--card); border: 1px solid var(--line); border-top: 6px solid var(--hs-success); border-radius: 14px; padding: 20px; }
+.vr.warn { border-top-color: var(--hs-warning); } .vr.bad { border-top-color: var(--hs-danger); }
+.vr-verdict { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.vr-verdict h2 { margin: 0 0 4px; font-size: 1.5rem; }
+.vr.ok h2 { color: var(--hs-success); } .vr.warn h2 { color: var(--hs-warning); } .vr.bad h2 { color: var(--hs-danger); }
+.vr-verdict p { margin: 4px 0; }
+.vr-seal { position: relative; flex: none; width: 96px; height: 96px; }
+.vr-badge { position: absolute; right: -6px; bottom: -4px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 1.1rem; border: 3px solid #fff; }
+.vr-badge.ok { background: var(--hs-success); } .vr-badge.warn { background: var(--hs-warning); } .vr-badge.bad { background: var(--hs-danger); }
+.vr-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 24px; margin: 20px 0 8px; padding-top: 16px; border-top: 1px solid var(--line); }
+.vr-facts dt { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.vr-facts dd { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.vr-checks { margin: 12px 0; } .vr-checks p { margin: 6px 0; } .vr-checks .ok { color: var(--hs-success); }
+.hash { display: block; font-size: 11px; word-break: break-all; color: var(--hs-body); }
+.vr-file, .vr-access { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+.vr-access h3 { margin: 0 0 4px; }
+.notice.ok { background: var(--hs-success-bg); color: var(--hs-success); }
+@media print {
+  .pub { background: #fff; } .pub::before, .pub-head .pub-brand small, .vr-form, .vr-access, .vr-file, .vr-print, .btn { display: none !important; }
+  .vr { border: 1px solid #999; break-inside: avoid; }
+}
+.requests { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 12px; }
+.requests blockquote { margin: 8px 0; padding: 8px 12px; border-left: 3px solid var(--hs-gold); background: var(--hs-band); }

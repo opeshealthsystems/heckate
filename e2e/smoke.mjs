@@ -89,7 +89,7 @@ const pub = await b.newPage();
 await pub.goto("http://localhost:3000/verify");
 await pub.fill("#ref", ref);
 await pub.click("button:has-text('Verify')");
-await pub.waitForSelector("text=Valid document");
+await pub.waitForSelector("text=Authentic HEKATE document");
 await pub.fill("#ref", ref.slice(0, -1) + (ref.endsWith("A") ? "B" : "A"));
 await pub.click("button:has-text('Verify')");
 await pub.waitForSelector("text=Not a valid HEKATE document");

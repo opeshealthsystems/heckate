@@ -497,7 +497,7 @@ func CORS(origins string, next http.Handler) http.Handler {
 			w.Header().Set("Vary", "Origin")
 			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Idempotency-Key, If-Match")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Expose-Headers", "ETag, RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, X-Trace-Id")
+			w.Header().Set("Access-Control-Expose-Headers", "ETag, RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, X-Trace-Id, Content-Disposition, X-Document-SHA256")
 		}
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)

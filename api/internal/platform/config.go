@@ -33,6 +33,7 @@ type Config struct {
 
 	PaymentsWebhookSecret string // HEKATE_PAYMENTS_WEBHOOK_SECRET: signs provider callbacks (HMAC-SHA256); callbacks are refused without it
 	PaymentsSandbox       bool   // HEKATE_PAYMENTS_SANDBOX=1: a fake provider that never moves money. Development only.
+	QRSigningKeyFile      string // HEKATE_QR_SIGNING_KEY_FILE: unencrypted PKCS#8 Ed25519 key in PEM form, from the secret store; empty prints plain /verify?ref= codes
 	MoMo                  MoMoConfig
 	Orange                OrangeConfig
 }
@@ -91,6 +92,7 @@ func LoadConfig() Config {
 
 		PaymentsWebhookSecret: os.Getenv("HEKATE_PAYMENTS_WEBHOOK_SECRET"),
 		PaymentsSandbox:       os.Getenv("HEKATE_PAYMENTS_SANDBOX") == "1",
+		QRSigningKeyFile:      os.Getenv("HEKATE_QR_SIGNING_KEY_FILE"),
 		MoMo: MoMoConfig{
 			BaseURL: os.Getenv("HEKATE_MOMO_BASE_URL"), SubscriptionKey: os.Getenv("HEKATE_MOMO_SUBSCRIPTION_KEY"),
 			APIUser: os.Getenv("HEKATE_MOMO_API_USER"), APIKey: os.Getenv("HEKATE_MOMO_API_KEY"),

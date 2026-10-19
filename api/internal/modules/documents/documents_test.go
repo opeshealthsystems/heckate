@@ -23,3 +23,18 @@ func TestRefs(t *testing.T) {
 		t.Error("malformed refs must fail")
 	}
 }
+
+// The check character follows ISO/IEC 7064 MOD 37,36 exactly as the brand pack's certificate generators compute it.
+func TestCheckCharMatchesThePackGenerator(t *testing.T) {
+	for body, want := range map[string]byte{"HS-ASM-2026-000148": 'P', "HS-ASM-2026-000001": 'S', "HS-CRT-A-2026-000012": 'Z'} {
+		if got := CheckChar(body); got != want {
+			t.Errorf("CheckChar(%s) = %c, want %c", body, got, want)
+		}
+		if !ValidRef(body + "-" + string(want)) {
+			t.Errorf("%s-%c must be a valid reference", body, want)
+		}
+	}
+	if ValidRef("HS-ASM-2026-000148-Q") {
+		t.Error("a wrong check character must be refused")
+	}
+}

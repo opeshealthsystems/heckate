@@ -939,6 +939,129 @@ paths:
                   issued_at: { type: string, format: date-time }
                   sha256: { type: string, description: "SHA-256 of the issued PDF once generated; compare with sha256sum of a file you hold" }
                   superseded_by: { type: string, description: "Reference of the revision that replaced this document. The document itself stays authentic; this says a newer one exists." }
+                  result: { type: string, enum: [authentic, replaced, revoked, not_found, malformed, signature_invalid] }
+                  type: { type: string, description: "Official name of the document type" }
+                  version: { type: string }
+                  classification: { type: string }
+                  issued_by: { type: string }
+                  verified_count: { type: integer }
+                  last_verified: { type: [string, "null"], format: date-time }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/public/verify-qr/{token}:
+    parameters: [{ name: token, in: path, required: true, schema: { type: string }, description: "The part of a signed QR address after /v/: reference.version.date.class.signature" }]
+    get:
+      operationId: verifyDocumentQr
+      summary: "Public check of a signed QR address: the Ed25519 signature against HEKATE's published key, then the register"
+      security: []
+      responses:
+        "200":
+          description: "Verification result; signature.valid says whether HEKATE signed the code"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Verification" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/public/access-requests:
+    post:
+      operationId: requestDocumentAccess
+      summary: "Someone who verified a document asks HEKATE to let them see it, and says why. HEKATE replies by email"
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ref, name, email, reason]
+              properties:
+                ref: { type: string }
+                name: { type: string, minLength: 2, maxLength: 120 }
+                email: { type: string, format: email, maxLength: 200 }
+                organisation: { type: string, maxLength: 200 }
+                reason: { type: string, minLength: 20, maxLength: 1000 }
+      responses:
+        "201":
+          description: "Received"
+          content:
+            application/json:
+              schema: { type: object, properties: { id: { type: string, format: uuid }, status: { type: string } } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/public/access/{token}:
+    parameters: [{ name: token, in: path, required: true, schema: { type: string } }]
+    get:
+      operationId: downloadGrantedDocument
+      summary: "Download the original PDF with a link HEKATE granted. Limited in time and in number of downloads"
+      security: []
+      responses:
+        "200":
+          description: "The original PDF"
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/documents/{ref}/verifications:
+    parameters: [{ name: ref, in: path, required: true, schema: { type: string } }]
+    get:
+      operationId: listDocumentVerifications
+      summary: "How often a document has been verified, and the latest checks (staff who issue documents)"
+      responses:
+        "200":
+          description: "Summary"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/access-requests:
+    get:
+      operationId: listAccessRequests
+      summary: "Requests to see a document (CEO and manager). Pending first"
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [pending, approved, denied] } }
+      responses:
+        "200":
+          description: "The requests"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/access-requests/{id}/approve:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      operationId: approveAccessRequest
+      summary: "Grant a time-limited download link for the stored original. The link is returned once; only its hash is kept"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                days: { type: integer, minimum: 1, maximum: 30, default: 7 }
+                max_downloads: { type: integer, minimum: 1, maximum: 10, default: 3 }
+                note: { type: string, maxLength: 500 }
+      responses:
+        "200":
+          description: "Granted"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/access-requests/{id}/deny:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      operationId: denyAccessRequest
+      summary: "Refuse a request, with a note"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { note: { type: string, maxLength: 500 } } }
+      responses:
+        "200":
+          description: "Refused"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
         "4XX": { $ref: "#/components/responses/Problem" }
   /v1/quotes:
     post:
@@ -3193,6 +3316,29 @@ components:
         revision: { type: integer, description: "1 for the first document; a revision of an issued document counts up" }
         supersedes: { type: [string, "null"], description: "Id of the issued document this one replaces" }
         superseded_by: { type: [string, "null"], description: "Reference of the issued revision that replaced this document" }
+    Verification:
+      type: object
+      required: [valid]
+      properties:
+        valid: { type: boolean }
+        result: { type: string, enum: [authentic, replaced, revoked, not_found, malformed, signature_invalid] }
+        reason: { type: string }
+        ref: { type: string }
+        code: { type: string }
+        type: { type: string }
+        title: { type: string }
+        status: { type: string }
+        issued_at: { type: string, format: date-time }
+        version: { type: string }
+        classification: { type: string }
+        issued_by: { type: string }
+        sha256: { type: string }
+        superseded_by: { type: string }
+        verified_count: { type: integer }
+        last_verified: { type: [string, "null"], format: date-time }
+        signature:
+          type: object
+          properties: { checked: { type: boolean }, valid: { type: boolean }, scheme: { type: string }, reason: { type: string } }
     NarrativeVersion:
       type: object
       properties:

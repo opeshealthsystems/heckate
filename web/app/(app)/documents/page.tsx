@@ -10,6 +10,7 @@ import { day } from "@/lib/format";
 import type { DocumentEntry } from "@/lib/types";
 import { DocumentPreview, type PreviewSource } from "@/components/DocumentPreview";
 import { VersionHistory } from "@/components/VersionHistory";
+import { AccessRequests } from "@/components/AccessRequests";
 import { Err, Field, Pill, Tabs, Table, useAction } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 
@@ -38,7 +39,8 @@ export default function Documents() {
   const shown = [...FORMS].sort((a, b) => FOLDER_ORDER.indexOf(a.folder) - FOLDER_ORDER.indexOf(b.folder) || a.code.localeCompare(b.code, undefined, { numeric: true })).filter((x) =>
     (!folder || x.folder === folder) && (!cls || x.cls === cls) &&
     (!q || `${x.code} ${x.title} ${x.aliases.join(" ")} ${x.module}`.toLowerCase().includes(q.toLowerCase())));
-  const tabs = ["Library", "My documents", "Glossary", ...(issuer ? ["Issue a reference"] : [])];
+  const decider = me.roles.some((r) => ["ceo", "manager"].includes(r));
+  const tabs = ["Library", "My documents", ...(decider ? ["Access requests"] : []), "Glossary", ...(issuer ? ["Issue a reference"] : [])];
 
   const open = (n: Narrative) => setPreview({
     title: `${n.ref ?? "Draft"} · ${n.title}`,
@@ -102,9 +104,11 @@ export default function Documents() {
               </tr>
             ))}
           </Table>
-          {history && (<section className="panel"><div className="panel-head"><h2>History</h2><button className="btn" onClick={() => setHistory(null)}>Close</button></div><div className="panel-body"><VersionHistory id={history} /></div></section>)}
+          {history && (<section className="panel"><div className="panel-head"><h2>History</h2><button className="btn" onClick={() => setHistory(null)}>Close</button></div><div className="panel-body"><VersionHistory id={history} reference={mine.find((m) => m.id === history)?.ref} /></div></section>)}
         </>
       )}
+
+      {tab === "Access requests" && decider && <AccessRequests />}
 
       {tab === "Glossary" && (
         <>

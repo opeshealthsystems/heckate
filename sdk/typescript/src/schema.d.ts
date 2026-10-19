@@ -809,6 +809,136 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/verify-qr/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The part of a signed QR address after /v/: reference.version.date.class.signature */
+                token: string;
+            };
+            cookie?: never;
+        };
+        /** Public check of a signed QR address: the Ed25519 signature against HEKATE's published key, then the register */
+        get: operations["verifyDocumentQr"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/access-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Someone who verified a document asks HEKATE to let them see it, and says why. HEKATE replies by email */
+        post: operations["requestDocumentAccess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/access/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        /** Download the original PDF with a link HEKATE granted. Limited in time and in number of downloads */
+        get: operations["downloadGrantedDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/documents/{ref}/verifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ref: string;
+            };
+            cookie?: never;
+        };
+        /** How often a document has been verified, and the latest checks (staff who issue documents) */
+        get: operations["listDocumentVerifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/access-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Requests to see a document (CEO and manager). Pending first */
+        get: operations["listAccessRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/access-requests/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Grant a time-limited download link for the stored original. The link is returned once; only its hash is kept */
+        post: operations["approveAccessRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/access-requests/{id}/deny": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refuse a request, with a note */
+        post: operations["denyAccessRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/quotes": {
         parameters: {
             query?: never;
@@ -2821,6 +2951,33 @@ export interface components {
             /** @description Reference of the issued revision that replaced this document */
             superseded_by?: string | null;
         };
+        Verification: {
+            valid: boolean;
+            /** @enum {string} */
+            result?: "authentic" | "replaced" | "revoked" | "not_found" | "malformed" | "signature_invalid";
+            reason?: string;
+            ref?: string;
+            code?: string;
+            type?: string;
+            title?: string;
+            status?: string;
+            /** Format: date-time */
+            issued_at?: string;
+            version?: string;
+            classification?: string;
+            issued_by?: string;
+            sha256?: string;
+            superseded_by?: string;
+            verified_count?: number;
+            /** Format: date-time */
+            last_verified?: string | null;
+            signature?: {
+                checked?: boolean;
+                valid?: boolean;
+                scheme?: string;
+                reason?: string;
+            };
+        };
         NarrativeVersion: {
             version?: number;
             /** @enum {string} */
@@ -4587,7 +4744,212 @@ export interface operations {
                         sha256?: string;
                         /** @description Reference of the revision that replaced this document. The document itself stays authentic; this says a newer one exists. */
                         superseded_by?: string;
+                        /** @enum {string} */
+                        result?: "authentic" | "replaced" | "revoked" | "not_found" | "malformed" | "signature_invalid";
+                        /** @description Official name of the document type */
+                        type?: string;
+                        version?: string;
+                        classification?: string;
+                        issued_by?: string;
+                        verified_count?: number;
+                        /** Format: date-time */
+                        last_verified?: string | null;
                     };
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    verifyDocumentQr: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The part of a signed QR address after /v/: reference.version.date.class.signature */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Verification result; signature.valid says whether HEKATE signed the code */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Verification"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    requestDocumentAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    ref: string;
+                    name: string;
+                    /** Format: email */
+                    email: string;
+                    organisation?: string;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Received */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        status?: string;
+                    };
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    downloadGrantedDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The original PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    listDocumentVerifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    listAccessRequests: {
+        parameters: {
+            query?: {
+                status?: "pending" | "approved" | "denied";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    approveAccessRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @default 7 */
+                    days?: number;
+                    /** @default 3 */
+                    max_downloads?: number;
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Granted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    denyAccessRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Refused */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
                 };
             };
             "4XX": components["responses"]["Problem"];

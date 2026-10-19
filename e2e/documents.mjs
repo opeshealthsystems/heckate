@@ -54,7 +54,7 @@ ok(pdf.subarray(0, 4).toString() === "%PDF", "downloaded file is a PDF");
 // 2. The public verify page confirms that exact file, and flags an altered copy.
 const pub = await b.newPage();
 await pub.goto(`${WEB}/verify?ref=${encodeURIComponent(issued.ref)}`);
-await pub.waitForSelector("text=Valid document");
+await pub.waitForSelector("text=Authentic HEKATE document");
 await pub.setInputFiles("#file", path);
 await pub.waitForSelector("text=identical to the original");
 ok(true, "verify page confirms the downloaded PDF is the original");

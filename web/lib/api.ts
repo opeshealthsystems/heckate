@@ -132,5 +132,7 @@ export const api = {
   leads: () => call<{ data: Lead[] }>("GET", "/v1/leads"),
   updateLead: (id: string, b: { stage?: string; owner?: string }) => call<Lead>("PATCH", `/v1/leads/${id}`, b),
   issueDocument: (b: { code: string; title: string; tenant_id?: string }) => call<DocumentEntry>("POST", "/v1/documents", b),
+  verifyQr: (token: string) => call<Verification>("GET", `/v1/public/verify-qr/${encodeURIComponent(token)}`),
+  requestAccess: (b: { ref: string; name: string; email: string; organisation: string; reason: string }) => call<{ id: string; status: string }>("POST", "/v1/public/access-requests", b),
   verify: (ref: string) => call<Verification>("GET", `/v1/public/verify/${encodeURIComponent(ref)}`),
 };

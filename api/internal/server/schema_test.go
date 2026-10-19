@@ -14,15 +14,19 @@ import (
 // enquiries, device push, audit sealing). The application role is neither owner nor superuser and has no
 // BYPASSRLS, so the rules apply to it on every one of these. A new entry needs a reason here.
 var notForced = map[string]string{
-	"crm.leads":           "public enquiry form inserts through a definer function",
-	"devapi.keys":         "API-key lookup by hash happens before any tenant is known",
-	"devapi.plans":        "plan lookup during key authentication",
-	"devapi.usage":        "metering through a definer function",
-	"documents.artifacts": "policy denies everyone; stored and served only by definer functions",
-	"documents.register":  "public verification through a definer function",
-	"notify.devices":      "push fan-out reads devices across users through a definer function",
-	"payroll.runs":        "payroll.run_released() lets an employee's payslip policy see the run's status",
-	"platform.audit_log":  "read and sealed by definer functions; the application role may only INSERT",
+	"crm.leads":                 "public enquiry form inserts through a definer function",
+	"devapi.keys":               "API-key lookup by hash happens before any tenant is known",
+	"devapi.plans":              "plan lookup during key authentication",
+	"devapi.usage":              "metering through a definer function",
+	"documents.access_grants":   "links are redeemed by the public through a definer function",
+	"documents.access_requests": "the public submits requests through a definer function",
+	"documents.artifacts":       "policy denies everyone; stored and served only by definer functions",
+	"documents.supersessions":   "read by the public verification definer function",
+	"documents.verifications":   "the public verification definer function is the only writer",
+	"documents.register":        "public verification through a definer function",
+	"notify.devices":            "push fan-out reads devices across users through a definer function",
+	"payroll.runs":              "payroll.run_released() lets an employee's payslip policy see the run's status",
+	"platform.audit_log":        "read and sealed by definer functions; the application role may only INSERT",
 }
 
 func TestEveryTableHasRowLevelSecurity(t *testing.T) {

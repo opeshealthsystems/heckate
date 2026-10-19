@@ -7,13 +7,24 @@ import { when } from "@/lib/format";
 import { Pill } from "./ui";
 
 /** Every saved version of a document: who, when, why, what changed since the one before, and its content fingerprint. */
-export function VersionHistory({ id }: { id: string }) {
+interface Checks { total: number; last: string | null; recent: { at: string; channel: string; result: string }[] }
+
+export function VersionHistory({ id, reference }: { id: string; reference?: string | null }) {
   const [rows, setRows] = useState<Version[] | null>(null);
   const [err, setErr] = useState("");
+  const [checks, setChecks] = useState<Checks | null>(null);
+  useEffect(() => { if (reference) raw.get<Checks>(`/v1/documents/${reference}/verifications`).then(setChecks).catch(() => {}); }, [reference]);
   useEffect(() => { raw.get<{ data: Version[] }>(`/v1/narratives/${id}/versions`).then((r) => setRows(r.data)).catch((e) => setErr(e.message)); }, [id]);
   if (err) return <p className="error" role="alert">{err}</p>;
   if (!rows) return <p className="muted">Loading history…</p>;
   return (
+    <>
+      {reference && checks && (
+        <p className="notice" role="status">
+          <strong>{checks.total === 0 ? "Not verified by anyone yet." : `Verified ${checks.total} time${checks.total === 1 ? "" : "s"} by the public`}</strong>
+          {checks.last && <> · last on {when(checks.last)} ({checks.recent[0]?.channel === "qr" ? "QR code" : checks.recent[0]?.channel}, {checks.recent[0]?.result.replace(/_/g, " ")})</>}
+        </p>
+      )}
     <ol className="history" aria-label="Version history">
       {[...rows].reverse().map((v) => {
         const prev = rows.find((x) => x.version === v.version - 1);
@@ -39,5 +50,6 @@ export function VersionHistory({ id }: { id: string }) {
         );
       })}
     </ol>
+    </>
   );
 }

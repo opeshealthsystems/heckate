@@ -74,8 +74,17 @@ export interface DocumentEntry {
   issued_at: string;
 }
 
+export interface VerificationSignature { checked: boolean; valid: boolean; scheme?: string; reason?: string }
 export interface Verification {
   valid: boolean;
+  result?: "authentic" | "replaced" | "revoked" | "not_found" | "malformed" | "signature_invalid";
+  type?: string;
+  version?: string;
+  classification?: string;
+  issued_by?: string;
+  verified_count?: number;
+  last_verified?: string | null;
+  signature?: VerificationSignature;
   reason?: string;
   ref?: string;
   code?: string;

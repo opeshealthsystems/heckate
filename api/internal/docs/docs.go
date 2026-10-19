@@ -7,6 +7,7 @@ package docs
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"fmt"
 	"image/png"
 	"strings"
@@ -22,6 +23,10 @@ type Options struct {
 	PortalURL  string
 	Letterhead []string
 	Compress   bool
+	// QRSigner signs the address in the QR code (see qr.go); empty means plain /verify?ref= addresses.
+	QRSigner ed25519.PrivateKey
+	// Version is the document version printed in the signed address; empty means 1.0.
+	Version string
 }
 
 type Party struct{ Name, RCCM, Email string }
@@ -92,7 +97,7 @@ func newDocMode(o Options, ref, kind string, at time.Time, draft bool) *doc {
 
 	var qr []byte
 	if o.PortalURL != "" && !draft {
-		qr, _ = qrcode.Encode(o.VerifyURL(ref), qrcode.Medium, 256)
+		qr, _ = qrcode.Encode(o.QRContent(ref, at), qrcode.Medium, 256)
 	}
 	class := Classification(ref)
 	if draft {

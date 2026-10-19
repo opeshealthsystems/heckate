@@ -9,6 +9,7 @@ For the person on call. Each alert in `deploy/monitoring/alerts.yml` links to a 
 | Liveness | `GET /livez` | 200, never touches the database. Use for "restart me" probes |
 | Readiness | `GET /readyz` (alias `/healthz`) | 200 within 2 s. Use for "send me traffic" probes |
 | Metrics | `HEKATE_METRICS_ADDR` (internal network only), `/metrics` | see below |
+| Document verification | `GET /v1/public/verify/{ref}`, `/verify-qr/{token}`; log in `documents.verifications` (counts per document in the Documents History panel) | `HEKATE_QR_SIGNING_KEY_FILE` (see BLOCKERS). Public requests are rate-limited per client address; requests for access are limited to 3 open per person per document and 30 per document per day |
 | Payment reminders | log line `payment reminders sent` (actor `system:payment-reminders`); log in `GET /v1/invoice-reminders` | `HEKATE_REMINDER_INTERVAL` (default `6h`, `off` to disable). One push notification per overdue invoice per stage (1, 7, 30 days late; only the highest stage reached) to the client's admins. Finance can run it on demand with `POST /v1/invoice-reminders/run`. Safe in every instance |
 | Recurring invoices | log line `recurring invoices: drafts created` (actor `system:recurring-invoices` in the audit log) | `HEKATE_RECURRING_INTERVAL` (default `1h`, minimum `1m`, `off` to disable). Creates DRAFTS only; finance issues them. Safe in every instance |
 | Request log | stdout, one line per request: `trace_id`, `route`, `dur` | quote the trace id from any error response (`X-Trace-Id`) to find the request |

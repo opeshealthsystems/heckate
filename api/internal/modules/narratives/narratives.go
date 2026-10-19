@@ -309,6 +309,11 @@ func issue(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	if cur.Revision != 1 {
+		if _, err := s.Tx.Exec(ctx, `UPDATE documents.register SET revision = $2 WHERE ref = $1`, doc.Ref, cur.Revision); err != nil {
+			return nil, err
+		}
+	}
 	if err := snapshot(ctx, s, n, "issued", "Issued as "+doc.Ref); err != nil {
 		return nil, err
 	}

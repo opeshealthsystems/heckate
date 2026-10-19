@@ -83,11 +83,16 @@ func build(cfg platform.Config, pool *pgxpool.Pool, hub *stream.Hub) *platform.A
 	clients.Register(app)
 	crm.Register(app)
 	support.Register(app)
-	documents.Register(app)
+	documents.Register(app, cfg.PortalURL)
 	notify.Register(app)
 	devapi.Register(app)
 	auditlog.Register(app)
 	docOpts := docs.Options{PortalURL: cfg.PortalURL, Letterhead: cfg.Letterhead, Compress: cfg.PDFCompress}
+	if signer, err := docs.LoadQRSigner(cfg.QRSigningKeyFile); err != nil {
+		panic("HEKATE_QR_SIGNING_KEY_FILE: " + err.Error()) // a configured but unusable key must stop start-up, not quietly print unsigned codes
+	} else {
+		docOpts.QRSigner = signer
+	}
 	projects.Register(app, docOpts)
 	hr.Register(app)
 	files.Register(app)
