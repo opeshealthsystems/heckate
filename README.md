@@ -27,14 +27,14 @@ ERP, client and supplier portals, public website and mobile app on one API. Requ
 | Inventory & Assets (stock ledger, serialised equipment, issue to staff, client assets, parts used on interventions) | Built: web |
 | Purchasing & Suppliers (supplier register with call-back-verified bank details, RFQs, POs, receipts, supplier invoices with three-way match, supplier portal) | Built: web |
 | HR (employee records, leave with balances, expense claims) | Built: web. **Payroll not built** |
-| Documents & Trust (register, references, public verification) | Built (register and verify; PDF generation and PAdES signing not built) |
-| Push notifications | Device registration built; sending needs credentials |
+| Documents & Trust (register, references, public verification) | Built: register, public verification, PDFs (invoice, quote, site-visit acceptance) with QR and SHA-256 check on /verify. **PAdES signing not built** |
+| Push notifications | Built (Expo push); real delivery needs credentials |
 | Public website (EN/FR) | Built |
 | Reporting dashboards | Per-module reports and the dashboard; Metabase not set up |
 | API as a product (keys, plans, metering, developer portal) | Not built |
-| Real-time chat (WebSockets) | Not built |
+| Live updates (WebSocket `/v1/stream`, tickets and interventions) | Built: web and mobile. Chat not built |
 | Mobile payments (MTN MoMo, Orange Money) | Not built: payments are recorded manually |
-| File attachments (MinIO) | Not built |
+| File attachments | Built, stored in Postgres (max 10 MB; MinIO not used) |
 
 Every endpoint is in `api/openapi/openapi.yaml`, and a test fails if the code and the contract disagree.
 

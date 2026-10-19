@@ -27,6 +27,15 @@ Things I could not do or decide alone. Each says what is needed. Items marked **
 - **App stores:** Apple Developer and Google Play accounts for builds and release.
 - **Domains and TLS:** `hekatesystems.com`, `api.`, `app.`, `auth.` records and certificates.
 
+## Needs a decision or asset for documents
+
+- **PAdES signing** needs a signing certificate (and a choice of CA). PDFs are hash-registered and QR-verifiable but not cryptographically signed.
+- **Letterhead and company facts** for PDFs: set `HEKATE_LETTERHEAD` (lines separated by `|`).
+- **Fonts:** PDFs use built-in Latin-1 fonts; characters outside cp1252 need an embedded Unicode font.
+- **Placeholders needing sign-off:** SLA times, approval thresholds, leave rules, TVA/CAC rates and the starter chart of accounts.
+- **Not built:** payroll, bank reconciliation, DSF statements, API keys/plans/metering, SDK generation, Metabase.
+- **Attachments** live in Postgres, not object storage; move to MinIO/S3 if volume grows.
+
 ## Needs infrastructure and people
 
 - **Servers, WAF, VPN, Proxmox, off-site backups, HCDP monitoring:** the spec's perimeter and recovery requirements are infrastructure work, not code. Nothing here configures them.
