@@ -1,34 +1,83 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"strings"
+	"syscall"
 	"time"
 
-	"github.com/opeshealthsystems/heckate/api/internal/modules/support"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
+	"github.com/opeshealthsystems/heckate/api/internal/server"
+	"github.com/opeshealthsystems/heckate/api/migrations"
 )
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-		platform.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-	})
-	support.Register(mux)
-
-	addr := os.Getenv("HEKATE_ADDR")
-	if addr == "" {
-		addr = ":8080"
+	cfg := platform.LoadConfig()
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "devtoken": // heckate devtoken <role[,role]> [tenant_id]
+			devToken(cfg)
+			return
+		case "migrate":
+			if err := platform.Migrate(context.Background(), cfg.DatabaseURL, migrations.FS); err != nil {
+				slog.Error("migrate", "err", err)
+				os.Exit(1)
+			}
+			return
+		}
 	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := platform.Migrate(ctx, cfg.DatabaseURL, migrations.FS); err != nil {
+		slog.Error("migrate", "err", err)
+		os.Exit(1)
+	}
+	pool, err := platform.NewPool(ctx, cfg.DatabaseURL)
+	if err != nil {
+		slog.Error("database", "err", err)
+		os.Exit(1)
+	}
+	defer pool.Close()
+
+	go platform.RelayOutbox(ctx, pool, platform.LogPublisher{}, 2*time.Second)
+
 	srv := &http.Server{
-		Addr:              addr,
-		Handler:           platform.Trace(mux),
+		Addr:              cfg.Addr,
+		Handler:           server.New(cfg, pool),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
-	slog.Info("listening", "addr", addr)
-	if err := srv.ListenAndServe(); err != nil {
+	go func() {
+		<-ctx.Done()
+		sctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(sctx)
+	}()
+	slog.Info("listening", "addr", cfg.Addr)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		slog.Error("server stopped", "err", err)
 		os.Exit(1)
 	}
+}
+
+// devToken prints a signed development token. Requires HEKATE_DEV_JWT_SECRET.
+func devToken(cfg platform.Config) {
+	if cfg.DevSecret == "" || len(os.Args) < 3 {
+		fmt.Fprintln(os.Stderr, "usage: HEKATE_DEV_JWT_SECRET=... api devtoken <role[,role]> [tenant_id]")
+		os.Exit(2)
+	}
+	claims := map[string]any{
+		"sub": "dev-" + os.Args[2], "email": os.Args[2] + "@dev.local",
+		"roles": strings.Split(os.Args[2], ","), "exp": time.Now().Add(24 * time.Hour).Unix(),
+	}
+	if len(os.Args) > 3 {
+		claims["tenant_id"] = os.Args[3]
+	}
+	fmt.Println(platform.SignDevToken(cfg.DevSecret, claims))
 }

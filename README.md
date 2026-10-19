@@ -8,7 +8,7 @@ ERP, client/supplier portals and mobile app on one API. Full requirements: [docs
 | --- | --- |
 | `api/` | Go modular monolith. One package per bounded context under `internal/modules/`; shared HTTP concerns in `internal/platform/` |
 | `api/openapi/openapi.yaml` | OpenAPI 3.1 contract. Edit it before writing handlers |
-| `db/migrations/` | PostgreSQL 16 schema, one schema per module, row-level security |
+| `api/migrations/` | PostgreSQL 16 schema (embedded in the API binary), one schema per module, row-level security |
 | `deploy/` | Local dev stack: Postgres, Keycloak, MinIO, NATS JetStream |
 
 ## Status
