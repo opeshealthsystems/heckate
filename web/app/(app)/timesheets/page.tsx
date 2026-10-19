@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { raw } from "@/lib/api";
 import { useMe } from "@/lib/session";
 import { day } from "@/lib/format";
+import { ExportButton } from "@/components/ExportButton";
 import { Err, Field, Pill, Table, useAction } from "@/components/ui";
 
 interface TS { id: string; actor: string; work_date: string; hours: number; note: string; status: string; approved_by: string | null }
@@ -22,6 +23,7 @@ export default function Timesheets() {
     <>
       <h1>Timesheets</h1>
       {reviewer && <label className="check"><input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} /> Show everyone's</label>}
+      <div className="actions"><ExportButton path="/v1/exports/timesheets" filename="timesheets" /></div>
       <Err msg={loadErr || act.err} />
       <Table head={["Date", ...(all ? ["Who"] : []), "Hours", "Note", "Status", ""]} empty={rows.length ? undefined : "No time logged."}>
         {rows.map((t) => (

@@ -69,6 +69,15 @@ End-to-end scripts (erp, documents, payroll, bank, attachments, csp, live) pass 
 * Severity (P1 red, P2 amber) reuses the same red and amber as status, so a "danger" colour means the same thing on every screen. No two meanings share a colour.
 * Contrast: axe colour-contrast reports no violations on any crawled screen.
 
+## 4b. Statements and exports
+
+* Printable (PDF, HEKATE letterhead, classification banner, produced-by footer): client statement of account (opening balance, invoices, payments, credit notes, running balance, overdue amount), financial statements, trial balance, general ledger per account, receivables ageing.
+* CSV (Excel-ready): invoices, payments, ageing, client statement, ledger lines, trial balance, stock, assets, expense claims, timesheets.
+* Same roles as the screens they come from; a client can print only their own statement and export only their own invoices; tested, including formula neutralisation.
+* Typing the address of a page a role cannot open (for example `/accounting` as a client) now shows "Not available" instead of the empty screens.
+* The financial statements are classified by account class only; the SYSCOHADA presentation still has to be agreed with the accountant (see the note printed on the report).
+* No XLSX: CSV opens in Excel. Payroll exports are not provided yet.
+
 ## 5. Known gaps (not fixed in this pass)
 
 * No icon set in the ERP: controls use text labels (✕ and ☰ are the only glyphs). This is consistent and accessible; a brand icon set would be a design task.

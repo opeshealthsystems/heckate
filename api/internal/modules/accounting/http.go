@@ -11,13 +11,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/opeshealthsystems/heckate/api/internal/docs"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 )
 
 var readers = []string{"ceo", "manager", "finance", "auditor"}
 var writers = []string{"ceo", "manager", "finance"}
 
-func Register(a *platform.App) {
+func Register(a *platform.App, o docs.Options) {
 	a.Route("GET /v1/accounting/accounts", readers, accounts)
 	a.Route("POST /v1/accounting/accounts", writers, platform.Idempotent(addAccount))
 	a.Route("GET /v1/accounting/entries", readers, entries)
@@ -30,6 +31,7 @@ func Register(a *platform.App) {
 	a.Route("POST /v1/accounting/periods/close", closers, platform.Idempotent(closePeriod))
 	a.Route("GET /v1/accounting/periods", readers, listClosed)
 	registerBank(a)
+	registerReports(a, o)
 }
 
 var accountRe = regexp.MustCompile(`^[1-9][0-9]{0,7}$`)

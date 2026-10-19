@@ -1063,6 +1063,195 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Object" }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/clients/{id}/statement:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: from, in: query, schema: { type: string, format: date } }
+      - { name: to, in: query, schema: { type: string, format: date } }
+    get:
+      operationId: getClientStatement
+      summary: "A client's statement of account: invoices billed, payments and credit notes, running balance, opening and closing balance, overdue amount"
+      responses:
+        "200":
+          description: "The statement"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/clients/{id}/statement/pdf:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: from, in: query, schema: { type: string, format: date } }
+      - { name: to, in: query, schema: { type: string, format: date } }
+    get:
+      operationId: downloadClientStatementPdf
+      summary: "Printable statement of account for a client"
+      responses:
+        "200":
+          description: "The PDF"
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/reports/ageing/pdf:
+    get:
+      operationId: downloadAgeingPdf
+      summary: "Printable receivables ageing report"
+      responses:
+        "200":
+          description: "The PDF"
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/accounting/statements/pdf:
+    parameters:
+      - { name: from, in: query, schema: { type: string, format: date } }
+      - { name: to, in: query, schema: { type: string, format: date } }
+    get:
+      operationId: downloadFinancialStatementsPdf
+      summary: "Printable income statement and balance sheet"
+      responses:
+        "200":
+          description: "The PDF"
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/accounting/trial-balance/pdf:
+    parameters:
+      - { name: from, in: query, schema: { type: string, format: date } }
+      - { name: to, in: query, schema: { type: string, format: date } }
+    get:
+      operationId: downloadTrialBalancePdf
+      summary: "Printable trial balance"
+      responses:
+        "200":
+          description: "The PDF"
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/accounting/ledger/{account}/pdf:
+    parameters: [{ name: account, in: path, required: true, schema: { type: string } }]
+    get:
+      operationId: downloadLedgerPdf
+      summary: "Printable general ledger of one account"
+      responses:
+        "200":
+          description: "The PDF"
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/exports/invoices:
+    get:
+      operationId: exportInvoices
+      summary: "Invoices as CSV (a client exports only their own)"
+      responses:
+        "200":
+          description: "A CSV file: UTF-8 with a byte-order mark so Excel opens it correctly, amounts as plain whole numbers, no cell that can run as a formula"
+          content:
+            text/csv: { schema: { type: string } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/exports/payments:
+    parameters:
+      - { name: from, in: query, schema: { type: string, format: date } }
+      - { name: to, in: query, schema: { type: string, format: date } }
+    get:
+      operationId: exportPayments
+      summary: "Payments received as CSV (finance, management)"
+      responses:
+        "200":
+          description: "A CSV file: UTF-8 with a byte-order mark so Excel opens it correctly, amounts as plain whole numbers, no cell that can run as a formula"
+          content:
+            text/csv: { schema: { type: string } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/exports/ageing:
+    get:
+      operationId: exportAgeing
+      summary: "Receivables ageing as CSV (finance, management)"
+      responses:
+        "200":
+          description: "A CSV file: UTF-8 with a byte-order mark so Excel opens it correctly, amounts as plain whole numbers, no cell that can run as a formula"
+          content:
+            text/csv: { schema: { type: string } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/exports/client-statement/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: from, in: query, schema: { type: string, format: date } }
+      - { name: to, in: query, schema: { type: string, format: date } }
+    get:
+      operationId: exportClientStatement
+      summary: "A client's statement of account as CSV"
+      responses:
+        "200":
+          description: "A CSV file: UTF-8 with a byte-order mark so Excel opens it correctly, amounts as plain whole numbers, no cell that can run as a formula"
+          content:
+            text/csv: { schema: { type: string } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/exports/ledger:
+    parameters:
+      - { name: from, in: query, schema: { type: string, format: date } }
+      - { name: to, in: query, schema: { type: string, format: date } }
+    get:
+      operationId: exportLedger
+      summary: "Every ledger line in the period as CSV (finance, management, auditor)"
+      responses:
+        "200":
+          description: "A CSV file: UTF-8 with a byte-order mark so Excel opens it correctly, amounts as plain whole numbers, no cell that can run as a formula"
+          content:
+            text/csv: { schema: { type: string } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/exports/trial-balance:
+    parameters:
+      - { name: from, in: query, schema: { type: string, format: date } }
+      - { name: to, in: query, schema: { type: string, format: date } }
+    get:
+      operationId: exportTrialBalance
+      summary: "Trial balance as CSV"
+      responses:
+        "200":
+          description: "A CSV file: UTF-8 with a byte-order mark so Excel opens it correctly, amounts as plain whole numbers, no cell that can run as a formula"
+          content:
+            text/csv: { schema: { type: string } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/exports/stock:
+    get:
+      operationId: exportStock
+      summary: "Stock levels by warehouse as CSV"
+      responses:
+        "200":
+          description: "A CSV file: UTF-8 with a byte-order mark so Excel opens it correctly, amounts as plain whole numbers, no cell that can run as a formula"
+          content:
+            text/csv: { schema: { type: string } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/exports/assets:
+    get:
+      operationId: exportAssets
+      summary: "Serial-numbered assets as CSV"
+      responses:
+        "200":
+          description: "A CSV file: UTF-8 with a byte-order mark so Excel opens it correctly, amounts as plain whole numbers, no cell that can run as a formula"
+          content:
+            text/csv: { schema: { type: string } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/exports/expense-claims:
+    get:
+      operationId: exportExpenseClaims
+      summary: "Expense claims as CSV (reviewers see everyone's, others their own)"
+      responses:
+        "200":
+          description: "A CSV file: UTF-8 with a byte-order mark so Excel opens it correctly, amounts as plain whole numbers, no cell that can run as a formula"
+          content:
+            text/csv: { schema: { type: string } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/exports/timesheets:
+    get:
+      operationId: exportTimesheets
+      summary: "Timesheets as CSV (reviewers see everyone's, others their own)"
+      responses:
+        "200":
+          description: "A CSV file: UTF-8 with a byte-order mark so Excel opens it correctly, amounts as plain whole numbers, no cell that can run as a formula"
+          content:
+            text/csv: { schema: { type: string } }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/quotes:
     post:
       operationId: createQuote

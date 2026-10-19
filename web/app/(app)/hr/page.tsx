@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { raw } from "@/lib/api";
 import { useMe } from "@/lib/session";
 import { day, xaf } from "@/lib/format";
+import { ExportButton } from "@/components/ExportButton";
 import { Err, Field, Pill, Table, Tabs, useAction } from "@/components/ui";
 import { Attachments } from "@/components/Attachments";
 
@@ -42,6 +43,7 @@ export default function HR() {
         <p className="notice">{recErr || "Loading…"} {recErr && "Ask HR to create your employee record."}</p>
       )}
       <Err msg={act.err} />
+      <div className="actions"><ExportButton path="/v1/exports/expense-claims" filename="expense-claims" label="Export expense claims CSV" /></div>
       <Tabs tabs={tabs} value={tab} onChange={setTab} />
       {tab === "My leave" && (
         <>

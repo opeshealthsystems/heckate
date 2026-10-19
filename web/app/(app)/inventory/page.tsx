@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { raw } from "@/lib/api";
 import { useMe } from "@/lib/session";
+import { ExportButton } from "@/components/ExportButton";
 import { Err, Field, Pill, Table, Tabs, useAction } from "@/components/ui";
 
 interface Item { id: string; sku: string; name: string; unit: string; serialised: boolean; min_stock: number; on_hand: number; low: boolean }
@@ -42,6 +43,7 @@ export default function Inventory() {
     <>
       <h1>{staff ? "Inventory and assets" : "Your equipment"}</h1>
       <Err msg={err} />
+      {staff && <div className="actions"><ExportButton path="/v1/exports/stock" filename="stock" label="Export stock CSV" /><ExportButton path="/v1/exports/assets" filename="assets" label="Export assets CSV" /></div>}
       {staff && <Tabs tabs={["Items", "Stock", "Equipment"]} value={tab} onChange={setTab} />}
       {staff && tab === "Items" && (
         <>

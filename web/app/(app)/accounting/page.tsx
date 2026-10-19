@@ -4,12 +4,15 @@ import { raw } from "@/lib/api";
 import { day, xaf } from "@/lib/format";
 import { Err, Pill, Table, Tabs, useAction } from "@/components/ui";
 import { Bank } from "@/components/Bank";
+import { Reports } from "@/components/Reports";
+import { useMe } from "@/lib/session";
 
 interface TB { rows: { account: string; name: string; debit: number; credit: number; balance: number }[]; total_debit: number; total_credit: number; balanced: boolean }
 interface Entry { seq: number; journal: string; entry_date: string; ref: string; narration: string; hash: string; lines: { account: string; debit: number; credit: number }[] }
 interface Verify { entries: number; intact: boolean; first_broken_seq?: number }
 
 export default function Accounting() {
+  const me = useMe();
   const [tab, setTab] = useState("Trial balance");
   const [tb, setTb] = useState<TB | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -30,7 +33,7 @@ export default function Accounting() {
     <>
       <h1>Accounting</h1>
       <Err msg={err} />
-      <Tabs tabs={["Trial balance", "Journal", "Bank", "Integrity"]} value={tab} onChange={setTab} />
+      <Tabs tabs={["Trial balance", "Journal", "Bank", "Reports", "Integrity"]} value={tab} onChange={setTab} />
       {tab === "Trial balance" && tb && (
         <>
           <div className="filters">
@@ -57,6 +60,7 @@ export default function Accounting() {
         </Table>
       )}
       {tab === "Bank" && <Bank />}
+      {tab === "Reports" && <Reports accounts={(tb?.rows ?? []).map((r) => ({ account: r.account, name: r.name }))} canSell={me.roles.some((r) => ["ceo", "manager", "finance"].includes(r))} />}
       {tab === "Integrity" && (
         <>
           <p>Every ledger entry is chained to the one before it by a hash. Verifying recomputes the whole chain and reports the first entry that does not match.</p>

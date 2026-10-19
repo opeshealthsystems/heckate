@@ -101,7 +101,7 @@ func build(cfg platform.Config, pool *pgxpool.Pool, hub *stream.Hub) *platform.A
 	payroll.Register(app, accounting.PayrollPoster{}, docOpts)
 	procurement.Register(app, accounting.ProcurementPoster{}, docOpts)
 	payments.Register(app, sales.Register(app, accounting.SalesPoster{}, docOpts), cfg)
-	accounting.Register(app)
+	accounting.Register(app, docOpts)
 	stream.Register(app, hub, cfg.CORSOrigins)
 	return app
 }

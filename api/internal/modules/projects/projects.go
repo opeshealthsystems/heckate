@@ -47,6 +47,7 @@ func Register(a *platform.App, o docs.Options) {
 
 	a.Route("POST /v1/timesheets", staffRoles, platform.Idempotent(createTimesheet))
 	a.Route("GET /v1/timesheets", staffRoles, listTimesheets)
+	a.Route("GET /v1/exports/timesheets", staffRoles, exportTimesheets)
 	a.Route("POST /v1/timesheets/{id}/submit", staffRoles, platform.Idempotent(submitTimesheet))
 	a.Route("POST /v1/timesheets/{id}/approve", managers, platform.Idempotent(approveTimesheet))
 }

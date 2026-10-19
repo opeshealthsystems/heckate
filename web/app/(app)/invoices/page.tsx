@@ -7,6 +7,8 @@ import { xaf, day } from "@/lib/format";
 import type { Invoice } from "@/lib/sales-types";
 import { api } from "@/lib/api";
 import type { Client } from "@/lib/types";
+import { ExportButton } from "@/components/ExportButton";
+import { PdfActions } from "@/components/PdfActions";
 import { Err, Field, LinesEditor, Pill, Table, emptyLine, toLines, useAction, type LineInput } from "@/components/ui";
 
 export const invoiceTone = (s: string) => (s === "paid" ? "ok" : s === "pending_approval" ? "bad" : undefined);
@@ -28,6 +30,10 @@ export default function Invoices() {
   return (
     <>
       <h1>Invoices</h1>
+      <div className="actions">
+        <ExportButton path="/v1/exports/invoices" filename="invoices" />
+        {me.tenant_id && me.scope === "client" && <PdfActions path={`/v1/clients/${me.tenant_id}/statement/pdf`} reference="statement-of-account" title="Statement of account" />}
+      </div>
       <Err msg={loadErr} />
       <Table head={["Reference", "Title", "Status", "Due", "Total", "Balance"]} empty={rows.length ? undefined : "No invoices yet."}>
         {rows.map((v) => (

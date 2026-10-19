@@ -35,6 +35,7 @@ func Register(a *platform.App) {
 
 	a.Route("POST /v1/expenses", staff, platform.Idempotent(createClaim))
 	a.Route("GET /v1/expenses", staff, listClaims)
+	a.Route("GET /v1/exports/expense-claims", staff, exportClaims)
 	a.Route("POST /v1/expenses/{id}/approve", reviewers, platform.Idempotent(decideClaim("approved")))
 	a.Route("POST /v1/expenses/{id}/reject", reviewers, platform.Idempotent(decideClaim("rejected")))
 	a.Route("POST /v1/expenses/{id}/pay", []string{"finance", "ceo", "manager"}, platform.Idempotent(payClaim))

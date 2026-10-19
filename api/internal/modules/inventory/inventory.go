@@ -34,6 +34,7 @@ func Register(a *platform.App, o docs.Options) {
 	a.Route("POST /v1/stock/transfers", keepers, platform.Idempotent(transfer))
 	a.Route("POST /v1/stock/adjustments", approver, platform.Idempotent(adjust))
 	a.Route("GET /v1/stock", staff, levels)
+	registerExports(a)
 	a.Route("GET /v1/stock/reorder", staff, reorder)
 	a.Route("POST /v1/stock/counts", keepers, platform.Idempotent(createCount))
 	a.Route("GET /v1/stock/counts", staff, listCounts)

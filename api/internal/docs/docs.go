@@ -83,6 +83,13 @@ func newDoc(o Options, ref, kind string, at time.Time) *doc {
 }
 
 func newDocMode(o Options, ref, kind string, at time.Time, draft bool) *doc {
+	return newDocFrame(o, ref, kind, at, draft, "", "")
+}
+
+// newDocFrame builds the page frame. A draft has no reference or QR code and says it is not valid; a report (reportNote
+// set) is a computed printout, not a numbered document: it has its classification banner and a footer saying when
+// and by whom it was produced, and no QR code.
+func newDocFrame(o Options, ref, kind string, at time.Time, draft bool, reportNote, reportClass string) *doc {
 	pdf := fpdf.New("P", "mm", "A4", "")
 	pdf.SetCompression(o.Compress)
 	pdf.SetCatalogSort(true) // font and image tables are written in sorted order, not map order: deterministic bytes
@@ -96,10 +103,13 @@ func newDocMode(o Options, ref, kind string, at time.Time, draft bool) *doc {
 	d := &doc{pdf: pdf, tr: pdf.UnicodeTranslatorFromDescriptor(""), o: o, ref: ref, draft: draft}
 
 	var qr []byte
-	if o.PortalURL != "" && !draft {
+	if o.PortalURL != "" && !draft && reportNote == "" {
 		qr, _ = qrcode.Encode(o.QRContent(ref, at), qrcode.Medium, 256)
 	}
 	class := Classification(ref)
+	if reportClass != "" {
+		class = reportClass
+	}
 	if draft {
 		class = "DRAFT PREVIEW - NOT ISSUED - NOT VALID"
 	}
@@ -161,6 +171,8 @@ func newDocMode(o Options, ref, kind string, at time.Time, draft bool) *doc {
 		line := class + "  |  Reference " + ref
 		if draft {
 			line = "Draft preview  |  not issued, has no reference and cannot be verified"
+		} else if reportNote != "" {
+			line = class + "  |  " + reportNote
 		} else if o.PortalURL != "" {
 			line += "  |  Verify at " + o.VerifyURL(ref)
 		}

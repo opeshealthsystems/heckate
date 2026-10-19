@@ -10,7 +10,7 @@ What exists today (counted):
 
 | | |
 | --- | --- |
-| API operations in the OpenAPI contract | 192 |
+| API operations in the OpenAPI contract | 208 |
 | Database migrations | 33 |
 | Go tests (integration tests run against a real PostgreSQL, as a superuser **and** as an ordinary database owner) | ~110 |
 | Browser end-to-end scripts (Playwright) | 8 |

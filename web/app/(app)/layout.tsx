@@ -36,6 +36,8 @@ function Shell({ children }: { children: ReactNode }) {
   if (staff && has("ceo", "manager", "finance", "sales", "support", "engineer", "hr", "logistics", "procurement")) links.push(["/documents", "Documents"]);
   if (has("client_admin", "client_user")) links.push(["/developer", "Developer"]);
   const ordered = [...links].sort((a, b) => Number(groupOf(a[0]) !== "Work") - Number(groupOf(b[0]) !== "Work"));
+  // The menu is the list of what a role may open; a page typed into the address bar follows the same rule.
+  const allowed = ordered.some(([href]) => path === href || path.startsWith(href + "/"));
   const icons: Record<string, IconName> = {"/dashboard": "dashboard", "/tickets": "tickets", "/clients": "clients", "/leads": "leads", "/quotes": "quotes", "/invoices": "invoices", "/projects": "projects", "/interventions": "field", "/timesheets": "time", "/inventory": "inventory", "/accounting": "accounting", "/procurement": "purchasing", "/hr": "people", "/payroll": "payroll", "/documents": "documents", "/developer": "developer"};
   return (
     <div className="shell">
@@ -68,7 +70,16 @@ function Shell({ children }: { children: ReactNode }) {
           </div>
         </nav>
       </header>
-      <main className="content"><div className="page">{children}</div></main>
+      <main className="content">
+        <div className="page">
+          {allowed ? children : (
+            <>
+              <h1>Not available</h1>
+              <p className="notice" role="alert">Your role does not have access to this page. <Link href="/dashboard">Back to the dashboard</Link></p>
+            </>
+          )}
+        </div>
+      </main>
     </div>
   );
 }

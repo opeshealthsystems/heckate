@@ -1,9 +1,16 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api, fetchFile } from "@/lib/api";
+import { useMe } from "@/lib/session";
+import { DocumentPreview, type PreviewSource } from "@/components/DocumentPreview";
+import { ExportButton } from "@/components/ExportButton";
+import { Icon } from "@/components/Icon";
 import type { Client } from "@/lib/types";
 
 export default function Clients() {
+  const me = useMe();
+  const statements = me.roles.some((r) => ["ceo", "manager", "finance", "sales"].includes(r));
+  const [preview, setPreview] = useState<PreviewSource | null>(null);
   const [rows, setRows] = useState<Client[]>([]);
   const [f, setF] = useState({ legal_name: "", rccm: "", email: "", phone: "" });
   const [err, setErr] = useState("");
@@ -15,12 +22,18 @@ export default function Clients() {
       {err && <p className="error">{err}</p>}
       <div className="scroll">
         <table>
-          <thead><tr><th>Name</th><th>RCCM</th><th>Email</th><th>KYC</th></tr></thead>
+          <thead><tr><th scope="col">Name</th><th scope="col">RCCM</th><th scope="col">Email</th><th scope="col">KYC</th>{statements && <th scope="col"><span className="sr">Statement</span></th>}</tr></thead>
           <tbody>
             {rows.map((c) => (
               <tr key={c.tenant_id}>
                 <td>{c.legal_name}</td><td>{c.rccm ?? "–"}</td><td>{c.email ?? "–"}</td>
                 <td><span className={`chip ${c.kyc_status === "verified" ? "ok" : c.kyc_status === "rejected" ? "bad" : ""}`}>{c.kyc_status}</span></td>
+                {statements && (
+                  <td className="nowrap">
+                    <button className="btn" onClick={() => setPreview({ title: `Statement of account · ${c.legal_name}`, filename: `statement-${c.legal_name}.pdf`, load: () => fetchFile(`/v1/clients/${c.tenant_id}/statement/pdf`) })}><Icon name="invoices" size={16} /> Statement</button>{" "}
+                    <ExportButton path={`/v1/exports/client-statement/${c.tenant_id}`} filename={`statement-${c.legal_name.replace(/[^A-Za-z0-9]+/g, "-")}`} label="CSV" />
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -38,6 +51,7 @@ export default function Clients() {
         <input id="p" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
         <button className="btn primary">Create</button>
       </form>
+      {preview && <DocumentPreview source={preview} onClose={() => setPreview(null)} />}
     </>
   );
 }
