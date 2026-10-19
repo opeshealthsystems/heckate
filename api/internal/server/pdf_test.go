@@ -185,3 +185,51 @@ func TestInterventionPDFCarriesTheSignature(t *testing.T) {
 		t.Errorf("another client: want 404, got %d", resp.StatusCode)
 	}
 }
+
+func TestReceiptAndCreditNotePDFs(t *testing.T) {
+	e := setup(t)
+	sfx := fmt.Sprint(time.Now().UnixNano())
+	fin := token("rc-fin", "", "finance")
+	ta := e.newClient(token("m", "", "manager"), "Receipt Co "+sfx)
+	tb := e.newClient(token("m", "", "manager"), "Other Receipt Co "+sfx)
+	alice := token("rc-alice", ta, "client_user")
+	bob := token("rc-bob", tb, "client_user")
+
+	_, inv, _ := e.do("POST", "/v1/invoices", fin, map[string]any{"tenant_id": ta, "title": "Support " + sfx, "lines": lines(1_000_000)})
+	id := inv["id"].(string)
+	e.do("POST", "/v1/invoices/"+id+"/issue", fin, nil)
+	e.do("POST", "/v1/invoices/"+id+"/payments", fin, map[string]any{"amount": 300000, "method": "momo", "reference": "TX" + sfx})
+	_, cn, _ := e.do("POST", "/v1/invoices/"+id+"/credit-notes", fin, map[string]any{"net": 100000, "reason": "Goodwill"})
+	cnRef := cn["credit_note_ref"].(string)
+
+	_, list, _ := e.do("GET", "/v1/invoices/"+id+"/payments", fin, nil)
+	items := list["items"].([]any)
+	if len(items) != 1 {
+		t.Fatalf("want 1 payment, got %v", list)
+	}
+	p := items[0].(map[string]any)
+	rct := p["receipt_ref"].(string)
+	if !strings.Contains(rct, "-RCT-") {
+		t.Fatalf("receipt ref: %v", rct)
+	}
+
+	resp, a := e.pdf(fin, "/v1/payments/"+p["id"].(string)+"/receipt")
+	if resp.StatusCode != 200 || !bytes.Contains(a, []byte(rct)) || !bytes.Contains(a, []byte("300 000 XAF")) || !bytes.Contains(a, []byte("TX"+sfx)) {
+		t.Fatalf("receipt: %d", resp.StatusCode)
+	}
+	_, b := e.pdf(alice, "/v1/payments/"+p["id"].(string)+"/receipt")
+	if !bytes.Equal(a, b) {
+		t.Error("receipt must be one stable file")
+	}
+	if r, _ := e.pdf(bob, "/v1/payments/"+p["id"].(string)+"/receipt"); r.StatusCode != 404 {
+		t.Errorf("another client: want 404, got %d", r.StatusCode)
+	}
+
+	resp, c := e.pdf(fin, "/v1/credit-notes/"+cnRef+"/pdf")
+	if resp.StatusCode != 200 || !bytes.Contains(c, []byte(cnRef)) || !bytes.Contains(c, []byte("Goodwill")) {
+		t.Fatalf("credit note pdf: %d", resp.StatusCode)
+	}
+	if r, _ := e.pdf(bob, "/v1/credit-notes/"+cnRef+"/pdf"); r.StatusCode != 404 {
+		t.Errorf("another client: want 404, got %d", r.StatusCode)
+	}
+}

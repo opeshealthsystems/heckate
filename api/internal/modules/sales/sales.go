@@ -76,6 +76,9 @@ func Register(a *platform.App, p Poster, o docs.Options) Recorder {
 	a.Route("GET /v1/invoices", nil, m.listInvoices)
 	a.Route("GET /v1/invoices/{id}", nil, m.getInvoice)
 	a.Route("GET /v1/invoices/{id}/pdf", nil, m.invoicePDF)
+	a.Route("GET /v1/invoices/{id}/payments", nil, m.listPayments)
+	a.Route("GET /v1/payments/{id}/receipt", nil, m.receiptPDF)
+	a.Route("GET /v1/credit-notes/{ref}/pdf", nil, m.creditNotePDF)
 	a.Route("POST /v1/invoices/{id}/issue", financeRoles, platform.Idempotent(m.issueInvoice))
 	a.Route("POST /v1/invoices/{id}/approve", approvers, platform.Idempotent(m.approveInvoice))
 	a.Route("POST /v1/invoices/{id}/payments", financeRoles, platform.Idempotent(m.recordPayment))
@@ -707,8 +710,12 @@ func (m *module) applyPayment(ctx context.Context, s *platform.Scope, id string,
 	if amount > v.Balance {
 		return nil, platform.Err(http.StatusUnprocessableEntity, "Overpayment", "amount exceeds the outstanding balance")
 	}
-	if _, err := s.Tx.Exec(ctx, `INSERT INTO sales.payments (invoice_id, tenant_id, amount, method, reference, recorded_by) VALUES ($1,$2,$3,$4,$5,$6)`,
-		v.ID, v.TenantID, amount, method, reference, s.Claims.Sub); err != nil {
+	rct, err := documents.Issue(ctx, s, "RCT", "Receipt for "+*v.Ref, v.TenantID, "")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := s.Tx.Exec(ctx, `INSERT INTO sales.payments (invoice_id, tenant_id, amount, method, reference, recorded_by, receipt_ref) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+		v.ID, v.TenantID, amount, method, reference, s.Claims.Sub, rct.Ref); err != nil {
 		return nil, err
 	}
 	if m.post != nil {
@@ -857,4 +864,79 @@ func (m *module) quotePDF(r *http.Request, s *platform.Scope) (*platform.Result,
 		}
 		return docs.RenderQuote(m.docs, *q.Ref, entry.IssuedAt, q.ValidUntil, q.Title, client, toDocLines(q.Lines), docs.Money{Net: q.Net, TVA: q.TVA, CAC: q.CAC, Total: q.Total}, q.Notes)
 	})
+}
+
+// listPayments lists the payments recorded against an invoice, each with its receipt reference.
+func (m *module) listPayments(r *http.Request, s *platform.Scope) (*platform.Result, error) {
+	rows, err := s.Tx.Query(r.Context(), `SELECT p.id, p.amount, p.method, p.reference, p.paid_at, p.receipt_ref
+		FROM sales.payments p WHERE p.invoice_id::text = $1 ORDER BY p.paid_at, p.id`, r.PathValue("id"))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []map[string]any{}
+	for rows.Next() {
+		var id, method, reference string
+		var amount int64
+		var paid time.Time
+		var rct *string
+		if err := rows.Scan(&id, &amount, &method, &reference, &paid, &rct); err != nil {
+			return nil, err
+		}
+		out = append(out, map[string]any{"id": id, "amount": amount, "method": method, "reference": reference, "paid_at": paid, "receipt_ref": rct})
+	}
+	return &platform.Result{Status: http.StatusOK, Body: map[string]any{"items": out}}, rows.Err()
+}
+
+// receiptPDF serves the canonical receipt of one payment.
+func (m *module) receiptPDF(r *http.Request, s *platform.Scope) (*platform.Result, error) {
+	ctx := r.Context()
+	var tenant, invRef, method, reference string
+	var amount, invTotal int64
+	var paid time.Time
+	var rct *string
+	err := s.Tx.QueryRow(ctx, `SELECT p.tenant_id::text, i.ref, p.method, p.reference, p.amount, i.total, p.paid_at, p.receipt_ref
+		FROM sales.payments p JOIN sales.invoices i ON i.id = p.invoice_id WHERE p.id::text = $1`, r.PathValue("id")).
+		Scan(&tenant, &invRef, &method, &reference, &amount, &invTotal, &paid, &rct)
+	if err != nil {
+		return nil, orNotFound("payment", err)
+	}
+	if rct == nil {
+		return nil, platform.Err(http.StatusConflict, "No receipt", "this payment was recorded before receipts existed")
+	}
+	return documents.ServePDF(ctx, s, *rct, func() ([]byte, error) {
+		client, err := clients.Party(ctx, s, tenant)
+		if err != nil {
+			return nil, err
+		}
+		return docs.RenderReceipt(m.docs, *rct, paid, client, invRef, invTotal, amount, method, reference)
+	})
+}
+
+// creditNotePDF serves the canonical PDF of a credit note.
+func (m *module) creditNotePDF(r *http.Request, s *platform.Scope) (*platform.Result, error) {
+	ctx := r.Context()
+	var tenant, ref, invRef, reason string
+	var net, tva, cac, total int64
+	var created time.Time
+	err := s.Tx.QueryRow(ctx, `SELECT c.tenant_id::text, c.ref, i.ref, c.reason, c.net, c.tva, c.cac, c.total, c.created_at
+		FROM sales.credit_notes c JOIN sales.invoices i ON i.id = c.invoice_id WHERE c.ref = $1`, r.PathValue("ref")).
+		Scan(&tenant, &ref, &invRef, &reason, &net, &tva, &cac, &total, &created)
+	if err != nil {
+		return nil, orNotFound("credit note", err)
+	}
+	return documents.ServePDF(ctx, s, ref, func() ([]byte, error) {
+		client, err := clients.Party(ctx, s, tenant)
+		if err != nil {
+			return nil, err
+		}
+		return docs.RenderCreditNote(m.docs, ref, created, invRef, reason, client, docs.Money{Net: net, TVA: tva, CAC: cac, Total: total})
+	})
+}
+
+func orNotFound(what string, err error) error {
+	if errors.Is(err, pgx.ErrNoRows) {
+		return notFound(what)
+	}
+	return err
 }

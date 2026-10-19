@@ -1025,7 +1025,8 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /** Payments recorded against an invoice, each with its receipt reference */
+        get: operations["listInvoicePayments"];
         put?: never;
         /** Record a payment against an issued invoice */
         post: operations["recordPayment"];
@@ -2199,6 +2200,44 @@ export interface paths {
          * @description Events are hints to refetch ({subject, data}); clients only hear about their own tenant. The connection ends when the token expires. At most 5 connections per user.
          */
         get: operations["openEventStream"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/payments/{id}/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** PDF receipt of one payment with a verification QR code */
+        get: operations["downloadPaymentReceipt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/credit-notes/{ref}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ref: string;
+            };
+            cookie?: never;
+        };
+        /** PDF of a credit note with a verification QR code */
+        get: operations["downloadCreditNotePdf"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4367,6 +4406,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    listInvoicePayments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payments in the order they were made */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items?: {
+                            /** Format: uuid */
+                            id?: string;
+                            amount?: number;
+                            method?: string;
+                            reference?: string;
+                            /** Format: date-time */
+                            paid_at?: string;
+                            receipt_ref?: string | null;
+                        }[];
+                    };
                 };
             };
             "4XX": components["responses"]["Problem"];
@@ -6578,6 +6651,54 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    downloadPaymentReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The canonical PDF. The first rendering is stored, so every download is the same file; its SHA-256 is in the X-Document-SHA256 header and the public register. */
+            200: {
+                headers: {
+                    "X-Document-SHA256"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    downloadCreditNotePdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The canonical PDF. The first rendering is stored, so every download is the same file; its SHA-256 is in the X-Document-SHA256 header and the public register. */
+            200: {
+                headers: {
+                    "X-Document-SHA256"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
             };
             "4XX": components["responses"]["Problem"];
         };

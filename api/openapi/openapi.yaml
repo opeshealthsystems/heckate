@@ -1174,6 +1174,29 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Object" }
         "4XX": { $ref: "#/components/responses/Problem" }
+    get:
+      operationId: listInvoicePayments
+      summary: "Payments recorded against an invoice, each with its receipt reference"
+      responses:
+        "200":
+          description: "Payments in the order they were made"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        amount: { type: integer }
+                        method: { type: string }
+                        reference: { type: string }
+                        paid_at: { type: string, format: date-time }
+                        receipt_ref: { type: [string, "null"] }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/invoices/{id}/credit-notes:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string } }
@@ -2596,6 +2619,32 @@ paths:
       security: []
       responses:
         "101": { description: Switching protocols }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/payments/{id}/receipt:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: downloadPaymentReceipt
+      summary: "PDF receipt of one payment with a verification QR code"
+      responses:
+        "200":
+          description: "The canonical PDF. The first rendering is stored, so every download is the same file; its SHA-256 is in the X-Document-SHA256 header and the public register."
+          headers:
+            X-Document-SHA256: { schema: { type: string } }
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/credit-notes/{ref}/pdf:
+    parameters: [{ name: ref, in: path, required: true, schema: { type: string } }]
+    get:
+      operationId: downloadCreditNotePdf
+      summary: "PDF of a credit note with a verification QR code"
+      responses:
+        "200":
+          description: "The canonical PDF. The first rendering is stored, so every download is the same file; its SHA-256 is in the X-Document-SHA256 header and the public register."
+          headers:
+            X-Document-SHA256: { schema: { type: string } }
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
         "4XX": { $ref: "#/components/responses/Problem" }
   /v1/invoices/{id}/pdf:
     parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
