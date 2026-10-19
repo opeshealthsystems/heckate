@@ -44,6 +44,31 @@ paths:
                   roles: { type: array, items: { type: string } }
                   scope: { type: string, enum: [staff, client, other] }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/devices:
+    put:
+      operationId: registerDevice
+      summary: Register this device for push notifications (re-registering moves it to the caller)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, platform]
+              properties:
+                token: { type: string }
+                platform: { type: string, enum: [ios, android, expo] }
+      responses:
+        "204": { description: Registered }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/devices/{token}:
+    parameters: [{ name: token, in: path, required: true, schema: { type: string } }]
+    delete:
+      operationId: unregisterDevice
+      summary: Stop push notifications to a device
+      responses:
+        "204": { description: Removed }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/clients:
     get:
       operationId: listClients

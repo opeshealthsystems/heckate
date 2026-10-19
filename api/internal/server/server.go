@@ -10,6 +10,7 @@ import (
 	"github.com/opeshealthsystems/heckate/api/internal/modules/clients"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/crm"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/documents"
+	"github.com/opeshealthsystems/heckate/api/internal/modules/notify"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/support"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 )
@@ -33,5 +34,6 @@ func New(cfg platform.Config, pool *pgxpool.Pool) http.Handler {
 	crm.Register(app)
 	support.Register(app)
 	documents.Register(app)
+	notify.Register(app)
 	return platform.Trace(platform.CORS(cfg.CORSOrigins, app.Mux))
 }

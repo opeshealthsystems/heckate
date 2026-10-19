@@ -5,11 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 	"github.com/opeshealthsystems/heckate/api/migrations"
@@ -27,6 +31,7 @@ func setup(t *testing.T) *env {
 	if dsn == "" {
 		t.Skip("HEKATE_TEST_DB not set")
 	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
 	ctx := context.Background()
 	if err := platform.Migrate(ctx, dsn, migrations.FS); err != nil {
 		t.Fatal(err)
@@ -336,5 +341,47 @@ func TestOutboxEvents(t *testing.T) {
 	_ = pool.QueryRow(context.Background(), `SELECT count(*) FROM platform.outbox WHERE payload->>'id' = $1 AND subject IN ('ticket.created','ticket.p1.page')`, tk["id"]).Scan(&n)
 	if n != 2 {
 		t.Errorf("P1 ticket must emit created + page events, got %d", n)
+	}
+}
+
+func TestDeviceRegistrationIsPerUser(t *testing.T) {
+	e := setup(t)
+	a, b := token("dev-a", "", "support"), token("dev-b", "", "support")
+	tok := fmt.Sprintf("ExponentPushToken[%d]", time.Now().UnixNano())
+	put := func(tk, device string) int {
+		body, _ := json.Marshal(map[string]string{"token": device, "platform": "expo"})
+		req, _ := http.NewRequest("PUT", e.srv.URL+"/v1/devices", bytes.NewReader(body))
+		req.Header.Set("Authorization", "Bearer "+tk)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return resp.StatusCode
+	}
+	if c := put(a, tok); c != 204 {
+		t.Fatalf("register: want 204, got %d", c)
+	}
+	if c := put(a, tok); c != 204 {
+		t.Fatalf("re-register: want 204, got %d", c)
+	}
+	if c := put(b, tok); c != 204 { // handed to another user
+		t.Fatalf("reassign: want 204, got %d", c)
+	}
+	owner, err := pgx.Connect(context.Background(), os.Getenv("HEKATE_TEST_DB"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer owner.Close(context.Background())
+	var actor string
+	if err := owner.QueryRow(context.Background(), `SELECT actor FROM notify.devices WHERE token=$1`, tok).Scan(&actor); err != nil || actor != "dev-b" {
+		t.Errorf("token must belong to last registrant, got %q %v", actor, err)
+	}
+	body, _ := json.Marshal(map[string]string{"token": "x", "platform": "pager"})
+	req, _ := http.NewRequest("PUT", e.srv.URL+"/v1/devices", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+a)
+	resp, _ := http.DefaultClient.Do(req)
+	if resp.StatusCode != 422 {
+		t.Errorf("bad platform: want 422, got %d", resp.StatusCode)
 	}
 }
