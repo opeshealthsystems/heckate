@@ -33,7 +33,7 @@ Things I could not do or decide alone. Each says what is needed. Items marked **
 - **Letterhead and company facts** for PDFs: set `HEKATE_LETTERHEAD` (lines separated by `|`).
 - **Fonts:** PDFs use built-in Latin-1 fonts; characters outside cp1252 need an embedded Unicode font.
 - **Placeholders needing sign-off:** SLA times, approval thresholds, leave rules, TVA/CAC rates and the starter chart of accounts.
-- **Not built:** payroll, bank reconciliation, DSF statements, API keys/plans/metering, SDK generation, Metabase.
+- **Not built:** payroll, bank reconciliation, DSF statements, paid-plan billing, SDK generation, Metabase.
 - **Attachments** live in Postgres, not object storage; move to MinIO/S3 if volume grows.
 
 ## Needs infrastructure and people

@@ -1,11 +1,12 @@
 # End-to-end tests
 
-Drive the real web app against a real API and Postgres with Playwright (Chromium). Two scripts:
+Drive the real web app against a real API and Postgres with Playwright (Chromium). Scripts:
 
 | Script | Covers |
 | --- | --- |
 | `smoke.mjs` | Support: client reports a P1, staff works it, internal notes stay hidden, client confirms and rates, dashboard report, role blocking, website enquiry to CRM, document issue and public verification |
 | `erp.mjs` | ERP: quote, client approval, invoice, mobile-money payment, ledger and hash-chain check, leave request and approval, and no sideways scroll at 360 px on every dense screen. It also asserts the session is not dropped |
+| `documents.mjs` | Downloading an invoice PDF, checking that exact file (and a tampered copy) on `/verify`, and a client admin creating, using and revoking an API key |
 
 ## Run
 
