@@ -1339,6 +1339,20 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Object" }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/accounting/statements:
+    get:
+      operationId: getFinancialStatements
+      summary: "Income statement for a period and balance sheet as at its end date, computed from the ledger"
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: "Statements classified by account class. The SYSCOHADA presentation still needs the accountant."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/projects:
     post:
       operationId: createProject

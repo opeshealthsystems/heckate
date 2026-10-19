@@ -1161,6 +1161,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/accounting/statements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Income statement for a period and balance sheet as at its end date, computed from the ledger */
+        get: operations["getFinancialStatements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects": {
         parameters: {
             query?: never;
@@ -4886,6 +4903,30 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    getFinancialStatements: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Statements classified by account class. The SYSCOHADA presentation still needs the accountant. */
             200: {
                 headers: {
                     [name: string]: unknown;

@@ -25,6 +25,7 @@ func Register(a *platform.App) {
 	a.Route("GET /v1/accounting/trial-balance", readers, trialBalance)
 	a.Route("GET /v1/accounting/ledger/{account}", readers, ledger)
 	a.Route("GET /v1/accounting/verify", readers, verify)
+	a.Route("GET /v1/accounting/statements", readers, statements)
 	registerBank(a)
 }
 

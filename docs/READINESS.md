@@ -10,9 +10,9 @@ What exists today (counted):
 
 | | |
 | --- | --- |
-| API operations in the OpenAPI contract | 166 |
+| API operations in the OpenAPI contract | 167 |
 | Database migrations | 24 |
-| Go tests (integration tests run against a real PostgreSQL, as a superuser **and** as an ordinary database owner) | 95 |
+| Go tests (integration tests run against a real PostgreSQL, as a superuser **and** as an ordinary database owner) | 96 |
 | Browser end-to-end scripts (Playwright) | 8 |
 | Languages / apps | Go API, Next.js web ERP and portals, Expo mobile app, static bilingual site, TypeScript SDK |
 
@@ -43,7 +43,7 @@ A module counts as production ready only when **all** of these are true. Today t
 | **Support & Incidents** | Tickets, SLA clocks, comments, private staff notes, rating, support report, live updates, push, attachments; web and mobile | Incident report form (HS-FRM-14), on-call roster, SLA calendars and pauses, email intake, knowledge base. **SLA times are placeholders** |
 | **Projects & Field** | Projects, tasks, site visits with GPS, signature, parts used; offline queue on mobile; timesheets with approval; acceptance PDF | Kick-off, change request, closure forms (HS-FRM-23, 26, 31), statements of work, milestone billing |
 | **Sales & Invoicing** | Quotes, client approval, invoices, dual control above a threshold, payments, credit notes, TVA + CAC, PDF invoice and quote, online mobile-money payment framework | Proposals, order confirmation, reminders, recurring invoices, rate card. **Tax figures need the accountant** |
-| **Accounting** | Append-only hash-chained ledger, balanced entries enforced in the database, posting from sales, purchasing and payroll, trial balance, ledger integrity check, bank reconciliation | Balance sheet and income statement, DSF filing, period close and lock, VAT return, fixed assets, ageing. **Chart of accounts is a starter set** |
+| **Accounting** | Append-only hash-chained ledger, balanced entries enforced in the database, posting from sales, purchasing and payroll, trial balance, ledger integrity check, bank reconciliation | DSF filing, SYSCOHADA presentation of the statements (a class-based income statement and balance sheet exist), period close and lock, VAT return, fixed assets, ageing. **Chart of accounts is a starter set** |
 | **Purchasing & Suppliers** | Supplier register with call-back-verified bank details, RFQs with sealed bids, purchase orders with dual control, goods receipt, supplier invoices with three-way match, supplier portal | supplier registration and evaluation forms (HS-FRM-39, 41), contract management |
 | **Inventory & Assets** | Append-only stock ledger, no negative stock, serialised equipment, issue to staff, client-held assets, parts on interventions | Stock counts, reorder levels, barcode scanning, depreciation |
 | **HR & Payroll** | Employee records, leave with live balances, expense claims with receipts, payroll engine (rates are data, a second person must validate them, dual control to approve and pay, posts to the ledger), payslips for employees | Recruitment and offers (HS-FRM-32, 33), appraisals, CNPS / tax declaration files, overtime, bonuses, contracts. **Payroll rates are unvalidated** |
