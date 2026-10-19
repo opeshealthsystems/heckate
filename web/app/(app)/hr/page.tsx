@@ -4,6 +4,7 @@ import { raw } from "@/lib/api";
 import { useMe } from "@/lib/session";
 import { day, xaf } from "@/lib/format";
 import { Err, Field, Pill, Table, Tabs, useAction } from "@/components/ui";
+import { Attachments } from "@/components/Attachments";
 
 interface Me { full_name: string; position: string; annual_leave_entitlement: number; annual_leave_taken: number; annual_leave_balance: number }
 interface Leave { id: string; actor: string; kind: string; start_date: string; end_date: string; days: number; status: string }
@@ -65,6 +66,9 @@ export default function HR() {
           <Table head={["Date", "Category", "Description", "Amount", "Status"]} empty={claims.length ? undefined : "No expense claims."}>
             {claims.map((c) => (<tr key={c.id}><td>{day(c.expense_date)}</td><td>{c.category}</td><td className="wrap">{c.description}</td><td className="num">{xaf(c.amount)}</td><td><Pill text={c.status} tone={c.status === "paid" ? "ok" : c.status === "rejected" ? "bad" : undefined} /></td></tr>))}
           </Table>
+          {claims.filter((c) => c.actor === me.sub && c.status === "submitted").map((c) => (
+            <div key={c.id} className="card"><strong>Receipt for: {c.description}</strong><Attachments entityType="expense" entityId={c.id} /></div>
+          ))}
           <h2>New expense claim</h2>
           <form className="card form" onSubmit={(e) => { e.preventDefault(); void act.run(async () => { await raw.post("/v1/expenses", { ...cf, amount: Math.round(Number(cf.amount)) }); setCf({ ...cf, category: "", description: "", amount: "" }); }); }}>
             <div className="grid2">
@@ -73,7 +77,7 @@ export default function HR() {
             </div>
             <Field id="ex-desc" label="Description"><input id="ex-desc" required value={cf.description} onChange={(e) => setCf({ ...cf, description: e.target.value })} /></Field>
             <Field id="ex-amt" label="Amount (XAF)"><input id="ex-amt" type="number" min="1" step="1" required value={cf.amount} onChange={(e) => setCf({ ...cf, amount: e.target.value })} /></Field>
-            <p className="muted small">Receipt photos are not stored yet: keep the paper receipt for your manager.</p>
+            <p className="muted small">After submitting, attach a photo of the receipt to the claim below.</p>
             <button className="btn primary" disabled={act.busy}>Submit</button>
           </form>
         </>
@@ -88,6 +92,9 @@ export default function HR() {
             ))}
           </Table>
           <h2>Expense claims</h2>
+          {claims.filter((c) => c.status === "submitted" && c.actor !== me.sub).map((c) => (
+            <details key={c.id} className="card"><summary>Receipts for {c.actor}: {c.description}</summary><Attachments entityType="expense" entityId={c.id} canUpload={false} /></details>
+          ))}
           <Table head={["Who", "Date", "Category", "Amount", "Status", ""]} empty={claims.length ? undefined : "Nothing waiting."}>
             {claims.map((c) => (
               <tr key={c.id}><td>{c.actor}</td><td>{day(c.expense_date)}</td><td>{c.category}</td><td className="num">{xaf(c.amount)}</td><td><Pill text={c.status} /></td>

@@ -35,6 +35,43 @@ async function call<T>(method: string, path: string, body?: unknown, extra: Reco
   return res.status === 204 ? (undefined as T) : res.json();
 }
 
+export interface Attachment {
+  id: string; entity_type: string; entity_id: string; filename: string; content_type: string; size: number; created_at: string; owner: string;
+}
+
+/** Uploads one file; the browser sets the multipart boundary, so no Content-Type header here. */
+export async function uploadAttachment(entityType: string, entityId: string, file: File): Promise<Attachment> {
+  const form = new FormData();
+  form.set("entity_type", entityType);
+  form.set("entity_id", entityId);
+  form.set("file", file);
+  const token = getToken();
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/v1/attachments`, { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: form });
+  } catch {
+    throw new ApiError(0, "Network error", "Cannot reach the server. Check your connection.");
+  }
+  if (!res.ok) {
+    const p = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, p.title ?? res.statusText, p.detail ?? "");
+  }
+  return res.json();
+}
+
+/** Downloads an attachment with the bearer token and hands it to the browser as a file. */
+export async function downloadAttachment(a: Pick<Attachment, "id" | "filename">): Promise<void> {
+  const token = getToken();
+  const res = await fetch(`${API_URL}/v1/attachments/${a.id}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) throw new ApiError(res.status, "Download failed", "");
+  const url = URL.createObjectURL(await res.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = a.filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 /** Generic call for endpoints without a hand-written wrapper. */
 export const raw = {
   get: <T,>(path: string) => call<T>("GET", path),

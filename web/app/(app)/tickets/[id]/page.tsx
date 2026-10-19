@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { useMe } from "@/lib/session";
 import type { Comment, Status, Ticket } from "@/lib/types";
 import { SeverityBadge, SlaChip, StatusBadge } from "@/components/Badges";
+import { Attachments } from "@/components/Attachments";
 
 export default function TicketPage() {
   const { id } = useParams<{ id: string }>();
@@ -55,6 +56,8 @@ export default function TicketPage() {
           <button className="btn">Save</button>
         </form>
       )}
+
+      <Attachments entityType="ticket" entityId={id} canUpload={t.status !== "closed"} />
 
       <h2>Conversation</h2>
       <ul className="thread">

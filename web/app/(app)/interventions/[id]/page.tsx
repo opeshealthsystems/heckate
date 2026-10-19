@@ -4,6 +4,8 @@ import { useParams } from "next/navigation";
 import { raw } from "@/lib/api";
 import { when } from "@/lib/format";
 import { Pill } from "@/components/ui";
+import { Attachments } from "@/components/Attachments";
+import { useMe } from "@/lib/session";
 
 interface Detail {
   id: string; engineer: string; status: string; summary: string; scheduled_for: string | null;
@@ -15,6 +17,7 @@ interface Detail {
 
 export default function InterventionPage() {
   const { id } = useParams<{ id: string }>();
+  const me = useMe();
   const [v, setV] = useState<Detail | null>(null);
   const [err, setErr] = useState("");
   useEffect(() => { raw.get<Detail>(`/v1/interventions/${id}`).then(setV).catch((e) => setErr(e.message)); }, [id]);
@@ -31,6 +34,7 @@ export default function InterventionPage() {
         {v.document_ref && (<><dt>Document</dt><dd><a href={`/verify?ref=${encodeURIComponent(v.document_ref)}`}>{v.document_ref}</a></dd></>)}
         {v.parts?.length > 0 && (<><dt>Parts used</dt><dd>{v.parts.map((p) => `${p.qty} × ${p.item_id.slice(0, 8)}`).join(", ")}</dd></>)}
       </dl>
+      <Attachments entityType="intervention" entityId={id} canUpload={me.scope === "staff" && v.status !== "completed"} />
       {v.report && <><h2>Report</h2><p className="card pre">{v.report}</p></>}
       {v.signature && (
         <>
