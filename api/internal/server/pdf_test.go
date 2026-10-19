@@ -387,7 +387,7 @@ func TestNarrativeDocuments(t *testing.T) {
 	if c, _, _ := e.do("POST", "/v1/narratives", sales, map[string]any{"kind": "form", "tenant_id": ta, "title": "x", "sections": []map[string]any{{"body": "y"}}}); c != 422 {
 		t.Errorf("form without a code: want 422, got %d", c)
 	}
-	for _, k := range []string{"guarantee", "contract", "pentest_report", "certificate", "letter"} {
+	for _, k := range []string{"guarantee", "contract", "certificate", "letter"} {
 		if c, _, _ := e.do("POST", "/v1/narratives", sales, map[string]any{"kind": k, "tenant_id": ta, "title": k + sfx, "sections": []map[string]any{{"body": "text"}}}); c != 201 {
 			t.Errorf("kind %s: want 201, got %d", k, c)
 		}

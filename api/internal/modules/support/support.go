@@ -95,12 +95,12 @@ func etag(v int) string { return fmt.Sprintf(`W/"%d"`, v) }
 
 // Register mounts the module's routes.
 func Register(a *platform.App) {
-	a.Route("GET /v1/tickets", nil, list)
-	a.Route("POST /v1/tickets", nil, platform.Idempotent(create))
-	a.Route("GET /v1/tickets/{id}", nil, get)
-	a.Route("PATCH /v1/tickets/{id}", nil, patch)
-	a.Route("GET /v1/tickets/{id}/comments", nil, listComments)
-	a.Route("POST /v1/tickets/{id}/comments", nil, platform.Idempotent(addComment))
+	a.Route("GET /v1/tickets", platform.Portal, list)
+	a.Route("POST /v1/tickets", platform.Portal, platform.Idempotent(create))
+	a.Route("GET /v1/tickets/{id}", platform.Portal, get)
+	a.Route("PATCH /v1/tickets/{id}", platform.Portal, patch)
+	a.Route("GET /v1/tickets/{id}/comments", platform.Portal, listComments)
+	a.Route("POST /v1/tickets/{id}/comments", platform.Portal, platform.Idempotent(addComment))
 	a.Route("POST /v1/tickets/{id}/rating", []string{"client_user", "client_admin"}, rate)
 	a.Route("GET /v1/reports/support", []string{"ceo", "manager", "support"}, report)
 }
@@ -150,12 +150,12 @@ func create(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		return nil, err
 	}
 	ctx := r.Context()
-	if err := s.Emit(ctx, "ticket.created", map[string]any{"id": t.ID, "tenant_id": t.TenantID, "severity": t.Severity, "sla_due_at": t.SLADueAt}); err != nil {
+	if err := s.Emit(ctx, "ticket.created", map[string]any{"id": t.ID, "tenant_id": t.TenantID, "reporter": t.Reporter, "severity": t.Severity, "sla_due_at": t.SLADueAt}); err != nil {
 		return nil, err
 	}
 	if t.Severity == P1 {
 		// P1 pages the on-call engineer and the Manager.
-		if err := s.Emit(ctx, "ticket.p1.page", map[string]any{"id": t.ID, "tenant_id": t.TenantID, "subject": t.Subject}); err != nil {
+		if err := s.Emit(ctx, "ticket.p1.page", map[string]any{"id": t.ID, "tenant_id": t.TenantID, "reporter": t.Reporter, "subject": t.Subject}); err != nil {
 			return nil, err
 		}
 	}
@@ -294,7 +294,7 @@ func patch(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		return nil, err
 	}
 	if status != t.Status {
-		if err := s.Emit(ctx, "ticket.status_changed", map[string]any{"id": nt.ID, "tenant_id": nt.TenantID, "subject": nt.Subject, "from": t.Status, "to": status, "actor": s.Claims.Sub, "by": s.Claims.Scope()}); err != nil {
+		if err := s.Emit(ctx, "ticket.status_changed", map[string]any{"id": nt.ID, "tenant_id": nt.TenantID, "reporter": nt.Reporter, "subject": nt.Subject, "from": t.Status, "to": status, "actor": s.Claims.Sub, "by": s.Claims.Scope()}); err != nil {
 			return nil, err
 		}
 	}
@@ -368,7 +368,7 @@ func addComment(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		}
 	}
 	if !in.Internal {
-		if err := s.Emit(ctx, "ticket.commented", map[string]any{"id": t.ID, "tenant_id": t.TenantID, "subject": t.Subject, "comment_id": c.ID, "actor": s.Claims.Sub, "by": s.Claims.Scope()}); err != nil {
+		if err := s.Emit(ctx, "ticket.commented", map[string]any{"id": t.ID, "tenant_id": t.TenantID, "reporter": t.Reporter, "subject": t.Subject, "comment_id": c.ID, "actor": s.Claims.Sub, "by": s.Claims.Scope()}); err != nil {
 			return nil, err
 		}
 	}

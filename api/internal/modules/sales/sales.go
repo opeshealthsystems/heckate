@@ -46,6 +46,8 @@ type module struct {
 }
 
 var (
+	// salesView may read quotes, invoices and their documents: the people who handle money, and the client themselves.
+	salesView      = platform.Join([]string{"ceo", "manager", "finance", "sales"}, platform.ClientAll)
 	quoteWriters   = []string{"ceo", "manager", "sales"}
 	invoiceWriters = []string{"ceo", "manager", "finance", "sales"}
 	financeRoles   = []string{"ceo", "manager", "finance"}
@@ -63,9 +65,9 @@ type Recorder interface {
 func Register(a *platform.App, p Poster, o docs.Options) Recorder {
 	m := &module{post: p, docs: o}
 	a.Route("POST /v1/quotes", quoteWriters, platform.Idempotent(m.createQuote))
-	a.Route("GET /v1/quotes", nil, m.listQuotes)
-	a.Route("GET /v1/quotes/{id}", nil, m.getQuote)
-	a.Route("GET /v1/quotes/{id}/pdf", nil, m.quotePDF)
+	a.Route("GET /v1/quotes", salesView, m.listQuotes)
+	a.Route("GET /v1/quotes/{id}", salesView, m.getQuote)
+	a.Route("GET /v1/quotes/{id}/pdf", salesView, m.quotePDF)
 	a.Route("PUT /v1/quotes/{id}/lines", quoteWriters, m.replaceQuoteLines)
 	a.Route("POST /v1/quotes/{id}/send", quoteWriters, platform.Idempotent(m.sendQuote))
 	a.Route("POST /v1/quotes/{id}/approve", []string{"client_admin"}, platform.Idempotent(m.decideQuote("approved")))
@@ -73,12 +75,12 @@ func Register(a *platform.App, p Poster, o docs.Options) Recorder {
 	a.Route("POST /v1/quotes/{id}/invoice", invoiceWriters, platform.Idempotent(m.invoiceFromQuote))
 
 	a.Route("POST /v1/invoices", invoiceWriters, platform.Idempotent(m.createInvoice))
-	a.Route("GET /v1/invoices", nil, m.listInvoices)
-	a.Route("GET /v1/invoices/{id}", nil, m.getInvoice)
-	a.Route("GET /v1/invoices/{id}/pdf", nil, m.invoicePDF)
-	a.Route("GET /v1/invoices/{id}/payments", nil, m.listPayments)
-	a.Route("GET /v1/payments/{id}/receipt", nil, m.receiptPDF)
-	a.Route("GET /v1/credit-notes/{ref}/pdf", nil, m.creditNotePDF)
+	a.Route("GET /v1/invoices", salesView, m.listInvoices)
+	a.Route("GET /v1/invoices/{id}", salesView, m.getInvoice)
+	a.Route("GET /v1/invoices/{id}/pdf", salesView, m.invoicePDF)
+	a.Route("GET /v1/invoices/{id}/payments", salesView, m.listPayments)
+	a.Route("GET /v1/payments/{id}/receipt", salesView, m.receiptPDF)
+	a.Route("GET /v1/credit-notes/{ref}/pdf", salesView, m.creditNotePDF)
 	a.Route("POST /v1/invoices/{id}/issue", financeRoles, platform.Idempotent(m.issueInvoice))
 	a.Route("POST /v1/invoices/{id}/approve", approvers, platform.Idempotent(m.approveInvoice))
 	a.Route("POST /v1/invoices/{id}/payments", financeRoles, platform.Idempotent(m.recordPayment))

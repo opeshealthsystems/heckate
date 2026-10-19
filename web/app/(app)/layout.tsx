@@ -18,7 +18,8 @@ function Shell({ children }: { children: ReactNode }) {
   ];
   if (staff && has("ceo", "manager", "sales")) links.push(["/clients", "Clients"], ["/leads", "Leads"]);
   else if (staff && has("support", "finance", "engineer")) links.push(["/clients", "Clients"]);
-  if (staff || has("client_user", "client_admin")) links.push(["/quotes", "Quotes"], ["/invoices", "Invoices"]);
+  // Money is for management, finance and sales, and for the client themselves; other staff do not see it.
+  if (has("ceo", "manager", "finance", "sales", "client_user", "client_admin")) links.push(["/quotes", "Quotes"], ["/invoices", "Invoices"]);
   if (staff || has("client_user", "client_admin")) links.push(["/projects", "Projects"], ["/interventions", has("client_user", "client_admin") ? "Site visits" : "Field"]);
   if (staff) links.push(["/timesheets", "Time"], ["/inventory", "Inventory"]);
   else if (has("client_user", "client_admin")) links.push(["/inventory", "Equipment"]);
@@ -26,7 +27,7 @@ function Shell({ children }: { children: ReactNode }) {
   if (has("ceo", "manager", "procurement", "finance", "supplier")) links.push(["/procurement", has("supplier") ? "Supplier portal" : "Purchasing"]);
   if (staff) links.push(["/hr", "People"]);
   if (has("hr", "finance", "manager", "ceo", "auditor")) links.push(["/payroll", "Payroll"]);
-  if (staff && has("ceo", "manager", "finance", "sales", "support", "engineer", "logistics", "procurement")) links.push(["/documents", "Documents"]);
+  if (staff && has("ceo", "manager", "finance", "sales", "support", "engineer", "hr", "logistics", "procurement")) links.push(["/documents", "Documents"]);
   if (has("client_admin", "client_user")) links.push(["/developer", "Developer"]);
   return (
     <div className="shell">

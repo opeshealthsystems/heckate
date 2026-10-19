@@ -26,7 +26,8 @@ const (
 )
 
 // Allowed decides whether a connected user may be told about an event. Clients only hear about
-// their own tenant; staff hear about all tickets and site visits (they can read them anyway).
+// their own tenant. Management, support and engineers hear about every ticket and site visit; other staff
+// hear only about tickets they raised themselves. This mirrors what row-level security lets each role read.
 func Allowed(c *platform.Claims, subject string, payload map[string]any) bool {
 	domain, _, _ := strings.Cut(subject, ".")
 	if domain != "ticket" && domain != "intervention" {
@@ -34,7 +35,11 @@ func Allowed(c *platform.Claims, subject string, payload map[string]any) bool {
 	}
 	switch c.Scope() {
 	case "staff":
-		return true
+		if c.HasAny("ceo", "manager", "support", "engineer") {
+			return true
+		}
+		reporter, _ := payload["reporter"].(string)
+		return domain == "ticket" && reporter != "" && reporter == c.Sub
 	case "client":
 		tenant, _ := payload["tenant_id"].(string)
 		return tenant != "" && tenant == c.TenantID

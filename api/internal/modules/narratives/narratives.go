@@ -17,7 +17,8 @@ import (
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 )
 
-var writers = []string{"ceo", "manager", "sales"}
+// writers may try to create or change a document; the database policy decides which kinds each role may touch.
+var writers = []string{"ceo", "manager", "sales", "hr", "support", "engineer", "procurement"}
 
 // kinds maps each kind to its reference code and the heading printed on the PDF.
 var kinds = map[string]struct{ code, label string }{
@@ -71,11 +72,19 @@ type module struct{ docs docs.Options }
 func Register(a *platform.App, o docs.Options) {
 	m := &module{docs: o}
 	a.Route("POST /v1/narratives", writers, platform.Idempotent(create))
-	a.Route("GET /v1/narratives", nil, list)
-	a.Route("GET /v1/narratives/{id}", nil, get)
+	a.Route("GET /v1/narratives", platform.Portal, list)
+	a.Route("GET /v1/narratives/{id}", platform.Portal, get)
 	a.Route("PUT /v1/narratives/{id}", writers, update)
 	a.Route("POST /v1/narratives/{id}/issue", writers, platform.Idempotent(issue))
-	a.Route("GET /v1/narratives/{id}/pdf", nil, m.pdf)
+	a.Route("GET /v1/narratives/{id}/pdf", platform.Portal, m.pdf)
+}
+
+// notAllowed turns a row-level-security refusal into a 403 that names the problem; other errors pass through.
+func notAllowed(err error) error {
+	if err != nil && strings.Contains(err.Error(), "row-level security") {
+		return platform.Err(http.StatusForbidden, "Forbidden", "your role cannot work with this kind of document")
+	}
+	return err
 }
 
 func bad(msg string) error {
@@ -148,7 +157,7 @@ func create(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		if strings.Contains(err.Error(), "foreign key") || strings.Contains(err.Error(), "invalid input syntax") {
 			return nil, bad("unknown client")
 		}
-		return nil, err
+		return nil, notAllowed(err)
 	}
 	if err := s.Audit(r.Context(), "create", "narrative", n.ID); err != nil {
 		return nil, err

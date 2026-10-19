@@ -14,6 +14,9 @@ import (
 
 var planAdmin = []string{"ceo", "manager"}
 
+// keyViewers see API keys and usage: management and support for any client, and the client's own people for their own.
+var keyViewers = []string{"ceo", "manager", "support", "client_admin", "client_user"}
+
 type Plan struct {
 	Code         string `json:"code"`
 	Name         string `json:"name"`
@@ -49,13 +52,13 @@ func scanKey(row pgx.Row) (*Key, error) {
 }
 
 func Register(a *platform.App) {
-	a.Route("GET /v1/api-plans", nil, listPlans)
+	a.Route("GET /v1/api-plans", keyViewers, listPlans)
 	a.Route("PUT /v1/api-plans/{code}", planAdmin, putPlan)
-	a.Route("GET /v1/api-keys", nil, listKeys)
+	a.Route("GET /v1/api-keys", keyViewers, listKeys)
 	a.Route("POST /v1/api-keys", []string{"client_admin"}, platform.Idempotent(createKey))
 	a.Route("DELETE /v1/api-keys/{id}", []string{"client_admin", "ceo", "manager"}, revokeKey)
 	a.Route("PATCH /v1/api-keys/{id}", planAdmin, setKeyPlan)
-	a.Route("GET /v1/api-keys/{id}/usage", nil, usage)
+	a.Route("GET /v1/api-keys/{id}/usage", keyViewers, usage)
 }
 
 func listPlans(r *http.Request, s *platform.Scope) (*platform.Result, error) {

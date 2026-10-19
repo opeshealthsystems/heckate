@@ -32,11 +32,12 @@ type mod struct {
 
 func Register(a *platform.App, rec sales.Recorder, cfg platform.Config) {
 	m := &mod{gw: Gateways(cfg), rec: rec, secret: cfg.PaymentsWebhookSecret}
-	payers := []string{"client_admin", "client_user"}
-	a.Route("GET /v1/payment-providers", nil, m.providers)
+	payers := platform.ClientAll
+	watchers := platform.Join([]string{"ceo", "manager", "finance"}, platform.ClientAll) // finance follows payments in progress
+	a.Route("GET /v1/payment-providers", payers, m.providers)
 	a.Route("POST /v1/invoices/{id}/online-payments", payers, platform.Idempotent(m.start))
-	a.Route("GET /v1/invoices/{id}/online-payments", nil, m.list)
-	a.Route("POST /v1/online-payments/{id}/refresh", nil, m.refresh)
+	a.Route("GET /v1/invoices/{id}/online-payments", watchers, m.list)
+	a.Route("POST /v1/online-payments/{id}/refresh", watchers, m.refresh)
 	a.Public("POST /v1/webhooks/payments/{provider}", m.webhook)
 }
 

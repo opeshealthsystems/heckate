@@ -123,9 +123,9 @@ type module struct{ store Store }
 
 func Register(a *platform.App) {
 	m := &module{store: pgStore{}}
-	a.Route("POST /v1/attachments", nil, m.upload)
-	a.Route("GET /v1/attachments", nil, m.list)
-	a.Route("GET /v1/attachments/{id}", nil, m.download)
+	a.Route("POST /v1/attachments", platform.Portal, m.upload)
+	a.Route("GET /v1/attachments", platform.Portal, m.list)
+	a.Route("GET /v1/attachments/{id}", platform.Portal, m.download)
 }
 
 // authorise checks the caller may attach to or read the entity, using each owning module's own

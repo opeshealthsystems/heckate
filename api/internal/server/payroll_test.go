@@ -146,6 +146,12 @@ func TestPayrollDualControlAndValidation(t *testing.T) {
 	if len(mine["data"].([]any)) != 1 || mine["data"].([]any)[0].(map[string]any)["net"] != float64(806_126) {
 		t.Errorf("employee should now see their payslip: %v", mine)
 	}
+	// The external auditor reviews totals, not individual pay: the run is visible, its payslips are not.
+	if c, b, _ := e.do("GET", "/v1/payroll/runs/"+runID, token("pay-auditor", "", "auditor"), nil); c != 200 || b["total_net"] == nil {
+		t.Errorf("auditor reading the run totals: %d %v", c, b)
+	} else if slips, _ := b["payslips"].([]any); len(slips) != 0 {
+		t.Errorf("the auditor must not see individual payslips, got %d", len(slips))
+	}
 	slipID := mine["data"].([]any)[0].(map[string]any)["id"].(string)
 	resp, pdfA := e.pdf(me, "/v1/payslips/"+slipID+"/pdf")
 	if resp.StatusCode != 200 || !bytes.HasPrefix(pdfA, []byte("%PDF-")) || !bytes.Contains(pdfA, []byte("806 126 XAF")) {

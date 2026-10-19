@@ -32,16 +32,16 @@ var pdfOptions docs.Options
 func Register(a *platform.App, o docs.Options) {
 	pdfOptions = o
 	a.Route("POST /v1/projects", managers, platform.Idempotent(createProject))
-	a.Route("GET /v1/projects", nil, listProjects)
-	a.Route("GET /v1/projects/{id}", nil, getProject)
+	a.Route("GET /v1/projects", platform.Portal, listProjects)
+	a.Route("GET /v1/projects/{id}", platform.Portal, getProject)
 	a.Route("PATCH /v1/projects/{id}", managers, updateProject)
 	a.Route("POST /v1/projects/{id}/tasks", append([]string{"engineer"}, managers...), platform.Idempotent(createTask))
 	a.Route("PATCH /v1/tasks/{id}", append([]string{"engineer"}, managers...), updateTask)
 
 	a.Route("POST /v1/interventions", dispatchers, platform.Idempotent(createIntervention))
-	a.Route("GET /v1/interventions", nil, listInterventions)
-	a.Route("GET /v1/interventions/{id}", nil, getIntervention)
-	a.Route("GET /v1/interventions/{id}/pdf", nil, interventionPDF)
+	a.Route("GET /v1/interventions", platform.Portal, listInterventions)
+	a.Route("GET /v1/interventions/{id}", platform.Portal, getIntervention)
+	a.Route("GET /v1/interventions/{id}/pdf", platform.Portal, interventionPDF)
 	a.Route("POST /v1/interventions/{id}/check-in", []string{"engineer"}, platform.Idempotent(checkIn))
 	a.Route("POST /v1/interventions/{id}/check-out", []string{"engineer"}, platform.Idempotent(checkOut))
 

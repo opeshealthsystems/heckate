@@ -10,8 +10,8 @@ import (
 )
 
 func Register(a *platform.App) {
-	a.Route("PUT /v1/devices", nil, register)
-	a.Route("DELETE /v1/devices/{token}", nil, unregister)
+	a.Route("PUT /v1/devices", platform.Portal, register)
+	a.Route("DELETE /v1/devices/{token}", platform.Portal, unregister)
 }
 
 func register(r *http.Request, s *platform.Scope) (*platform.Result, error) {

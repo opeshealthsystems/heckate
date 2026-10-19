@@ -41,7 +41,7 @@ func Register(a *platform.App) {
 	a.Route("GET /v1/me", nil, me)
 	a.Route("GET /v1/clients", []string{"ceo", "manager", "sales", "support", "finance", "engineer"}, list)
 	a.Route("POST /v1/clients", staffWrite, platform.Idempotent(create))
-	a.Route("GET /v1/clients/{id}", nil, get)
+	a.Route("GET /v1/clients/{id}", platform.Portal, get)
 	a.Route("PATCH /v1/clients/{id}", staffWrite, update)
 }
 

@@ -26,7 +26,7 @@ var (
 func Register(a *platform.App, o docs.Options) {
 	m := &module{docs: o}
 	a.Route("POST /v1/items", keepers, platform.Idempotent(createItem))
-	a.Route("GET /v1/items", nil, listItems)
+	a.Route("GET /v1/items", platform.Portal, listItems)
 	a.Route("POST /v1/warehouses", keepers, platform.Idempotent(createWarehouse))
 	a.Route("GET /v1/warehouses", staff, listWarehouses)
 	a.Route("POST /v1/stock/receipts", keepers, platform.Idempotent(receipt))
@@ -42,7 +42,7 @@ func Register(a *platform.App, o docs.Options) {
 	a.Route("POST /v1/assets/issue", keepers, platform.Idempotent(issueAsset))
 	a.Route("POST /v1/assets/return", keepers, platform.Idempotent(returnAsset))
 	a.Route("POST /v1/assets/install", keepers, platform.Idempotent(installAsset))
-	a.Route("GET /v1/assets", nil, listAssets)
+	a.Route("GET /v1/assets", platform.Portal, listAssets)
 	a.Route("GET /v1/assets/forms/{ref}/pdf", staff, m.assetFormPDF)
 }
 

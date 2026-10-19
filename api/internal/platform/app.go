@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -211,7 +212,8 @@ func (a *App) runKey(w http.ResponseWriter, r *http.Request, pattern, tok string
 		WriteProblem(w, r, http.StatusUnauthorized, "Unauthorized", "Invalid, expired or revoked API key")
 		return
 	}
-	if !KeyAllows(k.Scopes, pattern) || len(roles) > 0 {
+	// A key acts as a client_user, so it can call a route only if that role may (and only a read the key is scoped for).
+	if !KeyAllows(k.Scopes, pattern) || (len(roles) > 0 && !slices.Contains(roles, "client_user")) {
 		WriteProblem(w, r, http.StatusForbidden, "Forbidden", "This API key cannot call this endpoint")
 		return
 	}
