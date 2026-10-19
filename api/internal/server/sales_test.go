@@ -340,3 +340,71 @@ func TestSchedulerCreatesDraftsAsTheSystemActor(t *testing.T) {
 		t.Error("the audit log must record the scheduler as the actor of the run")
 	}
 }
+
+func TestPaymentRemindersAreSentOncePerStage(t *testing.T) {
+	e := setup(t)
+	sfx := fmt.Sprint(time.Now().UnixNano())
+	fin := token("rem-fin", "", "finance")
+	tid := e.newClient(token("m", "", "manager"), "Reminder Co "+sfx)
+	issue := func(title string, daysAgo int, payAll bool) string {
+		due := time.Now().UTC().AddDate(0, 0, -daysAgo).Format("2006-01-02")
+		_, d, _ := e.do("POST", "/v1/invoices", fin, map[string]any{"tenant_id": tid, "title": title + sfx, "due_date": due,
+			"lines": []map[string]any{{"description": "Work", "quantity": 1, "unit_price": 100_000}}})
+		id := d["id"].(string)
+		e.do("POST", "/v1/invoices/"+id+"/issue", fin, nil)
+		if payAll {
+			_, inv, _ := e.do("GET", "/v1/invoices/"+id, fin, nil)
+			e.do("POST", "/v1/invoices/"+id+"/payments", fin, map[string]any{"amount": inv["total"], "method": "bank"})
+		}
+		return id
+	}
+	late40, late3 := issue("Forty ", 40, false), issue("Three ", 3, false)
+	notDue, paid := issue("Future ", -10, false), issue("Paid ", 40, true)
+
+	sentFor := func(body map[string]any) map[string]float64 {
+		out := map[string]float64{}
+		for _, x := range body["sent"].([]any) {
+			m := x.(map[string]any)
+			out[m["invoice_id"].(string)] = m["stage"].(float64)
+		}
+		return out
+	}
+	c, run1, _ := e.do("POST", "/v1/invoice-reminders/run", fin, nil)
+	if c != 200 {
+		t.Fatalf("run: %d %v", c, run1)
+	}
+	got := sentFor(run1)
+	if got[late40] != 3 || got[late3] != 1 {
+		t.Errorf("40 days late must get the final stage 3 once, 3 days late stage 1: %v", got)
+	}
+	if _, ok := got[notDue]; ok {
+		t.Error("an invoice that is not yet due must not be reminded")
+	}
+	if _, ok := got[paid]; ok {
+		t.Error("a fully paid invoice must not be reminded")
+	}
+	_, run2, _ := e.do("POST", "/v1/invoice-reminders/run", fin, nil)
+	again := sentFor(run2)
+	if _, ok := again[late40]; ok {
+		t.Error("the same stage must not be sent twice")
+	}
+	if _, ok := again[late3]; ok {
+		t.Error("the same stage must not be sent twice")
+	}
+	_, list, _ := e.do("GET", "/v1/invoice-reminders", fin, nil)
+	n := 0
+	for _, x := range list["data"].([]any) {
+		if id := x.(map[string]any)["invoice_id"]; id == late40 || id == late3 {
+			n++
+		}
+	}
+	if n != 2 {
+		t.Errorf("the list must show the two reminders sent: %v", list)
+	}
+	if c, _, _ := e.do("POST", "/v1/invoice-reminders/run", token("rem-sales", "", "sales"), nil); c != 403 {
+		t.Errorf("sales sending reminders: want 403, got %d", c)
+	}
+	if c, _, _ := e.do("GET", "/v1/invoice-reminders", token("rem-c", tid, "client_admin"), nil); c != 403 {
+		t.Errorf("a client reading the reminder log: want 403, got %d", c)
+	}
+}

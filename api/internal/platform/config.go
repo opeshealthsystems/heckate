@@ -28,11 +28,13 @@ type Config struct {
 	PDFCompress    bool          // HEKATE_PDF_COMPRESS: on unless set to 0 (tests turn it off to read text)
 	PushEnabled    bool          // HEKATE_PUSH=1 sends push notifications through the Expo push service
 	ExpoToken      string        // HEKATE_EXPO_ACCESS_TOKEN, optional
+	RemindersEvery time.Duration // HEKATE_REMINDER_INTERVAL: how often overdue-invoice reminders go out (default 6h; "off" disables)
 	RecurringEvery time.Duration // HEKATE_RECURRING_INTERVAL: how often due recurring invoices become drafts (default 1h; "off" disables)
 
 	PaymentsWebhookSecret string // HEKATE_PAYMENTS_WEBHOOK_SECRET: signs provider callbacks (HMAC-SHA256); callbacks are refused without it
 	PaymentsSandbox       bool   // HEKATE_PAYMENTS_SANDBOX=1: a fake provider that never moves money. Development only.
 	MoMo                  MoMoConfig
+	Orange                OrangeConfig
 }
 
 // MoMoConfig is the MTN Mobile Money Collection API account (all empty: MoMo is off).
@@ -44,6 +46,19 @@ type MoMoConfig struct {
 	Environment     string // HEKATE_MOMO_ENVIRONMENT: sandbox or the production target, for X-Target-Environment
 	Currency        string // HEKATE_MOMO_CURRENCY, default XAF
 	CallbackURL     string // HEKATE_MOMO_CALLBACK_URL, optional
+}
+
+// OrangeConfig is the Orange Money WebPay account (all empty: Orange Money is off).
+type OrangeConfig struct {
+	BaseURL      string // HEKATE_ORANGE_BASE_URL, e.g. https://api.orange.com
+	ClientID     string // HEKATE_ORANGE_CLIENT_ID (OAuth client credentials)
+	ClientSecret string // HEKATE_ORANGE_CLIENT_SECRET
+	MerchantKey  string // HEKATE_ORANGE_MERCHANT_KEY
+	Country      string // HEKATE_ORANGE_COUNTRY, default cm
+	Currency     string // HEKATE_ORANGE_CURRENCY, default XAF
+	NotifURL     string // HEKATE_ORANGE_NOTIF_URL: where the provider posts the result
+	ReturnURL    string // HEKATE_ORANGE_RETURN_URL
+	CancelURL    string // HEKATE_ORANGE_CANCEL_URL
 }
 
 func LoadConfig() Config {
@@ -70,6 +85,7 @@ func LoadConfig() Config {
 		Letterhead:     splitLetterhead(os.Getenv("HEKATE_LETTERHEAD")),
 		PDFCompress:    os.Getenv("HEKATE_PDF_COMPRESS") != "0",
 		PushEnabled:    os.Getenv("HEKATE_PUSH") == "1",
+		RemindersEvery: durationOr(get("HEKATE_REMINDER_INTERVAL", "6h"), 6*time.Hour),
 		RecurringEvery: durationOr(get("HEKATE_RECURRING_INTERVAL", "1h"), time.Hour),
 		ExpoToken:      os.Getenv("HEKATE_EXPO_ACCESS_TOKEN"),
 
@@ -80,6 +96,12 @@ func LoadConfig() Config {
 			APIUser: os.Getenv("HEKATE_MOMO_API_USER"), APIKey: os.Getenv("HEKATE_MOMO_API_KEY"),
 			Environment: os.Getenv("HEKATE_MOMO_ENVIRONMENT"), Currency: get("HEKATE_MOMO_CURRENCY", "XAF"),
 			CallbackURL: os.Getenv("HEKATE_MOMO_CALLBACK_URL"),
+		},
+		Orange: OrangeConfig{
+			BaseURL: os.Getenv("HEKATE_ORANGE_BASE_URL"), ClientID: os.Getenv("HEKATE_ORANGE_CLIENT_ID"),
+			ClientSecret: os.Getenv("HEKATE_ORANGE_CLIENT_SECRET"), MerchantKey: os.Getenv("HEKATE_ORANGE_MERCHANT_KEY"),
+			Country: get("HEKATE_ORANGE_COUNTRY", "cm"), Currency: get("HEKATE_ORANGE_CURRENCY", "XAF"),
+			NotifURL: os.Getenv("HEKATE_ORANGE_NOTIF_URL"), ReturnURL: os.Getenv("HEKATE_ORANGE_RETURN_URL"), CancelURL: os.Getenv("HEKATE_ORANGE_CANCEL_URL"),
 		},
 	}
 }

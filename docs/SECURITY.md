@@ -46,7 +46,7 @@ Severity is our own judgement, assuming the platform handled real client data to
 | S-12 | Secrets come from environment variables; no managed secret store or rotation | Medium | Vault / cloud secret manager in the deployment |
 | S-13 | Digital signatures on documents (PAdES) are not implemented; documents are hash-registered and QR-verifiable but not cryptographically signed | Medium | Needs a signing certificate |
 | S-14 | There is no responsible-disclosure channel (`security.txt`, a monitored mailbox) | Low | Needs a company contact address |
-| S-15 | Orange Money and (live) MTN MoMo are not exercised against the real services | Medium | Sandbox runs when the providers issue credentials |
+| S-15 | Orange Money (written, off) and (live) MTN MoMo are not exercised against the real services | Medium | Sandbox runs when the providers issue credentials |
 | S-16 | The mobile app has not been tested on a real device, and certificate pinning is not in place | Medium | Device testing; evaluate pinning against the operational cost of key rotation |
 | S-17 | Retention and deletion rules (data protection law, contracts) are not defined; the ledger and audit trail are append-only by design | Medium | Legal input on retention; design a deletion path for personal data that is not legally retained |
 | S-18 | No formal threat model workshop or ASVS verification has been done by a second party; the mapping below is our own | Medium | Review with the auditor |

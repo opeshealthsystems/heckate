@@ -91,6 +91,9 @@ func main() {
 	if cfg.RecurringEvery > 0 {
 		go sales.RunScheduler(ctx, pool, cfg.RecurringEvery)
 	}
+	if cfg.RemindersEvery > 0 {
+		go sales.RunReminderScheduler(ctx, pool, cfg.RemindersEvery)
+	}
 
 	if cfg.MetricsAddr != "" {
 		// Internal only: metrics name every route and show load, so they must not face the internet.

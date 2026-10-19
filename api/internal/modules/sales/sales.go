@@ -89,6 +89,8 @@ func Register(a *platform.App, p Poster, o docs.Options) Recorder {
 	a.Route("GET /v1/reports/ageing", financeRoles, ageing)
 	a.Route("POST /v1/recurring-invoices", invoiceWriters, platform.Idempotent(m.createRecurring))
 	a.Route("GET /v1/recurring-invoices", invoiceWriters, m.listRecurring)
+	a.Route("GET /v1/invoice-reminders", financeRoles, m.listReminders)
+	a.Route("POST /v1/invoice-reminders/run", financeRoles, platform.Idempotent(m.runReminders))
 	a.Route("POST /v1/recurring-invoices/run", financeRoles, platform.Idempotent(m.runRecurring))
 	a.Route("POST /v1/recurring-invoices/{id}/active", invoiceWriters, m.setRecurringActive)
 	return m

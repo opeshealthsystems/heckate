@@ -84,3 +84,13 @@ func TestExpoSenderRequestAndResults(t *testing.T) {
 		t.Error("a response that does not match the request must be an error")
 	}
 }
+
+func TestPlanPaymentReminder(t *testing.T) {
+	m, a := Plan("invoice.reminder", map[string]any{"id": "i1", "tenant_id": "ten", "ref": "INV-2026-0007", "stage": float64(1), "days_late": float64(3)})
+	if m == nil || m.Title != "Invoice overdue" || m.Body != "Invoice INV-2026-0007 is 3 days past its due date" || a.Tenant != "ten" || len(a.Roles) != 1 || a.Roles[0] != "client_admin" {
+		t.Fatalf("reminder: %+v %+v", m, a)
+	}
+	if m, _ := Plan("invoice.reminder", map[string]any{"stage": float64(3), "days_late": float64(40)}); m.Title != "Payment reminder: action needed" {
+		t.Errorf("the final stage must say action is needed: %q", m.Title)
+	}
+}

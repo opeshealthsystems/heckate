@@ -11,7 +11,7 @@ What exists today (counted):
 | | |
 | --- | --- |
 | API operations in the OpenAPI contract | 180 |
-| Database migrations | 30 |
+| Database migrations | 31 |
 | Go tests (integration tests run against a real PostgreSQL, as a superuser **and** as an ordinary database owner) | ~110 |
 | Browser end-to-end scripts (Playwright) | 8 |
 | Languages / apps | Go API, Next.js web ERP and portals, Expo mobile app, static bilingual site, TypeScript SDK |
@@ -70,7 +70,7 @@ Verified by running it: every API rule above through integration tests; row-leve
 - The Keycloak realm file and real token verification against it
 - The Docker images and the full compose stack
 - The mobile app on a physical phone
-- MTN MoMo against the real service (written against the public API and tested only with a fake server); Orange Money is not written
+- MTN MoMo against the real service (written against the public API and tested only with a fake server); the Orange Money client is written the same way (off until credentials are set) and equally unverified
 - Backups and restore, failover, load and soak tests
 - Any penetration test
 

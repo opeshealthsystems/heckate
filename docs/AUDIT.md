@@ -4,7 +4,7 @@ A running record of what was checked, what was found, what was fixed and what re
 
 Status key: **Fixed** (change plus a test), **By design** (explained), **Open** (needs a decision or a person).
 
-## 1. Data layer (68 tables, 30 migrations)
+## 1. Data layer (69 tables, 31 migrations)
 
 Checked: row-level security (RLS) and FORCE on every table, policies per table, privileges of the application role, definer functions, primary keys, foreign-key indexes.
 
@@ -74,5 +74,5 @@ End-to-end scripts (erp, documents, payroll, bank, attachments, csp, live) pass 
 * No icon set in the ERP: controls use text labels (✕ and ☰ are the only glyphs). This is consistent and accessible; a brand icon set would be a design task.
 * Mobile screens were checked for theme tokens, not pixel-compared with the phone designs.
 * Pack form layouts (exact positions), certificate security print and PAdES signing remain open (see `BLOCKERS.md`).
-* Payment reminders and the Orange Money client are not built (Orange Money is intentionally disabled).
+* Payment reminders are built (push to the client's admins at 1, 7 and 30 days late). The Orange Money client is built but off and unverified against the real service; the redirect to its payment page is not wired into the UI.
 * Independent penetration test, Keycloak in production, off-site backups and monitoring remain pre-requisites for regulated clients (see `READINESS.md`).

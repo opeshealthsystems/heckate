@@ -42,3 +42,11 @@ func TestTotalsMultipleLinesRoundOnce(t *testing.T) {
 		t.Errorf("tva=%d", tva)
 	}
 }
+
+func TestReminderStage(t *testing.T) {
+	for days, want := range map[int]int{-5: 0, 0: 0, 1: 1, 6: 1, 7: 2, 29: 2, 30: 3, 400: 3} {
+		if got := reminderStage(days); got != want {
+			t.Errorf("%d days late: stage %d, want %d", days, got, want)
+		}
+	}
+}

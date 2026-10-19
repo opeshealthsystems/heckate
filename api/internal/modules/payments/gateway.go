@@ -52,6 +52,9 @@ func Gateways(cfg platform.Config) map[string]Gateway {
 	if m := cfg.MoMo; m.BaseURL != "" && m.SubscriptionKey != "" && m.APIUser != "" && m.APIKey != "" {
 		out["momo"] = NewMoMo(m, nil)
 	}
+	if o := cfg.Orange; o.BaseURL != "" && o.ClientID != "" && o.ClientSecret != "" && o.MerchantKey != "" {
+		out["orange_money"] = NewOrange(o, nil)
+	}
 	return out
 }
 

@@ -1073,6 +1073,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/invoice-reminders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Payment reminders already sent for overdue invoices (newest first, at most 200) */
+        get: operations["listInvoiceReminders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/invoice-reminders/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send the reminders that are due now: one per overdue invoice and stage (1 day, 7 days, 30 days late), the highest stage reached. Safe to repeat */
+        post: operations["runInvoiceReminders"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/recurring-invoices/run": {
         parameters: {
             query?: never;
@@ -4966,6 +5000,50 @@ export interface operations {
         responses: {
             /** @description The template */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    listInvoiceReminders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The reminders */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    runInvoiceReminders: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The reminders sent */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -1266,6 +1266,30 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Object" }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/invoice-reminders:
+    get:
+      operationId: listInvoiceReminders
+      summary: "Payment reminders already sent for overdue invoices (newest first, at most 200)"
+      responses:
+        "200":
+          description: "The reminders"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/invoice-reminders/run:
+    post:
+      operationId: runInvoiceReminders
+      summary: "Send the reminders that are due now: one per overdue invoice and stage (1 day, 7 days, 30 days late), the highest stage reached. Safe to repeat"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: "The reminders sent"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/recurring-invoices/run:
     post:
       operationId: runRecurringInvoices

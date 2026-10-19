@@ -54,6 +54,14 @@ func Plan(subject string, p map[string]any) (*Message, *Audience) {
 	case "invoice.issued":
 		return &Message{"New invoice", fmt.Sprintf("Invoice %s has been issued", str(p, "ref")), map[string]any{"screen": "invoice", "id": id}},
 			&Audience{Tenant: str(p, "tenant_id"), Roles: []string{"client_admin"}}
+	case "invoice.reminder":
+		title := "Invoice overdue"
+		if n, _ := p["stage"].(float64); n >= 3 {
+			title = "Payment reminder: action needed"
+		}
+		n, _ := p["days_late"].(float64)
+		return &Message{title, fmt.Sprintf("Invoice %s is %d days past its due date", str(p, "ref"), int(n)), map[string]any{"screen": "invoice", "id": id}},
+			&Audience{Tenant: str(p, "tenant_id"), Roles: []string{"client_admin"}}
 	case "leave.approved", "leave.rejected":
 		verdict := "approved"
 		if subject == "leave.rejected" {
