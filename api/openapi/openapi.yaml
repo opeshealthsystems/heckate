@@ -414,6 +414,7 @@ paths:
                   title: { type: string }
                   status: { type: string }
                   issued_at: { type: string, format: date-time }
+                  sha256: { type: string, description: "SHA-256 of the issued PDF once generated; compare with sha256sum of a file you hold" }
         "4XX": { $ref: "#/components/responses/Problem" }
   /v1/quotes:
     post:
@@ -2072,6 +2073,45 @@ paths:
       security: []
       responses:
         "101": { description: Switching protocols }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/invoices/{id}/pdf:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: downloadInvoicePdf
+      summary: "PDF of an issued invoice with a verification QR code"
+      responses:
+        "200":
+          description: "The canonical PDF. The first rendering is stored, so every download is the same file; its SHA-256 is in the X-Document-SHA256 header and the public register."
+          headers:
+            X-Document-SHA256: { schema: { type: string } }
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/quotes/{id}/pdf:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: downloadQuotePdf
+      summary: "PDF of a sent quotation"
+      responses:
+        "200":
+          description: "The canonical PDF. The first rendering is stored, so every download is the same file; its SHA-256 is in the X-Document-SHA256 header and the public register."
+          headers:
+            X-Document-SHA256: { schema: { type: string } }
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/interventions/{id}/pdf:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: downloadInterventionPdf
+      summary: "PDF of a completed site visit: report, GPS times and the client's signature"
+      responses:
+        "200":
+          description: "The canonical PDF. The first rendering is stored, so every download is the same file; its SHA-256 is in the X-Document-SHA256 header and the public register."
+          headers:
+            X-Document-SHA256: { schema: { type: string } }
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
         "4XX": { $ref: "#/components/responses/Problem" }
 components:
   securitySchemes:

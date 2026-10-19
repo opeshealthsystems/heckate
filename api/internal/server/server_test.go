@@ -29,7 +29,7 @@ type env struct {
 }
 
 func setup(t *testing.T) *env {
-	dsn := os.Getenv("HEKATE_TEST_DB")
+	dsn := setupDSN()
 	if dsn == "" {
 		t.Skip("HEKATE_TEST_DB not set")
 	}
@@ -43,7 +43,7 @@ func setup(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	srv := httptest.NewServer(New(platform.Config{DevSecret: secret}, pool))
+	srv := httptest.NewServer(New(platform.Config{DevSecret: secret, PortalURL: "https://app.example.com"}, pool))
 	t.Cleanup(srv.Close)
 	return &env{t, srv}
 }
@@ -391,7 +391,7 @@ func TestDeviceRegistrationIsPerUser(t *testing.T) {
 
 func httptestServer(t *testing.T, pool *pgxpool.Pool) *httptest.Server {
 	t.Helper()
-	srv := httptest.NewServer(New(platform.Config{DevSecret: secret}, pool))
+	srv := httptest.NewServer(New(platform.Config{DevSecret: secret, PortalURL: "https://app.example.com"}, pool))
 	t.Cleanup(srv.Close)
 	return srv
 }
@@ -417,3 +417,5 @@ func adminDSN() string {
 	}
 	return os.Getenv("HEKATE_TEST_DB")
 }
+
+func setupDSN() string { return os.Getenv("HEKATE_TEST_DB") }

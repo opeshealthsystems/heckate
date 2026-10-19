@@ -3,14 +3,18 @@ package projects
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/opeshealthsystems/heckate/api/internal/docs"
+	"github.com/opeshealthsystems/heckate/api/internal/modules/clients"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/documents"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/inventory"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
@@ -23,7 +27,10 @@ var (
 	fieldRoles  = []string{"ceo", "manager", "support", "engineer"}
 )
 
-func Register(a *platform.App) {
+var pdfOptions docs.Options
+
+func Register(a *platform.App, o docs.Options) {
+	pdfOptions = o
 	a.Route("POST /v1/projects", managers, platform.Idempotent(createProject))
 	a.Route("GET /v1/projects", nil, listProjects)
 	a.Route("GET /v1/projects/{id}", nil, getProject)
@@ -34,6 +41,7 @@ func Register(a *platform.App) {
 	a.Route("POST /v1/interventions", dispatchers, platform.Idempotent(createIntervention))
 	a.Route("GET /v1/interventions", nil, listInterventions)
 	a.Route("GET /v1/interventions/{id}", nil, getIntervention)
+	a.Route("GET /v1/interventions/{id}/pdf", nil, interventionPDF)
 	a.Route("POST /v1/interventions/{id}/check-in", []string{"engineer"}, platform.Idempotent(checkIn))
 	a.Route("POST /v1/interventions/{id}/check-out", []string{"engineer"}, platform.Idempotent(checkOut))
 
@@ -617,4 +625,50 @@ func InterventionTenant(ctx context.Context, s *platform.Scope, id string) (stri
 		return "", nf("intervention")
 	}
 	return tenant, err
+}
+
+// interventionPDF serves the canonical acceptance document of a completed site visit.
+func interventionPDF(r *http.Request, s *platform.Scope) (*platform.Result, error) {
+	ctx := r.Context()
+	v, err := scanIV(s.Tx.QueryRow(ctx, `SELECT `+ivCols+` FROM projects.interventions WHERE id::text=$1`, r.PathValue("id")))
+	if err != nil {
+		return nil, err
+	}
+	if v.Status != "completed" || v.DocumentRef == nil || v.CheckinAt == nil || v.CheckoutAt == nil {
+		return nil, platform.Err(http.StatusConflict, "Not completed", "only a completed site visit has a PDF")
+	}
+	return documents.ServePDF(ctx, s, *v.DocumentRef, func() ([]byte, error) {
+		client, err := clients.Party(ctx, s, v.TenantID)
+		if err != nil {
+			return nil, err
+		}
+		var dataURL *string
+		if err := s.Tx.QueryRow(ctx, `SELECT signature FROM projects.interventions WHERE id=$1`, v.ID).Scan(&dataURL); err != nil {
+			return nil, err
+		}
+		var sig []byte
+		if dataURL != nil {
+			// The upload was validated as a PNG data URL when the visit was completed.
+			sig, _ = base64.StdEncoding.DecodeString(strings.TrimPrefix(*dataURL, "data:image/png;base64,"))
+		}
+		pos := func(lat, lng *float64) string {
+			if lat == nil || lng == nil {
+				return "position not recorded"
+			}
+			return fmt.Sprintf("%.5f, %.5f", *lat, *lng)
+		}
+		signedBy := ""
+		if v.SignedBy != nil {
+			signedBy = *v.SignedBy
+		}
+		report := ""
+		if v.Report != nil {
+			report = *v.Report
+		}
+		return docs.RenderVisit(pdfOptions, *v.DocumentRef, client, docs.Visit{
+			Engineer: v.Engineer, Summary: v.Summary, CheckIn: *v.CheckinAt, CheckOut: *v.CheckoutAt,
+			InPos: pos(v.CheckinLat, v.CheckinLng), OutPos: pos(v.CheckoutLat, v.CheckoutLng),
+			Report: report, SignedBy: signedBy, Signature: sig,
+		})
+	})
 }

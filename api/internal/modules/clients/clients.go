@@ -2,6 +2,7 @@
 package clients
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/opeshealthsystems/heckate/api/internal/docs"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 )
 
@@ -137,4 +139,21 @@ func update(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		return nil, err
 	}
 	return &platform.Result{Status: http.StatusOK, Body: a}, nil
+}
+
+// Party returns the client's details for printing on a document, if the caller can see the account.
+func Party(ctx context.Context, s *platform.Scope, tenantID string) (docs.Party, error) {
+	var p docs.Party
+	var rccm, email *string
+	err := s.Tx.QueryRow(ctx, `SELECT legal_name, rccm, email FROM clients.accounts WHERE tenant_id::text = $1`, tenantID).Scan(&p.Name, &rccm, &email)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return p, platform.Err(http.StatusNotFound, "Not found", "client not found")
+	}
+	if rccm != nil {
+		p.RCCM = *rccm
+	}
+	if email != nil {
+		p.Email = *email
+	}
+	return p, err
 }

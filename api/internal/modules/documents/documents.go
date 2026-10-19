@@ -4,6 +4,8 @@ package documents
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -172,15 +174,53 @@ func verify(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	var d struct {
 		Ref, Code, Title, Status string
 		IssuedAt                 time.Time
+		SHA256                   *string
 	}
-	err := s.Tx.QueryRow(r.Context(), `SELECT ref, code, title, status, issued_at FROM documents.verify($1)`, ref).Scan(&d.Ref, &d.Code, &d.Title, &d.Status, &d.IssuedAt)
+	err := s.Tx.QueryRow(r.Context(), `SELECT ref, code, title, status, issued_at, sha256 FROM documents.verify($1)`, ref).Scan(&d.Ref, &d.Code, &d.Title, &d.Status, &d.IssuedAt, &d.SHA256)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return &platform.Result{Status: http.StatusOK, Body: map[string]any{"valid": false, "reason": "not found"}}, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	return &platform.Result{Status: http.StatusOK, Body: map[string]any{
-		"valid": d.Status == "valid", "ref": d.Ref, "code": d.Code, "title": d.Title, "status": d.Status, "issued_at": d.IssuedAt,
-	}}, nil
+	body := map[string]any{"valid": d.Status == "valid", "ref": d.Ref, "code": d.Code, "title": d.Title, "status": d.Status, "issued_at": d.IssuedAt}
+	if d.SHA256 != nil {
+		body["sha256"] = *d.SHA256 // lets anyone check a file they hold against the original
+	}
+	return &platform.Result{Status: http.StatusOK, Body: body}, nil
+}
+
+// Lookup returns a register entry the caller is allowed to see.
+func Lookup(ctx context.Context, s *platform.Scope, ref string) (*Document, error) {
+	return scan(s.Tx.QueryRow(ctx, `SELECT `+cols+` FROM documents.register WHERE ref=$1`, ref))
+}
+
+// ServePDF returns the canonical PDF for a document the caller has already been authorised to see.
+// The first rendering is stored with its hash (and the hash goes into the public register); every
+// later request gets exactly those bytes, so one reference always means one file.
+func ServePDF(ctx context.Context, s *platform.Scope, ref string, render func() ([]byte, error)) (*platform.Result, error) {
+	var stored []byte
+	if err := s.Tx.QueryRow(ctx, `SELECT documents.get_artifact($1)`, ref).Scan(&stored); err != nil {
+		return nil, err
+	}
+	if stored == nil {
+		fresh, err := render()
+		if err != nil {
+			return nil, err
+		}
+		sum := sha256.Sum256(fresh)
+		if err := s.Tx.QueryRow(ctx, `SELECT documents.put_artifact($1,$2,$3)`, ref, hex.EncodeToString(sum[:]), fresh).Scan(&stored); err != nil {
+			return nil, err
+		}
+	}
+	sum := sha256.Sum256(stored)
+	return &platform.Result{
+		Status: http.StatusOK, Bytes: stored, ContentType: "application/pdf",
+		Header: map[string]string{
+			"Content-Disposition":    `attachment; filename="` + ref + `.pdf"`,
+			"X-Document-SHA256":      hex.EncodeToString(sum[:]),
+			"X-Content-Type-Options": "nosniff",
+			"Cache-Control":          "private, no-store",
+		},
+	}, nil
 }

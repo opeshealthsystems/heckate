@@ -10,6 +10,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/opeshealthsystems/heckate/api/internal/docs"
+	"github.com/opeshealthsystems/heckate/api/internal/modules/clients"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/documents"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 )
@@ -38,7 +40,10 @@ type CreditEntry struct {
 	Date                    time.Time
 }
 
-type module struct{ post Poster }
+type module struct {
+	post Poster
+	docs docs.Options
+}
 
 var (
 	quoteWriters   = []string{"ceo", "manager", "sales"}
@@ -47,11 +52,12 @@ var (
 	approvers      = []string{"ceo", "manager"}
 )
 
-func Register(a *platform.App, p Poster) {
-	m := &module{post: p}
+func Register(a *platform.App, p Poster, o docs.Options) {
+	m := &module{post: p, docs: o}
 	a.Route("POST /v1/quotes", quoteWriters, platform.Idempotent(m.createQuote))
 	a.Route("GET /v1/quotes", nil, m.listQuotes)
 	a.Route("GET /v1/quotes/{id}", nil, m.getQuote)
+	a.Route("GET /v1/quotes/{id}/pdf", nil, m.quotePDF)
 	a.Route("PUT /v1/quotes/{id}/lines", quoteWriters, m.replaceQuoteLines)
 	a.Route("POST /v1/quotes/{id}/send", quoteWriters, platform.Idempotent(m.sendQuote))
 	a.Route("POST /v1/quotes/{id}/approve", []string{"client_admin"}, platform.Idempotent(m.decideQuote("approved")))
@@ -61,6 +67,7 @@ func Register(a *platform.App, p Poster) {
 	a.Route("POST /v1/invoices", invoiceWriters, platform.Idempotent(m.createInvoice))
 	a.Route("GET /v1/invoices", nil, m.listInvoices)
 	a.Route("GET /v1/invoices/{id}", nil, m.getInvoice)
+	a.Route("GET /v1/invoices/{id}/pdf", nil, m.invoicePDF)
 	a.Route("POST /v1/invoices/{id}/issue", financeRoles, platform.Idempotent(m.issueInvoice))
 	a.Route("POST /v1/invoices/{id}/approve", approvers, platform.Idempotent(m.approveInvoice))
 	a.Route("POST /v1/invoices/{id}/payments", financeRoles, platform.Idempotent(m.recordPayment))
@@ -761,4 +768,58 @@ func report(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		"invoiced": issued, "collected": collected, "credited": credited, "outstanding": outstanding,
 		"overdue_invoices": overdue, "open_quotes": openQuotes, "pipeline_net": pipeline,
 	}}, nil
+}
+
+func toDocLines(lines []Line) []docs.Line {
+	out := make([]docs.Line, len(lines))
+	for i, l := range lines {
+		out[i] = docs.Line{Description: l.Description, Quantity: l.Quantity, UnitPrice: l.UnitPrice}
+	}
+	return out
+}
+
+// invoicePDF serves the canonical PDF of an issued invoice. It prints nothing that changes after
+// issue (payments, balance), and the first rendering is the one that is stored and hashed.
+func (m *module) invoicePDF(r *http.Request, s *platform.Scope) (*platform.Result, error) {
+	ctx := r.Context()
+	v, err := loadInvoice(ctx, s, r.PathValue("id"), false, true)
+	if err != nil {
+		return nil, err
+	}
+	if (v.Status != "issued" && v.Status != "paid") || v.Ref == nil || v.IssueDate == nil {
+		return nil, platform.Err(http.StatusConflict, "Not issued", "only an issued invoice has a PDF")
+	}
+	return documents.ServePDF(ctx, s, *v.Ref, func() ([]byte, error) {
+		client, err := clients.Party(ctx, s, v.TenantID)
+		if err != nil {
+			return nil, err
+		}
+		return docs.RenderInvoice(m.docs, *v.Ref, *v.IssueDate, v.DueDate, v.Title, client, toDocLines(v.Lines), docs.Money{Net: v.Net, TVA: v.TVA, CAC: v.CAC, Total: v.Total})
+	})
+}
+
+// quotePDF serves the canonical PDF of a quotation that has been sent to the client.
+func (m *module) quotePDF(r *http.Request, s *platform.Scope) (*platform.Result, error) {
+	ctx := r.Context()
+	q, err := scanQuote(s.Tx.QueryRow(ctx, `SELECT `+quoteCols+` FROM sales.quotes WHERE id::text = $1`, r.PathValue("id")))
+	if err != nil {
+		return nil, err
+	}
+	if q.Status == "draft" || q.Ref == nil {
+		return nil, platform.Err(http.StatusConflict, "Not sent", "only a sent quotation has a PDF")
+	}
+	if err := fillQuote(ctx, s, q, true); err != nil {
+		return nil, err
+	}
+	return documents.ServePDF(ctx, s, *q.Ref, func() ([]byte, error) {
+		client, err := clients.Party(ctx, s, q.TenantID)
+		if err != nil {
+			return nil, err
+		}
+		entry, err := documents.Lookup(ctx, s, *q.Ref)
+		if err != nil {
+			return nil, err
+		}
+		return docs.RenderQuote(m.docs, *q.Ref, entry.IssuedAt, q.ValidUntil, q.Title, client, toDocLines(q.Lines), docs.Money{Net: q.Net, TVA: q.TVA, CAC: q.CAC, Total: q.Total}, q.Notes)
+	})
 }

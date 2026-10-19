@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/opeshealthsystems/heckate/api/internal/docs"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/accounting"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/clients"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/crm"
@@ -59,12 +60,13 @@ func build(cfg platform.Config, pool *pgxpool.Pool, hub *stream.Hub) *platform.A
 	support.Register(app)
 	documents.Register(app)
 	notify.Register(app)
-	projects.Register(app)
+	docOpts := docs.Options{PortalURL: cfg.PortalURL, Letterhead: cfg.Letterhead, Compress: cfg.PDFCompress}
+	projects.Register(app, docOpts)
 	hr.Register(app)
 	files.Register(app)
 	inventory.Register(app)
 	procurement.Register(app, accounting.ProcurementPoster{})
-	sales.Register(app, accounting.SalesPoster{})
+	sales.Register(app, accounting.SalesPoster{}, docOpts)
 	accounting.Register(app)
 	stream.Register(app, hub, cfg.CORSOrigins)
 	return app
