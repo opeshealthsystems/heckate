@@ -12,6 +12,8 @@ type Config struct {
 	DevSecret   string // HEKATE_DEV_JWT_SECRET: enables HS256 tokens. Never set in production.
 	CORSOrigins string // HEKATE_CORS_ORIGINS, comma separated
 	NATSURL     string // HEKATE_NATS_URL; empty logs events instead
+	PushEnabled bool   // HEKATE_PUSH=1 sends push notifications through the Expo push service
+	ExpoToken   string // HEKATE_EXPO_ACCESS_TOKEN, optional
 }
 
 func LoadConfig() Config {
@@ -30,5 +32,7 @@ func LoadConfig() Config {
 		DevSecret:   os.Getenv("HEKATE_DEV_JWT_SECRET"),
 		CORSOrigins: os.Getenv("HEKATE_CORS_ORIGINS"),
 		NATSURL:     os.Getenv("HEKATE_NATS_URL"),
+		PushEnabled: os.Getenv("HEKATE_PUSH") == "1",
+		ExpoToken:   os.Getenv("HEKATE_EXPO_ACCESS_TOKEN"),
 	}
 }

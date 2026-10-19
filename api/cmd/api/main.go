@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/opeshealthsystems/heckate/api/internal/modules/notify"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 	"github.com/opeshealthsystems/heckate/api/internal/server"
 	"github.com/opeshealthsystems/heckate/api/migrations"
@@ -56,6 +57,10 @@ func main() {
 		defer np.Close()
 		pub = np
 		slog.Info("publishing events to NATS JetStream", "url", cfg.NATSURL)
+	}
+	if cfg.PushEnabled {
+		pub = platform.MultiPublisher{pub, platform.BestEffort{Inner: notify.NewNotifier(pool, notify.NewExpoSender(cfg.ExpoToken))}}
+		slog.Info("push notifications enabled")
 	}
 	go platform.RelayOutbox(ctx, pool, pub, 2*time.Second)
 

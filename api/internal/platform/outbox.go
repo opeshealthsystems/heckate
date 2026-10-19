@@ -75,3 +75,26 @@ func RelayOnce(ctx context.Context, pool *pgxpool.Pool, pub Publisher) error {
 	}
 	return tx.Commit(ctx)
 }
+
+// MultiPublisher delivers every event to each publisher in turn and stops at the first error.
+type MultiPublisher []Publisher
+
+func (m MultiPublisher) Publish(ctx context.Context, subject string, payload []byte, id string) error {
+	for _, p := range m {
+		if err := p.Publish(ctx, subject, payload, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// BestEffort logs a publisher's errors instead of returning them, so a side channel such as push
+// notifications can never hold up (or repeat) delivery to the broker.
+type BestEffort struct{ Inner Publisher }
+
+func (b BestEffort) Publish(ctx context.Context, subject string, payload []byte, id string) error {
+	if err := b.Inner.Publish(ctx, subject, payload, id); err != nil {
+		slog.Warn("best-effort publisher failed", "subject", subject, "err", err)
+	}
+	return nil
+}

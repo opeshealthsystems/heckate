@@ -155,7 +155,7 @@ func create(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	}
 	if t.Severity == P1 {
 		// P1 pages the on-call engineer and the Manager.
-		if err := s.Emit(ctx, "ticket.p1.page", map[string]any{"id": t.ID, "subject": t.Subject}); err != nil {
+		if err := s.Emit(ctx, "ticket.p1.page", map[string]any{"id": t.ID, "tenant_id": t.TenantID, "subject": t.Subject}); err != nil {
 			return nil, err
 		}
 	}
@@ -292,7 +292,7 @@ func patch(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		return nil, err
 	}
 	if status != t.Status {
-		if err := s.Emit(ctx, "ticket.status_changed", map[string]any{"id": nt.ID, "from": t.Status, "to": status}); err != nil {
+		if err := s.Emit(ctx, "ticket.status_changed", map[string]any{"id": nt.ID, "tenant_id": nt.TenantID, "subject": nt.Subject, "from": t.Status, "to": status, "actor": s.Claims.Sub, "by": s.Claims.Scope()}); err != nil {
 			return nil, err
 		}
 	}
@@ -366,7 +366,7 @@ func addComment(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		}
 	}
 	if !in.Internal {
-		if err := s.Emit(ctx, "ticket.commented", map[string]any{"id": t.ID, "comment_id": c.ID}); err != nil {
+		if err := s.Emit(ctx, "ticket.commented", map[string]any{"id": t.ID, "tenant_id": t.TenantID, "subject": t.Subject, "comment_id": c.ID, "actor": s.Claims.Sub, "by": s.Claims.Scope()}); err != nil {
 			return nil, err
 		}
 	}
