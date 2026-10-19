@@ -3,6 +3,7 @@ package projects
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/opeshealthsystems/heckate/api/internal/modules/documents"
+	"github.com/opeshealthsystems/heckate/api/internal/modules/inventory"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 )
 
@@ -249,35 +251,36 @@ func updateTask(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 // ---- interventions ----
 
 type Intervention struct {
-	ID           string     `json:"id"`
-	TenantID     string     `json:"tenant_id"`
-	ProjectID    *string    `json:"project_id"`
-	TicketID     *string    `json:"ticket_id"`
-	Engineer     string     `json:"engineer"`
-	Status       string     `json:"status"`
-	ScheduledFor *time.Time `json:"scheduled_for"`
-	Summary      string     `json:"summary"`
-	CheckinAt    *time.Time `json:"checkin_at"`
-	CheckinLat   *float64   `json:"checkin_lat"`
-	CheckinLng   *float64   `json:"checkin_lng"`
-	CheckoutAt   *time.Time `json:"checkout_at"`
-	CheckoutLat  *float64   `json:"checkout_lat"`
-	CheckoutLng  *float64   `json:"checkout_lng"`
-	Report       *string    `json:"report"`
-	SignedBy     *string    `json:"signed_by"`
-	HasSignature bool       `json:"has_signature"`
-	Signature    *string    `json:"signature,omitempty"`
-	DocumentRef  *string    `json:"document_ref"`
-	CreatedAt    time.Time  `json:"created_at"`
+	ID           string          `json:"id"`
+	TenantID     string          `json:"tenant_id"`
+	ProjectID    *string         `json:"project_id"`
+	TicketID     *string         `json:"ticket_id"`
+	Engineer     string          `json:"engineer"`
+	Status       string          `json:"status"`
+	ScheduledFor *time.Time      `json:"scheduled_for"`
+	Summary      string          `json:"summary"`
+	CheckinAt    *time.Time      `json:"checkin_at"`
+	CheckinLat   *float64        `json:"checkin_lat"`
+	CheckinLng   *float64        `json:"checkin_lng"`
+	CheckoutAt   *time.Time      `json:"checkout_at"`
+	CheckoutLat  *float64        `json:"checkout_lat"`
+	CheckoutLng  *float64        `json:"checkout_lng"`
+	Report       *string         `json:"report"`
+	SignedBy     *string         `json:"signed_by"`
+	HasSignature bool            `json:"has_signature"`
+	Signature    *string         `json:"signature,omitempty"`
+	DocumentRef  *string         `json:"document_ref"`
+	Parts        json.RawMessage `json:"parts"`
+	CreatedAt    time.Time       `json:"created_at"`
 }
 
 const ivCols = `id, tenant_id, project_id, ticket_id, engineer, status, scheduled_for, summary, checkin_at, checkin_lat, checkin_lng,
- checkout_at, checkout_lat, checkout_lng, report, signed_by, signature IS NOT NULL, document_ref, created_at`
+ checkout_at, checkout_lat, checkout_lng, report, signed_by, signature IS NOT NULL, document_ref, parts, created_at`
 
 func scanIV(row pgx.Row) (*Intervention, error) {
 	var v Intervention
 	err := row.Scan(&v.ID, &v.TenantID, &v.ProjectID, &v.TicketID, &v.Engineer, &v.Status, &v.ScheduledFor, &v.Summary, &v.CheckinAt, &v.CheckinLat, &v.CheckinLng,
-		&v.CheckoutAt, &v.CheckoutLat, &v.CheckoutLng, &v.Report, &v.SignedBy, &v.HasSignature, &v.DocumentRef, &v.CreatedAt)
+		&v.CheckoutAt, &v.CheckoutLat, &v.CheckoutLng, &v.Report, &v.SignedBy, &v.HasSignature, &v.DocumentRef, &v.Parts, &v.CreatedAt)
 	if isNotFound(err) {
 		return nil, nf("intervention")
 	}
@@ -419,6 +422,11 @@ func checkOut(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		Report    string  `json:"report"`
 		SignedBy  string  `json:"signed_by"`
 		Signature string  `json:"signature"`
+		Parts     []struct {
+			ItemID      string `json:"item_id"`
+			WarehouseID string `json:"warehouse_id"`
+			Qty         int    `json:"qty"`
+		} `json:"parts"`
 	}
 	if err := platform.DecodeBody(r, &in); err != nil {
 		return nil, err
@@ -450,6 +458,16 @@ func checkOut(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	if v.CheckinAt != nil && at.Before(*v.CheckinAt) {
 		return nil, platform.Err(http.StatusUnprocessableEntity, "Invalid time", "check-out cannot be before check-in")
 	}
+	// Spare parts used come out of stock in the same transaction as the completed report.
+	for _, p := range in.Parts {
+		if err := inventory.Issue(ctx, s, p.ItemID, p.WarehouseID, p.Qty, "intervention:"+v.ID); err != nil {
+			return nil, err
+		}
+	}
+	parts, _ := json.Marshal(in.Parts)
+	if in.Parts == nil {
+		parts = []byte("[]")
+	}
 	doc, err := documents.Issue(ctx, s, "FRM-27", "Intervention report and acceptance", v.TenantID, "")
 	if err != nil {
 		return nil, err
@@ -459,7 +477,7 @@ func checkOut(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		sig, by = in.Signature, strings.TrimSpace(in.SignedBy)
 	}
 	nv, err := scanIV(s.Tx.QueryRow(ctx, `UPDATE projects.interventions SET status='completed', checkout_at=$2, checkout_lat=$3, checkout_lng=$4,
-		report=$5, signed_by=$6, signature=$7, document_ref=$8 WHERE id=$1 RETURNING `+ivCols, v.ID, at, in.Lat, in.Lng, strings.TrimSpace(in.Report), by, sig, doc.Ref))
+		report=$5, signed_by=$6, signature=$7, document_ref=$8, parts=$9 WHERE id=$1 RETURNING `+ivCols, v.ID, at, in.Lat, in.Lng, strings.TrimSpace(in.Report), by, sig, doc.Ref, parts))
 	if err != nil {
 		return nil, err
 	}

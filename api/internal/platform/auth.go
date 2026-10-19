@@ -26,7 +26,7 @@ type Claims struct {
 
 var staffRoles = map[string]bool{
 	"ceo": true, "manager": true, "finance": true, "sales": true, "support": true,
-	"engineer": true, "hr": true, "employee": true,
+	"engineer": true, "hr": true, "employee": true, "logistics": true,
 }
 
 // Scope maps roles to the row-level-security role: staff, client or other.

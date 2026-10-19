@@ -181,8 +181,16 @@ func (a *App) run(w http.ResponseWriter, r *http.Request, claims *Claims, h Hand
 		return
 	}
 	if err := s.Tx.Commit(ctx); err != nil {
-		slog.Error("commit", "err", err)
-		WriteProblem(w, r, http.StatusInternalServerError, "Internal error", "")
+		// Deferred database constraints (balanced ledger entries, non-negative stock) fail at commit.
+		switch msg := err.Error(); {
+		case strings.Contains(msg, "insufficient stock"):
+			WriteProblem(w, r, http.StatusConflict, "Insufficient stock", "not enough stock for this movement")
+		case strings.Contains(msg, "is not balanced"):
+			WriteProblem(w, r, http.StatusUnprocessableEntity, "Entry does not balance", "debits and credits must be equal")
+		default:
+			slog.Error("commit", "err", err)
+			WriteProblem(w, r, http.StatusInternalServerError, "Internal error", "")
+		}
 		return
 	}
 	for k, v := range res.Header {
