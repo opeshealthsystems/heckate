@@ -72,6 +72,27 @@ export async function downloadAttachment(a: Pick<Attachment, "id" | "filename">)
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
+/** Downloads a file from an authenticated endpoint (such as a PDF) and hands it to the browser. */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const token = getToken();
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  } catch {
+    throw new ApiError(0, "Network error", "Cannot reach the server. Check your connection.");
+  }
+  if (!res.ok) {
+    const p = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, p.title ?? "Download failed", p.detail ?? "");
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 /** Generic call for endpoints without a hand-written wrapper. */
 export const raw = {
   get: <T,>(path: string) => call<T>("GET", path),

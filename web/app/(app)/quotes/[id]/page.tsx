@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { raw } from "@/lib/api";
+import { downloadFile, raw } from "@/lib/api";
 import { useMe } from "@/lib/session";
 import { xaf, day } from "@/lib/format";
 import type { Quote } from "@/lib/sales-types";
@@ -34,6 +34,7 @@ export default function QuotePage() {
       <Totals net={q.net} tva={q.tva} cac={q.cac} total={q.total} />
       <Err msg={act.err} />
       <div className="actions">
+        {q.status !== "draft" && q.ref && <button className="btn" disabled={act.busy} onClick={() => act.run(() => downloadFile(`/v1/quotes/${id}/pdf`, `${q.ref}.pdf`))}>Download PDF</button>}
         {seller && q.status === "draft" && <button className="btn primary" disabled={act.busy} onClick={() => act.run(() => raw.post(`/v1/quotes/${id}/send`))}>Send to client</button>}
         {clientAdmin && q.status === "sent" && (
           <>

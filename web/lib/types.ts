@@ -82,6 +82,7 @@ export interface Verification {
   title?: string;
   status?: string;
   issued_at?: string;
+  sha256?: string;
 }
 
 export interface SupportReport {

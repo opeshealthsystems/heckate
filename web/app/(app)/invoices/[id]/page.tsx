@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { raw } from "@/lib/api";
+import { downloadFile, raw } from "@/lib/api";
 import { useMe } from "@/lib/session";
 import { xaf, day } from "@/lib/format";
 import type { Invoice } from "@/lib/sales-types";
@@ -39,6 +39,7 @@ export default function InvoicePage() {
       <Err msg={act.err} />
       {v.status === "pending_approval" && <p className="notice">This invoice is above the approval threshold and needs a second approver.</p>}
       <div className="actions">
+        {(v.status === "issued" || v.status === "paid") && v.ref && <button className="btn" disabled={act.busy} onClick={() => act.run(() => downloadFile(`/v1/invoices/${id}/pdf`, `${v.ref}.pdf`))}>Download PDF</button>}
         {finance && v.status === "draft" && <button className="btn primary" disabled={act.busy} onClick={() => act.run(() => raw.post(`/v1/invoices/${id}/issue`))}>Issue</button>}
         {approver && v.status === "pending_approval" && !mustWaitForSecond && <button className="btn primary" disabled={act.busy} onClick={() => act.run(() => raw.post(`/v1/invoices/${id}/approve`))}>Approve and issue</button>}
       </div>

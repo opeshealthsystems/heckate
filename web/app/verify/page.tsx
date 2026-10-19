@@ -7,9 +7,18 @@ export default function Verify() {
   const [ref, setRef] = useState("");
   const [res, setRes] = useState<Verification | null>(null);
   const [err, setErr] = useState("");
+  const [match, setMatch] = useState<"none" | "same" | "different" | "unregistered">("none");
+  /** Hashes a file you hold, in your browser (it is never uploaded), and compares it with the register. */
+  async function checkFile(f: File) {
+    if (!res?.valid && !res?.sha256) return;
+    const digest = await crypto.subtle.digest("SHA-256", await f.arrayBuffer());
+    const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+    setMatch(!res.sha256 ? "unregistered" : hex === res.sha256 ? "same" : "different");
+  }
   async function run(r: string) {
     setErr("");
     setRes(null);
+    setMatch("none");
     try {
       setRes(await api.verify(r.trim()));
     } catch (x) {
@@ -48,6 +57,11 @@ export default function Verify() {
                 <p className="muted small">
                   {res.ref} · issued {res.issued_at && new Date(res.issued_at).toLocaleDateString()}
                 </p>
+                <label htmlFor="file">Check a PDF you were given (it stays on your device)</label>
+                <input id="file" type="file" accept="application/pdf" onChange={(e) => { const f = e.target.files?.[0]; if (f) void checkFile(f); }} />
+                {match === "same" && <p className="result ok" role="status">This file is identical to the original issued by HEKATE.</p>}
+                {match === "different" && <p className="result bad" role="status">This file does NOT match the original. It may have been altered.</p>}
+                {match === "unregistered" && <p className="muted" role="status">No file has been recorded for this reference yet, so a file cannot be compared.</p>}
               </>
             ) : (
               <>
