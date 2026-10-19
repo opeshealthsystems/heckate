@@ -1339,6 +1339,40 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Object" }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/accounting/periods:
+    get:
+      operationId: listClosedPeriods
+      summary: "Closed accounting periods"
+      responses:
+        "200":
+          description: "Closed months, newest first"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/accounting/periods/close:
+    post:
+      operationId: closeAccountingPeriod
+      summary: "Close a finished month. Management only. Permanent: later corrections go into an open period"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [period]
+              properties:
+                period: { type: string, description: "YYYY-MM, a month that has ended" }
+                note: { type: string }
+      responses:
+        "201":
+          description: Closed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/accounting/statements:
     get:
       operationId: getFinancialStatements

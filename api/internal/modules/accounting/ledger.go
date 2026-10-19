@@ -99,6 +99,9 @@ func Post(ctx context.Context, s *platform.Scope, e Entry) (*Entry, error) {
 		if strings.Contains(err.Error(), "foreign key") {
 			return nil, platform.Err(http.StatusUnprocessableEntity, "Invalid entry", "unknown journal")
 		}
+		if strings.Contains(err.Error(), "is closed") {
+			return nil, platform.Err(http.StatusConflict, "Period closed", "the accounting period of this entry is closed; post the correction in an open period")
+		}
 		return nil, err
 	}
 	for i, l := range e.Lines {

@@ -226,3 +226,62 @@ func TestAuditorSeesDocumentsButCannotIssueThem(t *testing.T) {
 		t.Logf("auditor ticket list status %d (no tickets are visible to them)", c)
 	}
 }
+
+func TestClosingAPeriodLocksIt(t *testing.T) {
+	e := setup(t)
+	fin := token("fin-close", "", "finance")
+	mgr := token("mgr-close", "", "manager")
+	n := time.Now().UnixNano() / 1000
+	month := fmt.Sprintf("%d-%02d", 1950+n%25, 1+n/25%12) // a long-past month nobody else posts to
+	entry := func(date string) int {
+		c, _, _ := e.do("POST", "/v1/accounting/entries", fin, map[string]any{"journal": "OD", "entry_date": date, "narration": "close test",
+			"lines": []map[string]any{{"account": "521", "debit": 100}, {"account": "101", "credit": 100}}})
+		return c
+	}
+	if c := entry(month + "-10"); c != 201 {
+		t.Fatalf("open month accepts entries: got %d", c)
+	}
+	if c, _, _ := e.do("POST", "/v1/accounting/periods/close", fin, map[string]any{"period": month}); c != 403 {
+		t.Errorf("finance closing: want 403, got %d", c)
+	}
+	if c, _, _ := e.do("POST", "/v1/accounting/periods/close", mgr, map[string]any{"period": time.Now().UTC().Format("2006-01")}); c != 422 {
+		t.Errorf("closing the current month: want 422, got %d", c)
+	}
+	if c, _, _ := e.do("POST", "/v1/accounting/periods/close", mgr, map[string]any{"period": "nope"}); c != 422 {
+		t.Errorf("bad period: want 422, got %d", c)
+	}
+	if c, b, _ := e.do("POST", "/v1/accounting/periods/close", mgr, map[string]any{"period": month, "note": "audited"}); c != 201 {
+		t.Fatalf("close: %d %v", c, b)
+	}
+	if c, _, _ := e.do("POST", "/v1/accounting/periods/close", mgr, map[string]any{"period": month}); c != 409 {
+		t.Errorf("close twice: want 409, got %d", c)
+	}
+	if c := entry(month + "-20"); c != 409 {
+		t.Errorf("posting into a closed month: want 409, got %d", c)
+	}
+	other := fmt.Sprintf("%d-%02d-10", 1950+n%25, 1+(n/25+1)%12)
+	if c := entry(other); c != 201 {
+		t.Errorf("another month stays open: got %d", c)
+	}
+	_, lst, _ := e.do("GET", "/v1/accounting/periods", fin, nil)
+	found := false
+	for _, x := range lst["data"].([]any) {
+		found = found || x.(map[string]any)["period"] == month
+	}
+	if !found {
+		t.Error("the closed month must be listed")
+	}
+
+	// The lock is in the database: raw SQL cannot post into it or undo the close.
+	conn, err := pgx.Connect(context.Background(), adminDSN())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close(context.Background())
+	if _, err := conn.Exec(context.Background(), `INSERT INTO accounting.entries (journal, entry_date, narration, created_by, prev_hash, hash) VALUES ('OD',$1,'raw','x','x',$2)`, month+"-15", "raw"+fmt.Sprint(n)); err == nil {
+		t.Error("raw SQL must not post into a closed month")
+	}
+	if _, err := conn.Exec(context.Background(), `DELETE FROM accounting.closed_periods WHERE period = $1`, month+"-01"); err == nil {
+		t.Error("a close must not be undone")
+	}
+}
