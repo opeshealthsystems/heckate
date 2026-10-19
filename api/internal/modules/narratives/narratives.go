@@ -21,11 +21,28 @@ var writers = []string{"ceo", "manager", "sales"}
 
 // kinds maps each kind to its reference code and the heading printed on the PDF.
 var kinds = map[string]struct{ code, label string }{
-	"proposal":           {"PRP", "Proposal"},
+	"proposal":           {"PR", "Commercial and technical proposal"},
 	"order_confirmation": {"OC", "Order confirmation"},
 	"sow":                {"SOW", "Statement of work"},
-	"letter":             {"LTR", "Letter"},
-	"certificate":        {"CRT", "Certificate"},
+	"letter":             {"LT", "Letter"},
+	"certificate":        {"CRT-A", "Certificate"}, // CRT carries a check character in the reference
+	"guarantee":          {"GP", "Guarantee policy"},
+	"contract":           {"CTR", "Contract"},
+	"pentest_report":     {"PTR", "Penetration test report"},
+	"form":               {"", "Form"}, // code and name come from forms
+}
+
+// forms are the numbered HS-FRM forms of the specification that are filled in as titled fields.
+// Forms with their own layout (27 acceptance, 38 asset issue) are served by their modules.
+var forms = map[string]string{
+	"FRM-06": "Transmittal and fax cover sheet", "FRM-07": "Client information and onboarding form",
+	"FRM-08": "Service request and requirements questionnaire", "FRM-09": "Penetration test scoping form",
+	"FRM-10": "Security assessment pre-engagement questionnaire", "FRM-11": "hecID e-KYC integration request",
+	"FRM-12": "Background screening request", "FRM-13": "Client KYC and due-diligence form",
+	"FRM-14": "Incident report and emergency response request", "FRM-15": "Customer feedback and satisfaction form",
+	"FRM-23": "Change request form", "FRM-24": "Rate card", "FRM-26": "Project kick-off record",
+	"FRM-31": "Project closure and sign-off", "FRM-32": "Job application form", "FRM-33": "Offer of employment",
+	"FRM-37": "Visitor and laboratory access log", "FRM-39": "Supplier registration form", "FRM-41": "Supplier evaluation form",
 }
 
 type Section struct {
@@ -36,6 +53,7 @@ type Section struct {
 type Narrative struct {
 	ID        string    `json:"id"`
 	Kind      string    `json:"kind"`
+	FormCode  *string   `json:"form_code"`
 	TenantID  string    `json:"tenant_id"`
 	Title     string    `json:"title"`
 	Sections  []Section `json:"sections"`
@@ -46,7 +64,7 @@ type Narrative struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-const cols = `id::text, kind, tenant_id::text, title, sections, ref, signed_by, created_by, issued_by, created_at`
+const cols = `id::text, kind, form_code, tenant_id::text, title, sections, ref, signed_by, created_by, issued_by, created_at`
 
 type module struct{ docs docs.Options }
 
@@ -67,7 +85,7 @@ func bad(msg string) error {
 func scan(row pgx.Row) (*Narrative, error) {
 	var n Narrative
 	var sec []byte
-	err := row.Scan(&n.ID, &n.Kind, &n.TenantID, &n.Title, &sec, &n.Ref, &n.SignedBy, &n.CreatedBy, &n.IssuedBy, &n.CreatedAt)
+	err := row.Scan(&n.ID, &n.Kind, &n.FormCode, &n.TenantID, &n.Title, &sec, &n.Ref, &n.SignedBy, &n.CreatedBy, &n.IssuedBy, &n.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, platform.Err(http.StatusNotFound, "Not found", "document not found")
 	}
@@ -97,6 +115,7 @@ func validSections(in []Section) error {
 func create(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	var in struct {
 		Kind     string    `json:"kind"`
+		Form     string    `json:"form"`
 		TenantID string    `json:"tenant_id"`
 		Title    string    `json:"title"`
 		Sections []Section `json:"sections"`
@@ -106,7 +125,14 @@ func create(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		return nil, err
 	}
 	if _, ok := kinds[in.Kind]; !ok {
-		return nil, bad("kind must be proposal, order_confirmation, sow, letter or certificate")
+		return nil, bad("unknown kind")
+	}
+	if in.Kind == "form" {
+		if _, ok := forms[in.Form]; !ok {
+			return nil, bad("form must be one of the supported HS-FRM codes, for example FRM-23")
+		}
+	} else if in.Form != "" {
+		return nil, bad("form is only for kind form")
 	}
 	in.Title = strings.TrimSpace(in.Title)
 	if in.TenantID == "" || in.Title == "" || len(in.Title) > 200 {
@@ -116,8 +142,8 @@ func create(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		return nil, err
 	}
 	sec, _ := json.Marshal(in.Sections)
-	n, err := scan(s.Tx.QueryRow(r.Context(), `INSERT INTO documents.narratives (kind, tenant_id, title, sections, signed_by, created_by)
-		VALUES ($1,$2,$3,$4,NULLIF($5,''),$6) RETURNING `+cols, in.Kind, in.TenantID, in.Title, sec, strings.TrimSpace(in.SignedBy), s.Claims.Sub))
+	n, err := scan(s.Tx.QueryRow(r.Context(), `INSERT INTO documents.narratives (kind, form_code, tenant_id, title, sections, signed_by, created_by)
+		VALUES ($1,NULLIF($2,''),$3,$4,$5,NULLIF($6,''),$7) RETURNING `+cols, in.Kind, in.Form, in.TenantID, in.Title, sec, strings.TrimSpace(in.SignedBy), s.Claims.Sub))
 	if err != nil {
 		if strings.Contains(err.Error(), "foreign key") || strings.Contains(err.Error(), "invalid input syntax") {
 			return nil, bad("unknown client")
@@ -159,6 +185,7 @@ func get(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 func update(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	var in struct {
 		Kind     string    `json:"kind"`      // accepted so a client can send back what it read; never applied
+		Form     string    `json:"form"`      // likewise
 		TenantID string    `json:"tenant_id"` // likewise
 		Title    string    `json:"title"`
 		Sections []Section `json:"sections"`
@@ -200,7 +227,8 @@ func issue(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	if cur.Ref != nil {
 		return nil, platform.Err(http.StatusConflict, "Already issued", "this document has already been issued")
 	}
-	doc, err := documents.Issue(ctx, s, kinds[cur.Kind].code, kinds[cur.Kind].label+": "+cur.Title, cur.TenantID, "")
+	code, label := cur.codeAndLabel()
+	doc, err := documents.Issue(ctx, s, code, label+": "+cur.Title, cur.TenantID, "")
 	if err != nil {
 		return nil, err
 	}
@@ -232,6 +260,7 @@ func (m *module) pdf(r *http.Request, s *platform.Scope) (*platform.Result, erro
 		if err != nil {
 			return nil, err
 		}
+		_, label := n.codeAndLabel()
 		secs := make([]docs.Section, len(n.Sections))
 		for i, x := range n.Sections {
 			secs[i] = docs.Section{Heading: x.Heading, Body: x.Body}
@@ -240,6 +269,13 @@ func (m *module) pdf(r *http.Request, s *platform.Scope) (*platform.Result, erro
 		if n.SignedBy != nil {
 			signed = *n.SignedBy
 		}
-		return docs.RenderNarrative(m.docs, *n.Ref, kinds[n.Kind].label, entry.IssuedAt, n.Title, client, secs, signed)
+		return docs.RenderNarrative(m.docs, *n.Ref, label, entry.IssuedAt, n.Title, client, secs, signed)
 	})
+}
+
+func (n *Narrative) codeAndLabel() (code, label string) {
+	if n.Kind == "form" && n.FormCode != nil {
+		return *n.FormCode, forms[*n.FormCode]
+	}
+	return kinds[n.Kind].code, kinds[n.Kind].label
 }

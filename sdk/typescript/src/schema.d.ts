@@ -2478,7 +2478,9 @@ export interface components {
              * @description Required on create, ignored on edit
              * @enum {string}
              */
-            kind?: "proposal" | "order_confirmation" | "sow" | "letter" | "certificate";
+            kind?: "proposal" | "order_confirmation" | "sow" | "letter" | "certificate" | "guarantee" | "contract" | "pentest_report" | "form";
+            /** @description For kind form: the HS-FRM code such as FRM-23 (06-15, 23, 24, 26, 31-33, 37, 39, 41) */
+            form?: string;
             /**
              * Format: uuid
              * @description Required on create, ignored on edit
@@ -2495,6 +2497,7 @@ export interface components {
             /** Format: uuid */
             id?: string;
             kind?: string;
+            form_code?: string | null;
             /** Format: uuid */
             tenant_id?: string;
             title?: string;

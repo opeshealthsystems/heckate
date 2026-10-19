@@ -2863,7 +2863,8 @@ components:
       type: object
       required: [title, sections]
       properties:
-        kind: { type: string, enum: [proposal, order_confirmation, sow, letter, certificate], description: "Required on create, ignored on edit" }
+        kind: { type: string, enum: [proposal, order_confirmation, sow, letter, certificate, guarantee, contract, pentest_report, form], description: "Required on create, ignored on edit" }
+        form: { type: string, description: "For kind form: the HS-FRM code such as FRM-23 (06-15, 23, 24, 26, 31-33, 37, 39, 41)" }
         tenant_id: { type: string, format: uuid, description: "Required on create, ignored on edit" }
         title: { type: string, maxLength: 200 }
         signed_by: { type: string }
@@ -2882,6 +2883,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         kind: { type: string }
+        form_code: { type: [string, "null"] }
         tenant_id: { type: string, format: uuid }
         title: { type: string }
         sections: { type: array, items: { type: object, properties: { heading: { type: string }, body: { type: string } } } }

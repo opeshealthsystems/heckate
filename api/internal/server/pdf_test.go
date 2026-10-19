@@ -338,7 +338,7 @@ func TestNarrativeDocuments(t *testing.T) {
 		t.Fatalf("edit draft: %d", c)
 	}
 	c, iss, _ := e.do("POST", "/v1/narratives/"+id+"/issue", sales, nil)
-	if c != 200 || !strings.Contains(iss["ref"].(string), "-PRP-") {
+	if c != 200 || !strings.Contains(iss["ref"].(string), "-PR-") {
 		t.Fatalf("issue: %d %v", c, iss)
 	}
 	if c, _, _ := e.do("PUT", "/v1/narratives/"+id, sales, body); c != 409 {
@@ -363,6 +363,33 @@ func TestNarrativeDocuments(t *testing.T) {
 	for _, x := range lst["data"].([]any) {
 		if x.(map[string]any)["id"] == id {
 			t.Error("another client's list must not include the document")
+		}
+	}
+
+	// The numbered forms and the other kinds share the engine.
+	form := map[string]any{"kind": "form", "form": "FRM-23", "tenant_id": ta, "title": "Add VPN " + sfx,
+		"sections": []map[string]any{{"heading": "Requested change", "body": "Open a VPN for the Douala office"}}}
+	c, f, _ := e.do("POST", "/v1/narratives", sales, form)
+	if c != 201 {
+		t.Fatalf("form: %d %v", c, f)
+	}
+	_, fi, _ := e.do("POST", "/v1/narratives/"+f["id"].(string)+"/issue", sales, nil)
+	if !strings.Contains(fi["ref"].(string), "-FRM-23-") {
+		t.Errorf("form ref: %v", fi["ref"])
+	}
+	if _, fp := e.pdf(sales, "/v1/narratives/"+f["id"].(string)+"/pdf"); !bytes.Contains(fp, []byte("CHANGE REQUEST FORM")) {
+		t.Error("the form PDF must carry the form's name")
+	}
+	form["form"] = "FRM-99"
+	if c, _, _ := e.do("POST", "/v1/narratives", sales, form); c != 422 {
+		t.Errorf("unknown form: want 422, got %d", c)
+	}
+	if c, _, _ := e.do("POST", "/v1/narratives", sales, map[string]any{"kind": "form", "tenant_id": ta, "title": "x", "sections": []map[string]any{{"body": "y"}}}); c != 422 {
+		t.Errorf("form without a code: want 422, got %d", c)
+	}
+	for _, k := range []string{"guarantee", "contract", "pentest_report", "certificate", "letter"} {
+		if c, _, _ := e.do("POST", "/v1/narratives", sales, map[string]any{"kind": k, "tenant_id": ta, "title": k + sfx, "sections": []map[string]any{{"body": "text"}}}); c != 201 {
+			t.Errorf("kind %s: want 201, got %d", k, c)
 		}
 	}
 }
