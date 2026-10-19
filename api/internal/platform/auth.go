@@ -22,6 +22,7 @@ type Claims struct {
 	Email    string
 	TenantID string
 	Roles    []string
+	APIKey   *APIKey   // set when the request was authenticated with an API key
 	Exp      time.Time // when the token stops being valid (long-lived connections must end then)
 }
 

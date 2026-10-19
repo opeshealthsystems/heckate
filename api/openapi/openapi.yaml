@@ -10,6 +10,7 @@ servers:
   - url: https://api.hekatesystems.com
 security:
   - oauth2: []
+  - apiKey: []
 paths:
   /healthz:
     get:
@@ -68,6 +69,126 @@ paths:
       summary: Stop push notifications to a device
       responses:
         "204": { description: Removed }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/api-plans:
+    get:
+      operationId: listApiPlans
+      summary: API plans (rate limit and monthly quota)
+      responses:
+        "200":
+          description: Plans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/ApiPlan" } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/api-plans/{code}:
+    parameters: [{ name: code, in: path, required: true, schema: { type: string } }]
+    put:
+      operationId: putApiPlan
+      summary: Create or change an API plan (CEO, manager)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ApiPlan" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiPlan" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/api-keys:
+    get:
+      operationId: listApiKeys
+      summary: API keys (own company; staff see all). Secrets are never returned.
+      responses:
+        "200":
+          description: Keys
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/ApiKey" } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createApiKey
+      summary: Create a read-only API key for the company (client admin). The secret is shown once.
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, scopes]
+              properties:
+                name: { type: string }
+                scopes: { type: array, items: { type: string }, description: "read:tickets, read:invoices or read:*" }
+                plan: { type: string, default: free }
+                expires_in_days: { type: integer }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key: { $ref: "#/components/schemas/ApiKey" }
+                  secret: { type: string }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/api-keys/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    delete:
+      operationId: revokeApiKey
+      summary: Revoke an API key
+      responses:
+        "204": { description: Revoked }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    patch:
+      operationId: setApiKeyPlan
+      summary: Move a key to another plan (CEO, manager)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan]
+              properties:
+                plan: { type: string }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiKey" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/api-keys/{id}/usage:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: getApiKeyUsage
+      summary: Calls per month for a key
+      responses:
+        "200":
+          description: Usage
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        month: { type: string }
+                        calls: { type: integer }
         "4XX": { $ref: "#/components/responses/Problem" }
   /v1/clients:
     get:
@@ -2115,6 +2236,10 @@ paths:
         "4XX": { $ref: "#/components/responses/Problem" }
 components:
   securitySchemes:
+    apiKey:
+      type: http
+      scheme: bearer
+      description: Read-only company API key (hk_...), created under Developer in the web app
     oauth2:
       type: oauth2
       flows:
@@ -2135,6 +2260,30 @@ components:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
   schemas:
+    ApiPlan:
+      type: object
+      required: [code, name, rate_per_min, monthly_quota]
+      properties:
+        code: { type: string }
+        name: { type: string }
+        rate_per_min: { type: integer }
+        monthly_quota: { type: integer }
+        price_xaf: { type: integer }
+        active: { type: boolean }
+    ApiKey:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        tenant_id: { type: string, format: uuid }
+        name: { type: string }
+        prefix: { type: string }
+        scopes: { type: array, items: { type: string } }
+        plan: { type: string }
+        created_by: { type: string }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: [string, "null"], format: date-time }
+        revoked_at: { type: [string, "null"], format: date-time }
+        last_used_at: { type: [string, "null"], format: date-time }
     Object: { type: object, additionalProperties: true }
     Lines:
       type: array

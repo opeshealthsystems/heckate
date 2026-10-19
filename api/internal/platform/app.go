@@ -75,6 +75,7 @@ type App struct {
 	Verifier *Verifier
 	Limiter  *Limiter
 	Mux      *http.ServeMux
+	keyLim   keyLimiters
 	Patterns []string // every registered "METHOD /path", used to check the code against the OpenAPI contract
 }
 
@@ -119,6 +120,10 @@ func (a *App) Route(pattern string, roles []string, h HandlerFunc) {
 			WriteProblem(w, r, http.StatusUnauthorized, "Unauthorized", "Bearer token required")
 			return
 		}
+		if strings.HasPrefix(tok, KeyPrefix) {
+			a.runKey(w, r, pattern, tok, roles, h)
+			return
+		}
 		claims, err := a.Verifier.Verify(tok)
 		if err != nil {
 			w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
@@ -136,6 +141,39 @@ func (a *App) Route(pattern string, roles []string, h HandlerFunc) {
 	})
 }
 
+// runKey authenticates an API key, enforces its scopes, plan rate limit and monthly quota, and meters the call.
+func (a *App) runKey(w http.ResponseWriter, r *http.Request, pattern, tok string, roles []string, h HandlerFunc) {
+	ctx := r.Context()
+	var k APIKey
+	var tenant string
+	err := a.Pool.QueryRow(ctx, `SELECT key_id::text, tenant_id::text, scopes, rate_per_min, monthly_quota FROM devapi.authenticate($1)`, HashKey(tok)).
+		Scan(&k.ID, &tenant, &k.Scopes, &k.Rate, &k.Quota)
+	if err != nil {
+		w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
+		WriteProblem(w, r, http.StatusUnauthorized, "Unauthorized", "Invalid, expired or revoked API key")
+		return
+	}
+	if !KeyAllows(k.Scopes, pattern) || len(roles) > 0 {
+		WriteProblem(w, r, http.StatusForbidden, "Forbidden", "This API key cannot call this endpoint")
+		return
+	}
+	if !a.keyLim.get(k.Rate).allowWrite(w, r, k.ID) {
+		return
+	}
+	var calls int64
+	if err := a.Pool.QueryRow(ctx, `SELECT devapi.meter($1::uuid)`, k.ID).Scan(&calls); err != nil {
+		WriteProblem(w, r, http.StatusServiceUnavailable, "Service unavailable", "")
+		return
+	}
+	if calls > k.Quota {
+		w.Header().Set("Retry-After", "86400")
+		WriteProblem(w, r, http.StatusTooManyRequests, "Quota exceeded", "Monthly API quota for this key is used up")
+		return
+	}
+	claims := &Claims{Sub: "apikey:" + k.ID, TenantID: tenant, Roles: []string{"client_user"}, APIKey: &k}
+	a.run(w, r, claims, h)
+}
+
 // Public registers an unauthenticated route (rate limited per client IP).
 func (a *App) Public(pattern string, h HandlerFunc) {
 	a.Patterns = append(a.Patterns, pattern)
@@ -149,6 +187,18 @@ func (a *App) Public(pattern string, h HandlerFunc) {
 
 func (a *App) limit(w http.ResponseWriter, r *http.Request, key string) bool {
 	ok, limit, remaining, reset := a.Limiter.Allow(key)
+	w.Header().Set("RateLimit-Limit", strconv.Itoa(limit))
+	w.Header().Set("RateLimit-Remaining", strconv.Itoa(remaining))
+	w.Header().Set("RateLimit-Reset", strconv.Itoa(reset))
+	if !ok {
+		w.Header().Set("Retry-After", strconv.Itoa(reset))
+		WriteProblem(w, r, http.StatusTooManyRequests, "Too many requests", "Rate limit exceeded")
+	}
+	return ok
+}
+
+func (l *Limiter) allowWrite(w http.ResponseWriter, r *http.Request, key string) bool {
+	ok, limit, remaining, reset := l.Allow(key)
 	w.Header().Set("RateLimit-Limit", strconv.Itoa(limit))
 	w.Header().Set("RateLimit-Remaining", strconv.Itoa(remaining))
 	w.Header().Set("RateLimit-Reset", strconv.Itoa(reset))
