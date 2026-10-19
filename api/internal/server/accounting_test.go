@@ -206,3 +206,19 @@ func TestConcurrentPostingKeepsOneChain(t *testing.T) {
 		t.Errorf("concurrent postings must still form a single valid chain: %v", v)
 	}
 }
+
+func TestAuditorSeesDocumentsButCannotIssueThem(t *testing.T) {
+	e := setup(t)
+	_, d, _ := e.do("POST", "/v1/documents", token("f", "", "finance"), map[string]any{"code": "QT", "title": "Audit visible"})
+	ref := d["ref"].(string)
+	aud := token("auditor-1", "", "auditor")
+	if c, b, _ := e.do("GET", "/v1/documents/"+ref, aud, nil); c != 200 || b["ref"] != ref {
+		t.Errorf("auditor must see the register: %d %v", c, b)
+	}
+	if c, _, _ := e.do("POST", "/v1/documents", aud, map[string]any{"code": "QT", "title": "x"}); c != 403 {
+		t.Errorf("auditor must not issue documents, got %d", c)
+	}
+	if c, _, _ := e.do("GET", "/v1/tickets", aud, nil); c != 200 {
+		t.Logf("auditor ticket list status %d (no tickets are visible to them)", c)
+	}
+}

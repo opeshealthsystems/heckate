@@ -11,6 +11,7 @@ import (
 	"github.com/opeshealthsystems/heckate/api/internal/modules/clients"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/crm"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/documents"
+	"github.com/opeshealthsystems/heckate/api/internal/modules/hr"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/inventory"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/notify"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/procurement"
@@ -41,6 +42,7 @@ func New(cfg platform.Config, pool *pgxpool.Pool) http.Handler {
 	documents.Register(app)
 	notify.Register(app)
 	projects.Register(app)
+	hr.Register(app)
 	inventory.Register(app)
 	procurement.Register(app, accounting.ProcurementPoster{})
 	sales.Register(app, accounting.SalesPoster{})
