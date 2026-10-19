@@ -4,7 +4,7 @@ A running record of what was checked, what was found, what was fixed and what re
 
 Status key: **Fixed** (change plus a test), **By design** (explained), **Open** (needs a decision or a person).
 
-## 1. Data layer (68 tables, 29 migrations)
+## 1. Data layer (68 tables, 30 migrations)
 
 Checked: row-level security (RLS) and FORCE on every table, policies per table, privileges of the application role, definer functions, primary keys, foreign-key indexes.
 
@@ -44,3 +44,35 @@ Method: `internal/server/rbac_matrix_test.go` calls every route as every role (1
 Checked and fine: anonymous callers reach only the three health probes, public verification and the website enquiry; the auditor writes nothing; suppliers write only through purchasing; the payment webhook rejects unsigned calls; the matrix shows no mutating route open to every role.
 
 Re-verified after the changes: the whole Go suite (including the non-superuser run in CI) and all nine browser scripts (smoke, erp, documents, payroll, bank, payments, attachments, live, csp).
+
+## 3. Screens, tabs, forms and buttons, per role
+
+A Playwright crawl signs in as each of 14 identities (ceo, manager, sales, support, engineer, finance, hr, procurement, logistics, employee, auditor, client admin, client user, supplier), opens every menu entry and every tab, and records page errors, console errors, failed API calls, horizontal overflow at 390 px and axe-core violations (WCAG 2 A/AA).
+
+| Finding | Fix |
+| --- | --- |
+| Auditor and supplier were sent to a ticket queue their role may not read (403 on dashboard and Tickets) | Menu entry removed for them; the dashboard shows a plain notice instead |
+| Procurement and logistics saw Time and Inventory links they cannot use (403) | Links shown only to roles the API allows |
+| New-ticket form asked for the client list for roles that cannot list clients (403) | Fetched only for ceo, manager, sales, support, finance, engineer |
+| Procurement page asked for RFQs (finance) and warehouses (procurement) it may not read | Fetched only for roles the API allows |
+| Empty table header cells (action columns) failed axe `empty-table-header` | Header renders a screen-reader "Actions" label |
+| Supplier portal scrolled sideways at 390 px: the screen-reader-only label in a table header was positioned against the page, not the scrolling wrapper | Wrapper is now a positioned box |
+
+Result after fixes: 0 page errors, 0 console errors, 0 axe violations, 0 horizontal overflow on all 14 identities. The only remaining 4xx is `GET /v1/employees/me` returning 404 for identities with no employee record; the People page shows a notice for it by design.
+
+End-to-end scripts (erp, documents, payroll, bank, attachments, csp, live) pass with 0 failures. `smoke` and `payments` need extra set-up (pre-minted tokens; sandbox payment provider) and were not re-run in this pass.
+
+## 4. Colours, status and styling
+
+* All colours come from the brand tokens in `web/app/globals.css`, `site/app/globals.css` and `mobile/src/lib/theme.ts`. Three deliberate, documented deviations keep text legible: gold text `#8B6B2B`, input border `#788EAC`, PDF "CONFIDENTIAL" banner `#A96500` (see `BRAND_PACK.md`).
+* Status chips were inconsistent: only "ok" and "bad" tones existed and each screen chose them by hand. `Pill` now derives the tone from the status word (green: approved, paid, posted, reconciled, received, awarded, closed, resolved; red: rejected, cancelled, overdue, failed, void; amber: pending, submitted, draft, open, partial), so one state has one colour everywhere. Colour is never the only signal; every chip carries its text.
+* Severity (P1 red, P2 amber) reuses the same red and amber as status, so a "danger" colour means the same thing on every screen. No two meanings share a colour.
+* Contrast: axe colour-contrast reports no violations on any crawled screen.
+
+## 5. Known gaps (not fixed in this pass)
+
+* No icon set in the ERP: controls use text labels (✕ and ☰ are the only glyphs). This is consistent and accessible; a brand icon set would be a design task.
+* Mobile screens were checked for theme tokens, not pixel-compared with the phone designs.
+* Pack form layouts (exact positions), certificate security print and PAdES signing remain open (see `BLOCKERS.md`).
+* Payment reminders and the Orange Money client are not built (Orange Money is intentionally disabled).
+* Independent penetration test, Keycloak in production, off-site backups and monitoring remain pre-requisites for regulated clients (see `READINESS.md`).

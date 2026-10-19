@@ -44,7 +44,16 @@ export function Table({ head, children, empty }: { head: string[]; children: Rea
   );
 }
 
-export const Pill = ({ text, tone }: { text: string; tone?: "ok" | "bad" }) => <span className={`chip ${tone ?? ""}`}>{text.replace(/_/g, " ")}</span>;
+const GOOD = new Set(["approved", "paid", "posted", "reconciled", "received", "awarded", "completed", "closed", "resolved", "active", "verified", "issued"]);
+const BAD = new Set(["rejected", "cancelled", "overdue", "failed", "void", "voided", "declined", "breached", "disputed"]);
+const WARN = new Set(["pending", "submitted", "draft", "open", "partial", "partially_paid", "awaiting_approval", "in_review"]);
+
+/** Status chip. Tone follows the status word unless one is passed, so the same state has the same colour on every screen. */
+export const Pill = ({ text, tone }: { text: string; tone?: "ok" | "bad" | "warn" }) => {
+  const key = text.toLowerCase();
+  const t = tone ?? (GOOD.has(key) ? "ok" : BAD.has(key) ? "bad" : WARN.has(key) ? "warn" : "");
+  return <span className={`chip ${t}`}>{text.replace(/_/g, " ")}</span>;
+};
 
 export function Tabs({ tabs, value, onChange }: { tabs: string[]; value: string; onChange: (t: string) => void }) {
   return (

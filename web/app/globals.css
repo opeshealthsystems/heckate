@@ -98,6 +98,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .signature { max-width: min(100%, 360px); background: #fff; border: 1px solid var(--line); border-radius: 8px; }
 
 .mono, .ref { font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 500; }
+.chip.warn { color: var(--warn); border-color: var(--warn); background: var(--hs-warning-bg); }
 .chip.ok { background: var(--hs-success-bg); } .chip.bad { background: var(--hs-danger-bg); }
 .notice { background: var(--hs-warning-bg); color: var(--hs-warning); }
 
