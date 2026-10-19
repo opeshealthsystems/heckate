@@ -28,7 +28,7 @@ var kinds = map[string]struct{ code, label string }{
 	"certificate":        {"CRT-A", "Certificate"}, // CRT carries a check character in the reference
 	"guarantee":          {"GP", "Guarantee policy"},
 	"contract":           {"CTR", "Contract"},
-	"pentest_report":     {"PTR", "Penetration test report"},
+	"pentest_report":     {"RPT", "Penetration test report"},
 	"form":               {"", "Form"}, // code and name come from forms
 }
 

@@ -89,12 +89,22 @@ func newDoc(o Options, ref, kind string, at time.Time) *doc {
 	if o.PortalURL != "" {
 		qr, _ = qrcode.Encode(o.VerifyURL(ref), qrcode.Medium, 256)
 	}
+	class := Classification(ref)
+	col := classColour[class]
+	pdf.RegisterImageOptionsReader("logo", fpdf.ImageOptions{ImageType: "PNG"}, bytes.NewReader(logoPNG))
 	pdf.SetHeaderFunc(func() {
-		pdf.SetFont("Helvetica", "B", 15)
-		pdf.SetXY(15, 12)
-		pdf.CellFormat(120, 7, d.tr("HEKATE SYSTEMS SARL"), "", 1, "L", false, 0, "")
+		// Classification banner across the top of every page.
+		pdf.SetFillColor(col[0], col[1], col[2])
+		pdf.Rect(0, 0, 210, 6.5, "F")
+		pdf.SetFont("Helvetica", "B", 7.5)
+		pdf.SetTextColor(255, 255, 255)
+		pdf.SetXY(15, 1.4)
+		pdf.CellFormat(180, 3.8, d.tr(class), "", 0, "L", false, 0, "")
+		pdf.SetTextColor(0, 0, 0)
+		pdf.ImageOptions("logo", 15, 11, 40, 0, false, fpdf.ImageOptions{ImageType: "PNG"}, 0, "")
 		pdf.SetFont("Helvetica", "", 8.5)
 		pdf.SetTextColor(90, 90, 90)
+		pdf.SetXY(15, 27.5)
 		for _, l := range o.Letterhead {
 			pdf.SetX(15)
 			pdf.CellFormat(120, 4, d.tr(l), "", 1, "L", false, 0, "")
@@ -107,13 +117,23 @@ func newDoc(o Options, ref, kind string, at time.Time) *doc {
 			pdf.SetXY(160, 37.5)
 			pdf.CellFormat(43, 3, d.tr("Scan to verify"), "", 0, "C", false, 0, "")
 		}
-		pdf.SetY(42)
+		pdf.SetDrawColor(gold[0], gold[1], gold[2])
+		pdf.SetLineWidth(0.5)
+		pdf.Line(15, 43, 195, 43)
+		pdf.SetLineWidth(0.2)
+		pdf.SetDrawColor(0, 0, 0)
+		pdf.SetY(47)
 	})
 	pdf.SetFooterFunc(func() {
 		pdf.SetY(-16)
+		pdf.SetFont("Helvetica", "", 1.5)
+		pdf.SetTextColor(navy[0], navy[1], navy[2])
+		pdf.SetX(15)
+		pdf.CellFormat(180, 1.6, d.tr(microtext(180, pdf.GetStringWidth)), "", 1, "L", false, 0, "")
 		pdf.SetFont("Helvetica", "", 7.5)
 		pdf.SetTextColor(90, 90, 90)
-		line := "Reference " + ref
+		pdf.SetX(15)
+		line := class + "  |  Reference " + ref
 		if o.PortalURL != "" {
 			line += "  |  Verify at " + o.VerifyURL(ref)
 		}
@@ -127,7 +147,9 @@ func newDoc(o Options, ref, kind string, at time.Time) *doc {
 
 func (d *doc) title(kind, sub string) {
 	d.pdf.SetFont("Helvetica", "B", 20)
-	d.pdf.CellFormat(0, 10, d.tr(kind), "", 1, "L", false, 0, "")
+	d.pdf.SetTextColor(navy[0], navy[1], navy[2])
+	d.pdf.MultiCell(0, 9, d.tr(kind), "", "L", false) // wraps long titles instead of running off the page
+	d.pdf.SetTextColor(0, 0, 0)
 	d.pdf.SetFont("Helvetica", "", 10)
 	d.pdf.CellFormat(0, 5, d.tr(sub), "", 1, "L", false, 0, "")
 	d.pdf.Ln(3)
@@ -161,7 +183,8 @@ func (d *doc) table(lines []Line) {
 	w := []float64{88, 20, 35, 37}
 	head := func() {
 		p.SetFont("Helvetica", "B", 9)
-		p.SetFillColor(235, 238, 243)
+		p.SetFillColor(bandFill[0], bandFill[1], bandFill[2])
+		p.SetTextColor(navy[0], navy[1], navy[2])
 		for i, h := range []string{"Description", "Qty", "Unit price", "Amount"} {
 			al := "R"
 			if i == 0 {
@@ -169,6 +192,7 @@ func (d *doc) table(lines []Line) {
 			}
 			p.CellFormat(w[i], 7, d.tr(h), "B", 0, al, true, 0, "")
 		}
+		p.SetTextColor(0, 0, 0)
 		p.Ln(-1)
 	}
 	head()

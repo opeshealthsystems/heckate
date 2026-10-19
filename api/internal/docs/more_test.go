@@ -57,3 +57,26 @@ func TestMoreTemplates(t *testing.T) {
 		}
 	}
 }
+
+func TestClassificationBannerAndMicrotext(t *testing.T) {
+	cases := map[string]string{
+		"HS-INV-2026-000007":     "CONFIDENTIAL",
+		"HS-FRM-14-2026-000002":  "RESTRICTED",
+		"HS-FRM-15-2026-000002":  "INTERNAL",
+		"HS-GP-2026-000001":      "PUBLIC",
+		"HS-RPT-2026-000001":     "RESTRICTED",
+		"HS-PAY-2026-000009":     "RESTRICTED",
+		"HS-UNKNOWN-2026-000001": "CONFIDENTIAL",
+		"garbage":                "CONFIDENTIAL",
+	}
+	for ref, want := range cases {
+		if got := Classification(ref); got != want {
+			t.Errorf("Classification(%q) = %q, want %q", ref, got, want)
+		}
+	}
+	b, err := RenderCreditNote(opts, "HS-FRM-14-2026-000002", at, "HS-INV-2026-000007", "x", Party{Name: "A"}, Money{Net: 1, Total: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustHave(t, "classified PDF", b, "RESTRICTED", "HEKATESYSTEMS")
+}
