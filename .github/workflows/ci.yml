@@ -46,3 +46,11 @@ jobs:
         with:
           node-version: "22"
       - run: cd mobile && npm ci && npm run typecheck && npm test && npx expo-doctor
+  site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: cd site && npm ci && npm run typecheck && npm test && npm run build
