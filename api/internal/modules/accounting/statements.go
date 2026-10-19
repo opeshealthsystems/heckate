@@ -100,3 +100,29 @@ func statements(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		"note":             "Classified by account class only. The SYSCOHADA presentation (netting of depreciation, sub-totals, notes) must be defined with the accountant before these are filed.",
 	}}, nil
 }
+
+// vatSummary reports VAT collected on sales (account 4431, net of credit notes), VAT recoverable on
+// purchases (4452) and the net payable for a period, plus the CAC collected (4439). It is a working
+// summary taken from the ledger, not the filed return: the accountant must confirm the account mapping,
+// the treatment of exempt and zero-rated sales, and the declaration format.
+func vatSummary(r *http.Request, s *platform.Scope) (*platform.Result, error) {
+	from, to, err := period(r)
+	if err != nil {
+		return nil, err
+	}
+	var collected, recoverable, cac int64
+	err = s.Tx.QueryRow(r.Context(), `SELECT
+		COALESCE(sum(l.credit - l.debit) FILTER (WHERE l.account = '4431'), 0),
+		COALESCE(sum(l.debit - l.credit) FILTER (WHERE l.account = '4452'), 0),
+		COALESCE(sum(l.credit - l.debit) FILTER (WHERE l.account = '4439'), 0)
+		FROM accounting.entry_lines l JOIN accounting.entries e ON e.seq = l.entry_seq
+		WHERE l.account IN ('4431','4452','4439')
+		  AND ($1::date IS NULL OR e.entry_date >= $1) AND ($2::date IS NULL OR e.entry_date <= $2)`, from, to).Scan(&collected, &recoverable, &cac)
+	if err != nil {
+		return nil, err
+	}
+	return &platform.Result{Status: http.StatusOK, Body: map[string]any{
+		"vat_collected": collected, "vat_recoverable": recoverable, "vat_payable": collected - recoverable, "cac_collected": cac,
+		"note": "A working summary from the ledger, not the filed return. The accountant must confirm the account mapping, exempt and zero-rated sales, and the declaration format.",
+	}}, nil
+}

@@ -1195,6 +1195,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/accounting/vat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** VAT collected, recoverable and payable for a period, from the ledger. A working summary, not the filed return */
+        get: operations["getVatSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/accounting/statements": {
         parameters: {
             query?: never;
@@ -4990,6 +5007,30 @@ export interface operations {
         responses: {
             /** @description Closed */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    getVatSummary: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Amounts in XAF */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

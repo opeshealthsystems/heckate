@@ -26,6 +26,7 @@ func Register(a *platform.App) {
 	a.Route("GET /v1/accounting/ledger/{account}", readers, ledger)
 	a.Route("GET /v1/accounting/verify", readers, verify)
 	a.Route("GET /v1/accounting/statements", readers, statements)
+	a.Route("GET /v1/accounting/vat", readers, vatSummary)
 	a.Route("POST /v1/accounting/periods/close", closers, platform.Idempotent(closePeriod))
 	a.Route("GET /v1/accounting/periods", readers, listClosed)
 	registerBank(a)

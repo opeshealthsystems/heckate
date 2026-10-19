@@ -1373,6 +1373,20 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Object" }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/accounting/vat:
+    get:
+      operationId: getVatSummary
+      summary: "VAT collected, recoverable and payable for a period, from the ledger. A working summary, not the filed return"
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: "Amounts in XAF"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/accounting/statements:
     get:
       operationId: getFinancialStatements

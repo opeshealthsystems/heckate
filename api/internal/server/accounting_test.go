@@ -285,3 +285,26 @@ func TestClosingAPeriodLocksIt(t *testing.T) {
 		t.Error("a close must not be undone")
 	}
 }
+
+func TestVATSummary(t *testing.T) {
+	e := setup(t)
+	fin := token("fin-vat", "", "finance")
+	n := time.Now().UnixNano() / 1000
+	day := fmt.Sprintf("%d-%02d-%02d", 1960+n%10, 1+n/10%12, 1+n/120%28) // a unique past day keeps the figures exact on a reused database
+	post := func(lines ...map[string]any) {
+		t.Helper()
+		if c, b, _ := e.do("POST", "/v1/accounting/entries", fin, map[string]any{"journal": "OD", "entry_date": day, "narration": "vat", "lines": lines}); c != 201 {
+			t.Fatalf("post: %d %v", c, b)
+		}
+	}
+	post(map[string]any{"account": "521", "debit": 1_192_500}, map[string]any{"account": "4431", "credit": 175_000}, map[string]any{"account": "4439", "credit": 17_500}, map[string]any{"account": "706", "credit": 1_000_000})
+	post(map[string]any{"account": "4431", "debit": 17_500}, map[string]any{"account": "4439", "debit": 1_750}, map[string]any{"account": "709", "debit": 100_000}, map[string]any{"account": "521", "credit": 119_250}) // credit note
+	post(map[string]any{"account": "601", "debit": 200_000}, map[string]any{"account": "4452", "debit": 35_000}, map[string]any{"account": "521", "credit": 235_000})
+	code, v, _ := e.do("GET", "/v1/accounting/vat?from="+day+"&to="+day, fin, nil)
+	if code != 200 || v["vat_collected"] != float64(157_500) || v["vat_recoverable"] != float64(35_000) || v["vat_payable"] != float64(122_500) || v["cac_collected"] != float64(15_750) {
+		t.Errorf("VAT summary wrong: %d %v", code, v)
+	}
+	if c, _, _ := e.do("GET", "/v1/accounting/vat", token("s", "", "support"), nil); c != 403 {
+		t.Errorf("support: want 403, got %d", c)
+	}
+}
