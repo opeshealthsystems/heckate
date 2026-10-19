@@ -415,6 +415,1606 @@ paths:
                   status: { type: string }
                   issued_at: { type: string, format: date-time }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/quotes:
+    post:
+      operationId: createQuote
+      summary: "Create a draft quotation (sales)"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenant_id, title, lines]
+              properties:
+                tenant_id: { type: string, format: uuid }
+                title: { type: string }
+                valid_until: { type: string, format: date }
+                notes: { type: string }
+                lines: { $ref: "#/components/schemas/Lines" }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    get:
+      operationId: listQuotes
+      summary: "List quotations (clients see only those sent to them)"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/quotes/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getQuote
+      summary: "Get a quotation with lines and totals"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/quotes/{id}/lines:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    put:
+      operationId: replaceQuoteLines
+      summary: "Replace the lines of a draft quotation"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lines]
+              properties:
+                lines: { $ref: "#/components/schemas/Lines" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/quotes/{id}/send:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: sendQuote
+      summary: "Send a draft quotation; assigns its HS-QT reference"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/quotes/{id}/approve:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: approveQuote
+      summary: "Client admin approves a sent quotation"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/quotes/{id}/reject:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: rejectQuote
+      summary: "Client admin rejects a sent quotation"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/quotes/{id}/invoice:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: invoiceQuote
+      summary: "Create a draft invoice from an approved quotation"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/invoices:
+    post:
+      operationId: createInvoice
+      summary: "Create a draft invoice"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenant_id, title, lines]
+              properties:
+                tenant_id: { type: string, format: uuid }
+                title: { type: string }
+                due_date: { type: string, format: date }
+                lines: { $ref: "#/components/schemas/Lines" }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    get:
+      operationId: listInvoices
+      summary: "List invoices (clients see only issued ones of their own)"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/invoices/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getInvoice
+      summary: "Get an invoice with lines, payments and balance"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/invoices/{id}/issue:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: issueInvoice
+      summary: "Issue an invoice; 202 means a second approver is needed above the threshold"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/invoices/{id}/approve:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: approveInvoice
+      summary: "Second approver issues a pending invoice (not the preparer)"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/invoices/{id}/payments:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: recordPayment
+      summary: "Record a payment against an issued invoice"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, method]
+              properties:
+                amount: { type: integer }
+                method: { type: string }
+                reference: { type: string }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/invoices/{id}/credit-notes:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: createCreditNote
+      summary: "Issue a credit note (HS-CN) against an issued invoice"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [net, reason]
+              properties:
+                net: { type: integer }
+                reason: { type: string }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/reports/sales:
+    get:
+      operationId: getSalesReport
+      summary: "Invoiced, collected, outstanding and pipeline (finance, management)"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/accounting/accounts:
+    get:
+      operationId: listAccounts
+      summary: "Chart of accounts"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createAccount
+      summary: "Add an account"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code: { type: string }
+                name: { type: string }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/accounting/entries:
+    get:
+      operationId: listEntries
+      summary: "Latest ledger entries with their hash"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: postEntry
+      summary: "Post a balanced manual journal entry"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [journal, entry_date, narration, lines]
+              properties:
+                journal: { type: string }
+                entry_date: { type: string, format: date }
+                narration: { type: string }
+                lines: { type: array, items: { type: object, additionalProperties: true } }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/accounting/trial-balance:
+    get:
+      operationId: getTrialBalance
+      summary: "Trial balance for a period"
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/accounting/ledger/{account}:
+    parameters:
+      - { name: account, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getAccountLedger
+      summary: "Running ledger for one account"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/accounting/verify:
+    get:
+      operationId: verifyLedger
+      summary: "Recompute the hash chain and report the first broken entry, if any"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/projects:
+    post:
+      operationId: createProject
+      summary: "Create a project (management)"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenant_id, name]
+              properties:
+                tenant_id: { type: string, format: uuid }
+                name: { type: string }
+                manager: { type: string }
+                start_date: { type: string, format: date }
+                end_date: { type: string, format: date }
+                budget: { type: integer }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    get:
+      operationId: listProjects
+      summary: "List projects (clients see their own)"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/projects/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getProject
+      summary: "Get a project with its tasks"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    patch:
+      operationId: updateProject
+      summary: "Change status or manager"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string }
+                manager: { type: string }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/projects/{id}/tasks:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: createTask
+      summary: "Add a task"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string }
+                assignee: { type: string }
+                due_date: { type: string, format: date }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/tasks/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      operationId: updateTask
+      summary: "Change a task's status or assignee"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string }
+                assignee: { type: string }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/interventions:
+    post:
+      operationId: createIntervention
+      summary: "Dispatch an engineer to a client site"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenant_id, engineer]
+              properties:
+                tenant_id: { type: string, format: uuid }
+                engineer: { type: string }
+                project_id: { type: string, format: uuid }
+                ticket_id: { type: string, format: uuid }
+                scheduled_for: { type: string, format: date-time }
+                summary: { type: string }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    get:
+      operationId: listInterventions
+      summary: "List interventions (engineers see their own, clients see completed ones)"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/interventions/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getIntervention
+      summary: "Get an intervention, including the client signature when signed"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/interventions/{id}/check-in:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: checkInIntervention
+      summary: "Engineer checks in on site with GPS; at may carry the real device time when offline"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lat, lng]
+              properties:
+                lat: { type: number }
+                lng: { type: number }
+                at: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/interventions/{id}/check-out:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: checkOutIntervention
+      summary: "Engineer completes with report, signature and spare parts; issues the acceptance document"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lat, lng, report]
+              properties:
+                lat: { type: number }
+                lng: { type: number }
+                at: { type: string, format: date-time }
+                report: { type: string }
+                signed_by: { type: string }
+                signature: { type: string }
+                parts: { type: array, items: { type: object, additionalProperties: true } }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/timesheets:
+    post:
+      operationId: createTimesheet
+      summary: "Log hours for a day (24 h cap)"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [work_date, hours]
+              properties:
+                work_date: { type: string, format: date }
+                hours: { type: number }
+                project_id: { type: string, format: uuid }
+                ticket_id: { type: string, format: uuid }
+                note: { type: string }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    get:
+      operationId: listTimesheets
+      summary: "Own timesheets; reviewers may pass all=1"
+      parameters:
+        - { name: all, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/timesheets/{id}/submit:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: submitTimesheet
+      summary: "Submit a draft timesheet"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/timesheets/{id}/approve:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: approveTimesheet
+      summary: "Approve a submitted timesheet (not your own)"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/items:
+    post:
+      operationId: createItem
+      summary: "Create a stock item"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sku, name]
+              properties:
+                sku: { type: string }
+                name: { type: string }
+                unit: { type: string }
+                serialised: { type: boolean }
+                min_stock: { type: integer }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    get:
+      operationId: listItems
+      summary: "Items with on-hand quantity and a low-stock flag"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/warehouses:
+    post:
+      operationId: createWarehouse
+      summary: "Create a warehouse"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    get:
+      operationId: listWarehouses
+      summary: "List warehouses"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/stock/receipts:
+    post:
+      operationId: receiveStock
+      summary: "Receive stock; serialised items need one serial per unit"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [item_id, warehouse_id, qty]
+              properties:
+                item_id: { type: string, format: uuid }
+                warehouse_id: { type: string, format: uuid }
+                qty: { type: integer }
+                ref: { type: string }
+                serials: { type: array, items: { type: string } }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/stock/issues:
+    post:
+      operationId: issueStock
+      summary: "Issue non-serialised stock"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [item_id, warehouse_id, qty]
+              properties:
+                item_id: { type: string, format: uuid }
+                warehouse_id: { type: string, format: uuid }
+                qty: { type: integer }
+                ref: { type: string }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/stock/transfers:
+    post:
+      operationId: transferStock
+      summary: "Move stock between warehouses"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [item_id, from_warehouse_id, to_warehouse_id, qty]
+              properties:
+                item_id: { type: string, format: uuid }
+                from_warehouse_id: { type: string, format: uuid }
+                to_warehouse_id: { type: string, format: uuid }
+                qty: { type: integer }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/stock/adjustments:
+    post:
+      operationId: adjustStock
+      summary: "Correct stock with a reason (management)"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [item_id, warehouse_id, qty, reason]
+              properties:
+                item_id: { type: string, format: uuid }
+                warehouse_id: { type: string, format: uuid }
+                qty: { type: integer }
+                reason: { type: string }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/stock:
+    get:
+      operationId: getStockLevels
+      summary: "Stock by item and warehouse"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/assets/issue:
+    post:
+      operationId: issueAsset
+      summary: "Issue serialised equipment to a staff member (HS-FRM-38)"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [serial_id, assignee]
+              properties:
+                serial_id: { type: string, format: uuid }
+                assignee: { type: string }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/assets/return:
+    post:
+      operationId: returnAsset
+      summary: "Return issued equipment to a warehouse"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [serial_id, warehouse_id]
+              properties:
+                serial_id: { type: string, format: uuid }
+                warehouse_id: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/assets/install:
+    post:
+      operationId: installAsset
+      summary: "Install equipment at a client under contract"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [serial_id, tenant_id]
+              properties:
+                serial_id: { type: string, format: uuid }
+                tenant_id: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/assets:
+    get:
+      operationId: listAssets
+      summary: "Serial-numbered assets (clients see their installed equipment)"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/suppliers:
+    post:
+      operationId: createSupplier
+      summary: "Register a supplier"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [legal_name]
+              properties:
+                legal_name: { type: string }
+                rccm: { type: string }
+                email: { type: string }
+                phone: { type: string }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    get:
+      operationId: listSuppliers
+      summary: "List suppliers with bank status and average score"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/suppliers/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getSupplier
+      summary: "Get a supplier (a supplier sees only itself)"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/suppliers/me/bank:
+    put:
+      operationId: putSupplierBank
+      summary: "Supplier proposes bank details; unusable until verified by call-back"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [account]
+              properties:
+                account: { type: string }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/suppliers/{id}/bank/verify:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: verifySupplierBank
+      summary: "Finance verifies bank details after a call-back"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [note]
+              properties:
+                note: { type: string }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/suppliers/{id}/evaluations:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: evaluateSupplier
+      summary: "Score a supplier (HS-FRM-41)"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quality, delivery, price]
+              properties:
+                quality: { type: integer }
+                delivery: { type: integer }
+                price: { type: integer }
+                comment: { type: string }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/rfqs:
+    post:
+      operationId: createRfq
+      summary: "Create a draft request for quotation"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, lines, suppliers]
+              properties:
+                title: { type: string }
+                closes_at: { type: string, format: date-time }
+                lines: { type: array, items: { type: object, additionalProperties: true } }
+                suppliers: { type: array, items: { type: string } }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    get:
+      operationId: listRfqs
+      summary: "List RFQs (a supplier sees open ones they are invited to)"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/rfqs/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getRfq
+      summary: "RFQ with lines; buyers see all responses, a supplier only their own"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/rfqs/{id}/open:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: openRfq
+      summary: "Open an RFQ; assigns its HS-RFQ reference"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/rfqs/{id}/respond:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: respondRfq
+      summary: "Supplier submits unit prices for every line"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [unit_prices]
+              properties:
+                unit_prices: { type: array, items: { type: object, additionalProperties: true } }
+                note: { type: string }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/rfqs/{id}/close:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: closeRfq
+      summary: "Close an open RFQ"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/rfqs/{id}/award:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: awardRfq
+      summary: "Award to a responding supplier; creates a draft purchase order"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [supplier]
+              properties:
+                supplier: { type: string, format: uuid }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/purchase-orders:
+    post:
+      operationId: createPurchaseOrder
+      summary: "Create a draft purchase order"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [supplier_id, title, lines]
+              properties:
+                supplier_id: { type: string, format: uuid }
+                title: { type: string }
+                lines: { type: array, items: { type: object, additionalProperties: true } }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    get:
+      operationId: listPurchaseOrders
+      summary: "List purchase orders (a supplier sees their issued ones)"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/purchase-orders/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getPurchaseOrder
+      summary: "Purchase order with lines and received quantities"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/purchase-orders/{id}/issue:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: issuePurchaseOrder
+      summary: "Issue a purchase order; 202 means a second approver is needed above the threshold"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/purchase-orders/{id}/approve:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: approvePurchaseOrder
+      summary: "Second approver issues a pending purchase order"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/purchase-orders/{id}/receive:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: receivePurchaseOrder
+      summary: "Record goods received; stock lines go into a warehouse"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lines]
+              properties:
+                lines: { type: array, items: { type: object, additionalProperties: true } }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/purchase-orders/{id}/invoices:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: submitSupplierInvoice
+      summary: "Supplier submits an invoice against an issued purchase order"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number, net, vat]
+              properties:
+                number: { type: string }
+                net: { type: integer }
+                vat: { type: integer }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/supplier-invoices:
+    get:
+      operationId: listSupplierInvoices
+      summary: "Supplier invoices (a supplier sees their own)"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/supplier-invoices/{id}/approve:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: approveSupplierInvoice
+      summary: "Three-way match, then post to the ledger"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/supplier-invoices/{id}/reject:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: rejectSupplierInvoice
+      summary: "Reject a submitted supplier invoice"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/supplier-invoices/{id}/pay:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: paySupplierInvoice
+      summary: "Pay an approved invoice (needs verified bank details and a different person from the approver)"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [method]
+              properties:
+                method: { type: string }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/employees:
+    post:
+      operationId: createEmployee
+      summary: "Create an employee record (HR)"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actor, full_name, hire_date]
+              properties:
+                actor: { type: string }
+                full_name: { type: string }
+                position: { type: string }
+                department: { type: string }
+                hire_date: { type: string, format: date }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    get:
+      operationId: listEmployees
+      summary: "List employees (HR, management)"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/employees/me:
+    get:
+      operationId: getMyEmployeeRecord
+      summary: "Own record with annual leave balance"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/holidays:
+    post:
+      operationId: addHoliday
+      summary: "Add a public holiday (not counted as leave)"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [day, name]
+              properties:
+                day: { type: string, format: date }
+                name: { type: string }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/leave:
+    post:
+      operationId: requestLeave
+      summary: "Request leave; working days are computed server-side"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, start_date, end_date]
+              properties:
+                kind: { type: string }
+                start_date: { type: string, format: date }
+                end_date: { type: string, format: date }
+                reason: { type: string }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    get:
+      operationId: listLeave
+      summary: "Own leave; reviewers may pass all=1"
+      parameters:
+        - { name: all, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/leave/{id}/approve:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: approveLeave
+      summary: "Approve a pending request (not your own)"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/leave/{id}/reject:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: rejectLeave
+      summary: "Reject a pending request (not your own)"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/leave/{id}/cancel:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: cancelLeave
+      summary: "Cancel your own pending request"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/expenses:
+    post:
+      operationId: createExpenseClaim
+      summary: "Submit an expense claim"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expense_date, category, description, amount]
+              properties:
+                expense_date: { type: string, format: date }
+                category: { type: string }
+                description: { type: string }
+                amount: { type: integer }
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    get:
+      operationId: listExpenseClaims
+      summary: "Own claims; reviewers and finance may pass all=1"
+      parameters:
+        - { name: all, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/expenses/{id}/approve:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: approveExpenseClaim
+      summary: "Approve a claim (not your own)"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/expenses/{id}/reject:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: rejectExpenseClaim
+      summary: "Reject a claim (not your own)"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/expenses/{id}/pay:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: payExpenseClaim
+      summary: "Pay an approved claim (a different person from the approver)"
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
 components:
   securitySchemes:
     oauth2:
@@ -437,6 +2037,16 @@ components:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
   schemas:
+    Object: { type: object, additionalProperties: true }
+    Lines:
+      type: array
+      items:
+        type: object
+        required: [description, quantity, unit_price]
+        properties:
+          description: { type: string }
+          quantity: { type: number, description: "At most two decimals" }
+          unit_price: { type: integer, description: "XAF" }
     Severity: { type: string, enum: [P1, P2, P3, P4] }
     Status: { type: string, enum: [open, in_progress, resolved, closed] }
     Channel: { type: string, enum: [app, portal, email, phone] }

@@ -72,6 +72,7 @@ type App struct {
 	Verifier *Verifier
 	Limiter  *Limiter
 	Mux      *http.ServeMux
+	Patterns []string // every registered "METHOD /path", used to check the code against the OpenAPI contract
 }
 
 // NewPool connects with the owner credentials, then drops to hekate_app so RLS applies.
@@ -107,6 +108,7 @@ func (a *App) begin(ctx context.Context, c *Claims, trace string) (*Scope, error
 
 // Route registers an authenticated route. roles is an allow-list (empty = any authenticated user).
 func (a *App) Route(pattern string, roles []string, h HandlerFunc) {
+	a.Patterns = append(a.Patterns, pattern)
 	a.Mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		tok, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if !ok {
@@ -133,6 +135,7 @@ func (a *App) Route(pattern string, roles []string, h HandlerFunc) {
 
 // Public registers an unauthenticated route (rate limited per client IP).
 func (a *App) Public(pattern string, h HandlerFunc) {
+	a.Patterns = append(a.Patterns, pattern)
 	a.Mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		if !a.limit(w, r, clientIP(r)) {
 			return

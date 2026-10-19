@@ -23,12 +23,21 @@ import (
 
 // New returns the full API handler.
 func New(cfg platform.Config, pool *pgxpool.Pool) http.Handler {
+	app := build(cfg, pool)
+	return platform.Trace(platform.CORS(cfg.CORSOrigins, app.Mux))
+}
+
+// Patterns lists every route the server registers ("METHOD /path"), without needing a database.
+func Patterns() []string { return build(platform.Config{}, nil).Patterns }
+
+func build(cfg platform.Config, pool *pgxpool.Pool) *platform.App {
 	app := &platform.App{
 		Pool:     pool,
 		Verifier: platform.NewVerifier(cfg),
 		Limiter:  platform.NewLimiter(300, time.Minute),
 		Mux:      http.NewServeMux(),
 	}
+	app.Patterns = append(app.Patterns, "GET /healthz")
 	app.Mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		if err := pool.Ping(r.Context()); err != nil {
 			platform.WriteProblem(w, r, http.StatusServiceUnavailable, "Database unavailable", "")
@@ -47,5 +56,5 @@ func New(cfg platform.Config, pool *pgxpool.Pool) http.Handler {
 	procurement.Register(app, accounting.ProcurementPoster{})
 	sales.Register(app, accounting.SalesPoster{})
 	accounting.Register(app)
-	return platform.Trace(platform.CORS(cfg.CORSOrigins, app.Mux))
+	return app
 }
