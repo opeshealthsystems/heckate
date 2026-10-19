@@ -1,0 +1,784 @@
+{
+  "title": "HEKATE Platform — ERP & Mobile App Specification",
+  "version": "1.0",
+  "date": "2026-10-19",
+  "owner": "HEKATE SYSTEMS SARL",
+  "summary": "One platform runs HEKATE: a web ERP hosted online and a mobile app on the same API, used by employees, clients and suppliers, with client support and incident handling at its centre.",
+  "sections": [
+    {
+      "heading": "Architecture",
+      "tables": [
+        [
+          {
+            "Layer": "Users",
+            "Components": "Clients and employees (mobile app, browser), suppliers (portal)",
+            "Access": "Internet, HTTPS only"
+          },
+          {
+            "Layer": "Perimeter",
+            "Components": "WAF + reverse proxy; VPN for admin access",
+            "Access": "Public 443; admin via VPN only"
+          },
+          {
+            "Layer": "Identity",
+            "Components": "Keycloak SSO, two-factor login, roles",
+            "Access": "All apps authenticate here"
+          },
+          {
+            "Layer": "Application",
+            "Components": "Go API (single API for web and mobile); Next.js web ERP and portals; WebSockets + FCM push",
+            "Access": "Behind WAF"
+          },
+          {
+            "Layer": "Data",
+            "Components": "PostgreSQL with row-level security (primary + replica); MinIO file storage; Metabase reporting",
+            "Access": "Internal network only"
+          },
+          {
+            "Layer": "Operations",
+            "Components": "HCDP monitoring, logging, alerts; encrypted off-site backup",
+            "Access": "Internal + off-site"
+          },
+          {
+            "Layer": "Public website",
+            "Components": "Static site on a separate host",
+            "Access": "No link to ERP data"
+          }
+        ]
+      ],
+      "content": [
+        "Flow: every request passes the WAF, is authenticated by Keycloak, served by the Go API, and reaches data only through row-level security; nothing in the data layer is reachable from the internet."
+      ]
+    },
+    {
+      "heading": "Architecture style",
+      "content": [
+        "Modular monolith, API-first, domain-driven and event-driven. One Go service split into strict domain modules; any module can be extracted into its own service without a rewrite when load justifies it."
+      ],
+      "tables": [
+        [
+          {
+            "Pattern": "Microservices",
+            "Decision": "Not at launch",
+            "Rule": "Modules are deployable units in waiting; extraction order: Support, Identity, Finance"
+          },
+          {
+            "Pattern": "API-first",
+            "Decision": "Yes",
+            "Rule": "Every endpoint defined in OpenAPI 3.1 before code; SDKs for web (TypeScript) and mobile (Dart) generated from the contract; contract tests in CI"
+          },
+          {
+            "Pattern": "API as a product",
+            "Decision": "Yes",
+            "Rule": "Developer portal, API keys, plans, rate limits, `/v1` versioning, 12-month deprecation notice, usage metering for billing"
+          },
+          {
+            "Pattern": "Domain-Driven Design",
+            "Decision": "Yes",
+            "Rule": "Bounded contexts: CRM, Sales, Support & Incidents, Projects, Finance, Inventory & Assets, Procurement, HR, Documents, Identity, Platform. Each owns its schema; no cross-module table reads"
+          },
+          {
+            "Pattern": "CQRS",
+            "Decision": "Selective",
+            "Rule": "Support & Incidents, Finance, Identity, dashboards: commands write to PostgreSQL, queries read from projections"
+          },
+          {
+            "Pattern": "Event-driven",
+            "Decision": "Yes",
+            "Rule": "Domain events (`ticket.created`, `invoice.paid`, `id.enrolled`) via transactional outbox to NATS JetStream; webhooks for external systems; idempotent consumers"
+          },
+          {
+            "Pattern": "Event sourcing",
+            "Decision": "Ledger and identity only",
+            "Rule": "Append-only, hash-chained records; no updates or deletes"
+          },
+          {
+            "Pattern": "Authentication",
+            "Decision": "OAuth 2.1 + OpenID Connect (Keycloak)",
+            "Rule": "Authorization Code + PKCE for web and mobile; Client Credentials for machine-to-machine; mTLS for government links; WebAuthn/TOTP two-factor"
+          },
+          {
+            "Pattern": "Authorization",
+            "Decision": "RBAC + ABAC",
+            "Rule": "Roles and attributes in the token; tenant and row-level security enforced in PostgreSQL"
+          },
+          {
+            "Pattern": "Real-time",
+            "Decision": "WebSockets + push",
+            "Rule": "Live chat and incident updates; FCM/APNs notifications"
+          }
+        ]
+      ]
+    },
+    {
+      "heading": "API conventions",
+      "items": [
+        "REST over HTTPS, JSON, resource names in plural (`/v1/tickets`, `/v1/invoices`).",
+        "Cursor pagination, `Idempotency-Key` on every POST, ETags for concurrency.",
+        "Errors in RFC 9457 Problem Details format.",
+        "Every request carries a trace ID; every write lands in the audit log.",
+        "Rate limits per key and per tenant, returned in `RateLimit-*` headers.",
+        "Webhooks signed with HMAC-SHA256, retried with exponential backoff."
+      ]
+    },
+    {
+      "heading": "Public website and landing page",
+      "content": [
+        "The public site (hekatesystems.com) is static and hosted separately from the ERP. Sections: hero with the client-portal sign-in, services, platform (ERP, support, identity), trust and security, sectors served, client support entry, contact, footer with verification link for HEKATE documents."
+      ]
+    },
+    {
+      "heading": "Platform screens",
+      "tables": [
+        [
+          {
+            "Screen": "Home (landing)",
+            "Users": "Public",
+            "Purpose": "Services, platform, identity, trust, support entry, verification"
+          },
+          {
+            "Screen": "About",
+            "Users": "Public",
+            "Purpose": "Company, founders, legal identity, values, locations"
+          },
+          {
+            "Screen": "Contact",
+            "Users": "Public",
+            "Purpose": "Enquiry form, emergency incident line, office map, departments"
+          },
+          {
+            "Screen": "Sign in",
+            "Users": "Clients, staff, suppliers",
+            "Purpose": "Email + password, two-factor, passkey, SSO"
+          },
+          {
+            "Screen": "Client dashboard",
+            "Users": "Clients",
+            "Purpose": "Tickets and incidents, quotes, invoices, contracts, reports, certificates, assets"
+          },
+          {
+            "Screen": "Staff dashboard",
+            "Users": "Employees",
+            "Purpose": "Ticket queue, SLA timers, projects, timesheets, approvals, documents"
+          },
+          {
+            "Screen": "Document verification",
+            "Users": "Public",
+            "Purpose": "Check any HEKATE document by QR or reference"
+          },
+          {
+            "Screen": "Mobile app",
+            "Users": "Clients and staff",
+            "Purpose": "Same functions, push notifications, offline drafts"
+          }
+        ]
+      ]
+    },
+    {
+      "heading": "Documents, forms and certificates in the platform",
+      "content": [
+        "Every printable document built for HEKATE is a platform template. The platform fills it from live data, assigns the reference, signs it (PAdES), adds the QR verification code and logs it in the document register. Paper versions remain available for offline use.",
+        "Contract templates (NDA, Master Services Agreement and SLA, Data Processing Addendum, Pentest Authorisation and Rules of Engagement, Employment Contract, Screening Consent) are generated the same way from the Legal module.",
+        "Reference format: `HS-<CODE>-<YYYY>-<NNNNNN>`, with a `-<check>` character on certificates. Certificates carry the security features already built: guilloche, UV plate, hologram, microtext, Code128 barcode and signed QR."
+      ],
+      "tables": [
+        [
+          {
+            "Code": "HS-QT",
+            "Name": "Quotation",
+            "Module": "Sales",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-PR",
+            "Name": "Commercial and Technical Proposal",
+            "Module": "Sales",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-OC",
+            "Name": "Order Confirmation",
+            "Module": "Sales",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-SOW",
+            "Name": "Statement of Work",
+            "Module": "Sales / Projects",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-INV",
+            "Name": "Invoice",
+            "Module": "Finance",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-RCT",
+            "Name": "Receipt",
+            "Module": "Finance",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-CN",
+            "Name": "Credit Note",
+            "Module": "Finance",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-FRM-23",
+            "Name": "Change Request Form",
+            "Module": "Projects",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-FRM-24",
+            "Name": "Rate Card",
+            "Module": "Sales",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-FRM-06",
+            "Name": "Transmittal and Fax Cover Sheet",
+            "Module": "Documents",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-FRM-07",
+            "Name": "Client Information and Onboarding Form",
+            "Module": "CRM",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-FRM-08",
+            "Name": "Service Request and Requirements Questionnaire",
+            "Module": "CRM / Support",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-FRM-09",
+            "Name": "Penetration Test Scoping Form",
+            "Module": "Projects",
+            "Classification": "Restricted"
+          },
+          {
+            "Code": "HS-FRM-10",
+            "Name": "Security Assessment Pre-Engagement Questionnaire",
+            "Module": "Projects",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-FRM-11",
+            "Name": "hecID e-KYC Integration Request",
+            "Module": "Identity",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-FRM-12",
+            "Name": "Background Screening Request",
+            "Module": "Identity",
+            "Classification": "Restricted"
+          },
+          {
+            "Code": "HS-FRM-13",
+            "Name": "Client KYC and Due-Diligence Form",
+            "Module": "CRM / Compliance",
+            "Classification": "Restricted"
+          },
+          {
+            "Code": "HS-FRM-14",
+            "Name": "Incident Report and Emergency Response Request",
+            "Module": "Support & Incidents",
+            "Classification": "Restricted"
+          },
+          {
+            "Code": "HS-FRM-15",
+            "Name": "Customer Feedback and Satisfaction Form",
+            "Module": "Support",
+            "Classification": "Internal"
+          },
+          {
+            "Code": "HS-FRM-26",
+            "Name": "Project Kick-off Record",
+            "Module": "Projects",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-FRM-27",
+            "Name": "Delivery Note and Acceptance Certificate",
+            "Module": "Projects",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-FRM-30",
+            "Name": "Timesheet and Service Log",
+            "Module": "Projects / HR",
+            "Classification": "Internal"
+          },
+          {
+            "Code": "HS-FRM-31",
+            "Name": "Project Closure and Sign-off",
+            "Module": "Projects",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-RPT",
+            "Name": "Penetration Test Report",
+            "Module": "Projects",
+            "Classification": "Restricted"
+          },
+          {
+            "Code": "HS-FRM-32",
+            "Name": "Job Application Form",
+            "Module": "HR",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-FRM-33",
+            "Name": "Offer of Employment",
+            "Module": "HR",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-FRM-35",
+            "Name": "Leave Request",
+            "Module": "HR",
+            "Classification": "Internal"
+          },
+          {
+            "Code": "HS-FRM-36",
+            "Name": "Expense Claim",
+            "Module": "HR / Finance",
+            "Classification": "Internal"
+          },
+          {
+            "Code": "HS-FRM-37",
+            "Name": "Visitor and Laboratory Access Log",
+            "Module": "Facilities",
+            "Classification": "Internal"
+          },
+          {
+            "Code": "HS-FRM-38",
+            "Name": "Asset Issue and Return Form",
+            "Module": "Inventory & Assets",
+            "Classification": "Internal"
+          },
+          {
+            "Code": "HS-FRM-39",
+            "Name": "Supplier Registration Form",
+            "Module": "Procurement",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-PO",
+            "Name": "Purchase Order",
+            "Module": "Procurement",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-FRM-41",
+            "Name": "Supplier Evaluation Form",
+            "Module": "Procurement",
+            "Classification": "Internal"
+          },
+          {
+            "Code": "HS-RFQ",
+            "Name": "Request for Quotation",
+            "Module": "Procurement",
+            "Classification": "Confidential"
+          },
+          {
+            "Code": "HS-LT",
+            "Name": "Letter on letterhead",
+            "Module": "Documents",
+            "Classification": "Per content"
+          },
+          {
+            "Code": "HS-CRT-A",
+            "Name": "Certificate of Assessment (template A)",
+            "Module": "Certificates",
+            "Classification": "Public, verifiable"
+          },
+          {
+            "Code": "HS-ASM",
+            "Name": "Assessment Certificate (template B)",
+            "Module": "Certificates",
+            "Classification": "Public, verifiable"
+          },
+          {
+            "Code": "HS-CRT-C",
+            "Name": "Certificate (template C)",
+            "Module": "Certificates",
+            "Classification": "Public, verifiable"
+          },
+          {
+            "Code": "HS-GP",
+            "Name": "Guarantee Policies",
+            "Module": "Legal / Support",
+            "Classification": "Public"
+          }
+        ]
+      ]
+    },
+    {
+      "heading": "Guarantee policies",
+      "content": [
+        "The full policy is in the separate document \"HEKATE Guarantee Policies\" (HS-GP). The platform enforces it: SLA timers on every ticket, automatic service credits on breach, warranty periods recorded against each delivery, and re-test entitlements tracked per engagement."
+      ]
+    },
+    {
+      "heading": "Responsive design",
+      "content": [
+        "Every screen of the website, web ERP and portals is built mobile-first and desktop-complete: one fluid layout that adapts to any width from 320 px phones to 2560 px monitors, with no separate mobile site."
+      ],
+      "items": [
+        "Fluid grids (CSS grid auto-fit, flex-wrap) and fluid type (clamp); breakpoints at 480, 768, 1024, 1280 and 1600 px.",
+        "Navigation collapses to a menu on phones; side menus stack above content; wide tables scroll inside their box.",
+        "Touch targets at least 44 px; no hover-only actions.",
+        "Tested on Android and iOS phones, tablets, laptops and large monitors in portrait and landscape.",
+        "The Flutter mobile app uses the same layouts and adapts to phone and tablet sizes."
+      ]
+    },
+    {
+      "heading": "Search and discovery optimisation",
+      "content": [
+        "SEO, GEO (generative-engine optimisation) and AEO (answer-engine optimisation) are built into the public website from day one, not added later."
+      ],
+      "items": [
+        "**SEO:** server-rendered pages, clean URLs, one H1 per page, meta titles and descriptions, XML sitemap, robots.txt, canonical tags, hreflang for English and French, Core Web Vitals targets (LCP under 2.5 s, CLS under 0.1, INP under 200 ms), image alt text, Google Business Profile for the Douala office.",
+        "**AEO:** FAQ sections on service pages with FAQPage schema, direct question-and-answer copy (\"What does a penetration test cost in Cameroon?\"), HowTo schema for support steps.",
+        "**GEO:** Organization, LocalBusiness and Service schema (JSON-LD) with legal name, RCCM, address and founders; consistent facts on every page; an llms.txt file; citable service and policy pages so AI assistants can quote HEKATE accurately.",
+        "Client portal, dashboards and ERP pages are excluded from indexing (noindex, behind sign-in)."
+      ]
+    },
+    {
+      "heading": "Modules",
+      "content": [
+        "Twelve modules share one database and one API; the website and client portal are views on the same data."
+      ],
+      "tables": [
+        [
+          {
+            "Module": "Website & CMS",
+            "What it does": "Public site, service pages, blog, contact and quote forms feeding the CRM",
+            "Main users": "Public, marketing"
+          },
+          {
+            "Module": "CRM",
+            "What it does": "Leads, opportunities, pipeline, quotations, follow-ups, client history",
+            "Main users": "Sales, management"
+          },
+          {
+            "Module": "Clients",
+            "What it does": "Client accounts, contacts, contracts, KYC status (HS-FRM-07, HS-FRM-13), documents",
+            "Main users": "All staff, clients (own data)"
+          },
+          {
+            "Module": "Support & Incidents",
+            "What it does": "Tickets, incident reports, SLA timers, escalation, on-call, chat, attachments, satisfaction rating",
+            "Main users": "Support, engineers, clients"
+          },
+          {
+            "Module": "Projects & Field Service",
+            "What it does": "Projects, tasks, interventions, site visits, timesheets, delivery and acceptance PV",
+            "Main users": "Engineers, technicians, PMs"
+          },
+          {
+            "Module": "Sales & Invoicing",
+            "What it does": "Quotations, orders, invoices, credit notes, receipts, TVA + CAC, payment tracking (MoMo, bank)",
+            "Main users": "Sales, finance, clients"
+          },
+          {
+            "Module": "Accounting",
+            "What it does": "SYSCOHADA chart of accounts, journals, bank reconciliation, ledgers, trial balance, DSF tax statements",
+            "Main users": "Finance"
+          },
+          {
+            "Module": "Purchasing & Suppliers",
+            "What it does": "Supplier register and evaluation, RFQs, purchase orders, receipts",
+            "Main users": "Procurement, suppliers (portal)"
+          },
+          {
+            "Module": "Inventory & Assets",
+            "What it does": "Stock, warehouses, serial numbers, equipment issued to staff, client assets under contract",
+            "Main users": "Logistics, engineers"
+          },
+          {
+            "Module": "HR & Payroll",
+            "What it does": "Staff records, contracts, leave, expenses, CNPS and IRPP payroll",
+            "Main users": "HR, all staff (self-service)"
+          },
+          {
+            "Module": "Documents & Trust",
+            "What it does": "Document register, signed PDFs, QR verification, certificates (HS-CERT)",
+            "Main users": "All staff, public verify page"
+          },
+          {
+            "Module": "Reporting",
+            "What it does": "Dashboards: revenue, pipeline, SLA performance, incidents, cash, stock",
+            "Main users": "Management"
+          }
+        ]
+      ]
+    },
+    {
+      "heading": "Users and roles",
+      "content": [
+        "Every user sees only what their role allows, and clients and suppliers see only their own records."
+      ],
+      "tables": [
+        [
+          {
+            "Role": "CEO / Manager",
+            "Web ERP": "Yes",
+            "Mobile app": "Yes",
+            "Can do": "Everything, approvals above thresholds, all reports"
+          },
+          {
+            "Role": "Finance",
+            "Web ERP": "Yes",
+            "Mobile app": "Read-only",
+            "Can do": "Accounting, invoicing, payments, payroll"
+          },
+          {
+            "Role": "Sales",
+            "Web ERP": "Yes",
+            "Mobile app": "Yes",
+            "Can do": "CRM, quotations, client accounts"
+          },
+          {
+            "Role": "Support agent",
+            "Web ERP": "Yes",
+            "Mobile app": "Yes",
+            "Can do": "Tickets, chat, first response, escalation"
+          },
+          {
+            "Role": "Engineer / technician",
+            "Web ERP": "Yes",
+            "Mobile app": "Yes",
+            "Can do": "Assigned tickets, interventions, timesheets, photos, client sign-off"
+          },
+          {
+            "Role": "HR",
+            "Web ERP": "Yes",
+            "Mobile app": "Read-only",
+            "Can do": "Staff, leave, payroll"
+          },
+          {
+            "Role": "Employee (all)",
+            "Web ERP": "Self-service",
+            "Mobile app": "Yes",
+            "Can do": "Own leave, expenses, payslips, assets, notifications"
+          },
+          {
+            "Role": "Client user",
+            "Web ERP": "Portal",
+            "Mobile app": "Yes",
+            "Can do": "Open tickets and incidents, chat, quotes, invoices, contracts, documents, verify certificates"
+          },
+          {
+            "Role": "Client admin",
+            "Web ERP": "Portal",
+            "Mobile app": "Yes",
+            "Can do": "Manage own company users, approve quotes"
+          },
+          {
+            "Role": "Supplier",
+            "Web ERP": "Portal",
+            "Mobile app": "No",
+            "Can do": "Answer RFQs, see POs, upload invoices, update bank details (with call-back check)"
+          },
+          {
+            "Role": "Auditor (external)",
+            "Web ERP": "Read-only, time-limited",
+            "Mobile app": "No",
+            "Can do": "View ledgers and documents"
+          }
+        ]
+      ]
+    },
+    {
+      "heading": "Mobile app",
+      "content": [
+        "One app (Android and iOS) with two experiences chosen at login: staff and client. It talks only to the platform API, never to the database.",
+        "**Client side**",
+        "**Staff side**",
+        "**Support and incident flow**"
+      ],
+      "items": [
+        "Report an incident in three taps: category, severity, description, photos or screenshots; urgent ones trigger the on-call engineer immediately",
+        "Open and follow support tickets with live status, SLA countdown and engineer assigned",
+        "Chat with support (text, files, voice notes); call-back request",
+        "Push notifications at each status change; rate the service when closed",
+        "Quotes to approve, invoices to pay (MTN MoMo, Orange Money, card), contracts and documents",
+        "Scan a HEKATE QR code to verify a certificate or document",
+        "Ticket queue, accept and update tickets, internal notes, escalation",
+        "Field interventions: check-in with GPS at client site, photos, parts used from stock, client signature on screen, auto-generated intervention report",
+        "Timesheets, leave and expense requests with receipt photos, payslips",
+        "On-call schedule and incident alerts",
+        "Works offline in the field and syncs when back online",
+        "Client reports by app, portal, e-mail (incident@hekatesystems.com) or phone; every channel becomes one ticket.",
+        "Ticket is classified by severity (P1 critical to P4 low); the SLA clock starts.",
+        "Auto-assigned to the right queue; P1 pages the on-call engineer and the Manager.",
+        "Engineer works remotely or on site; every action is logged.",
+        "Client confirms resolution in the app and rates it; a P1/P2 gets a written incident report.",
+        "SLA breaches and repeated incidents show on the management dashboard."
+      ]
+    },
+    {
+      "heading": "Technology stack and hosting",
+      "content": [
+        "A custom build, generated with AI and reviewed module by module, on proven open-source parts and hosted on HEKATE's own servers."
+      ],
+      "tables": [
+        [
+          {
+            "Layer": "Backend API",
+            "Choice": "Go",
+            "Why": "Memory-safe, fast, small attack surface, one binary to deploy"
+          },
+          {
+            "Layer": "Web ERP and portals",
+            "Choice": "TypeScript + Next.js (React)",
+            "Why": "One codebase for staff ERP, client and supplier portals"
+          },
+          {
+            "Layer": "Public website",
+            "Choice": "Next.js static export (separate host)",
+            "Why": "Nothing on the public site can reach the ERP"
+          },
+          {
+            "Layer": "Mobile app",
+            "Choice": "Flutter (Android + iOS)",
+            "Why": "One codebase, offline support, good camera/GPS/signature support"
+          },
+          {
+            "Layer": "Database",
+            "Choice": "PostgreSQL 16 + row-level security",
+            "Why": "Clients and suppliers can only read their own rows, enforced in the database"
+          },
+          {
+            "Layer": "Files",
+            "Choice": "MinIO (S3-compatible), encrypted",
+            "Why": "Attachments, photos, signed PDFs"
+          },
+          {
+            "Layer": "Login",
+            "Choice": "Keycloak",
+            "Why": "Single sign-on, two-factor login, roles in one place"
+          },
+          {
+            "Layer": "Real-time chat and notifications",
+            "Choice": "WebSockets + Firebase Cloud Messaging",
+            "Why": "Live ticket chat and push alerts"
+          },
+          {
+            "Layer": "Search and reporting",
+            "Choice": "PostgreSQL + Metabase",
+            "Why": "Dashboards without exposing raw data"
+          },
+          {
+            "Layer": "Hosting",
+            "Choice": "2 × DL380 Gen11 (app + API, active/standby), 1 × DL380 Gen11 (database primary), 1 × DL380 Gen10 (database replica + backups), 2 × DL380 Gen10 (monitoring/HCDP, test environment)",
+            "Why": "Uses the six servers in the RFQ; Proxmox virtualisation"
+          },
+          {
+            "Layer": "Off-site",
+            "Choice": "Encrypted nightly backup to a second location or cloud",
+            "Why": "Survives a fire or theft at the office"
+          }
+        ]
+      ]
+    },
+    {
+      "heading": "Security requirements",
+      "content": [
+        "The platform must pass an internal and an external penetration test before go-live."
+      ],
+      "items": [
+        "**Perimeter:** only the reverse proxy and web application firewall face the internet; the database and admin tools are reachable only through VPN.",
+        "**Login:** two-factor login for every staff account; passwordless or OTP for clients; account lockout and alerts on suspicious logins.",
+        "**Access:** role-based permissions plus database row-level security; every approval above the thresholds needs two people.",
+        "**Data:** TLS 1.3 everywhere; database and file storage encrypted at rest; personal data handled under Law 2024-017 and the Data Processing Addendum (HS-DOC-34).",
+        "**Mobile:** certificate pinning, no data stored unencrypted on the phone, remote logout of lost devices.",
+        "**Audit:** every create, change, delete and login logged and sent to HCDP; logs kept 12 months.",
+        "**Code:** automated tests, Semgrep code scanning and dependency scanning on every change; no code reaches production without review.",
+        "**Recovery:** daily encrypted backups, monthly restore test, target recovery within 4 hours."
+      ]
+    },
+    {
+      "heading": "Build plan",
+      "content": [
+        "Support and incidents come first because clients feel them first; accounting comes last because it is the riskiest."
+      ],
+      "tables": [
+        [
+          {
+            "Phase": "0",
+            "Delivers": "Specification, data model, login (Keycloak), servers and network",
+            "Gate before next phase": "Architecture approved"
+          },
+          {
+            "Phase": "1",
+            "Delivers": "Clients, CRM, Support & Incidents (web + mobile app), public website",
+            "Gate before next phase": "Pilot with 2–3 friendly clients"
+          },
+          {
+            "Phase": "2",
+            "Delivers": "Projects & field service, quotations, invoicing, mobile payments",
+            "Gate before next phase": "First real invoices issued"
+          },
+          {
+            "Phase": "3",
+            "Delivers": "Purchasing & suppliers portal, inventory & assets",
+            "Gate before next phase": "Stock count matches"
+          },
+          {
+            "Phase": "4",
+            "Delivers": "HR & payroll, employee self-service",
+            "Gate before next phase": "One payroll run checked by an accountant"
+          },
+          {
+            "Phase": "5",
+            "Delivers": "Accounting (SYSCOHADA), reporting dashboards",
+            "Gate before next phase": "Two quarters run in parallel with the accountant's books"
+          },
+          {
+            "Phase": "Go-live",
+            "Delivers": "Full platform",
+            "Gate before next phase": "Internal + external penetration test passed"
+          }
+        ]
+      ]
+    },
+    {
+      "heading": "Open decisions",
+      "items": [
+        {
+          "decision": "Platform name (internal and for clients)",
+          "status": "open"
+        },
+        {
+          "decision": "Host on own servers only, or own servers plus a cloud copy for the public site and app API",
+          "status": "open"
+        },
+        {
+          "decision": "Mobile payment providers to integrate first (MTN MoMo, Orange Money, bank card)",
+          "status": "open"
+        },
+        {
+          "decision": "Languages in the app: English and French at launch?",
+          "status": "open"
+        },
+        {
+          "decision": "SLA levels and response times to promise clients (P1–P4)",
+          "status": "open"
+        },
+        {
+          "decision": "Who approves code going to production (two named people)",
+          "status": "open"
+        }
+      ]
+    }
+  ]
+}
