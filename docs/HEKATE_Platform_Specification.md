@@ -25,7 +25,7 @@ Modular monolith, API-first, domain-driven and event-driven. One Go service spli
 | Pattern | Decision | Rule |
 | --- | --- | --- |
 | Microservices | Not at launch | Modules are deployable units in waiting; extraction order: Support, Identity, Finance |
-| API-first | Yes | Every endpoint defined in OpenAPI 3.1 before code; SDKs for web (TypeScript) and mobile (Dart) generated from the contract; contract tests in CI |
+| API-first | Yes | Every endpoint defined in OpenAPI 3.1 before code; SDKs for web (TypeScript) and mobile (TypeScript) generated from the contract; contract tests in CI |
 | API as a product | Yes | Developer portal, API keys, plans, rate limits, `/v1` versioning, 12-month deprecation notice, usage metering for billing |
 | Domain-Driven Design | Yes | Bounded contexts: CRM, Sales, Support & Incidents, Projects, Finance, Inventory & Assets, Procurement, HR, Documents, Identity, Platform. Each owns its schema; no cross-module table reads |
 | CQRS | Selective | Support & Incidents, Finance, Identity, dashboards: commands write to PostgreSQL, queries read from projections |
@@ -123,7 +123,7 @@ Every screen of the website, web ERP and portals is built mobile-first and deskt
 - Navigation collapses to a menu on phones; side menus stack above content; wide tables scroll inside their box.
 - Touch targets at least 44 px; no hover-only actions.
 - Tested on Android and iOS phones, tablets, laptops and large monitors in portrait and landscape.
-- The Flutter mobile app uses the same layouts and adapts to phone and tablet sizes.
+- The Expo mobile app uses the same layouts and adapts to phone and tablet sizes.
 
 ## Search and discovery optimisation
 
@@ -210,7 +210,7 @@ A custom build, generated with AI and reviewed module by module, on proven open-
 | Backend API | Go | Memory-safe, fast, small attack surface, one binary to deploy |
 | Web ERP and portals | TypeScript + Next.js (React) | One codebase for staff ERP, client and supplier portals |
 | Public website | Next.js static export (separate host) | Nothing on the public site can reach the ERP |
-| Mobile app | Flutter (Android + iOS) | One codebase, offline support, good camera/GPS/signature support |
+| Mobile app | Expo (React Native, Android + iOS) | One TypeScript codebase shared with the web SDK; camera, GPS, signature, push and offline via Expo modules |
 | Database | PostgreSQL 16 + row-level security | Clients and suppliers can only read their own rows, enforced in the database |
 | Files | MinIO (S3-compatible), encrypted | Attachments, photos, signed PDFs |
 | Login | Keycloak | Single sign-on, two-factor login, roles in one place |

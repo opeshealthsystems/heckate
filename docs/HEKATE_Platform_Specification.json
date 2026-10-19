@@ -65,7 +65,7 @@
           {
             "Pattern": "API-first",
             "Decision": "Yes",
-            "Rule": "Every endpoint defined in OpenAPI 3.1 before code; SDKs for web (TypeScript) and mobile (Dart) generated from the contract; contract tests in CI"
+            "Rule": "Every endpoint defined in OpenAPI 3.1 before code; SDKs for web (TypeScript) and mobile (TypeScript) generated from the contract; contract tests in CI"
           },
           {
             "Pattern": "API as a product",
@@ -436,7 +436,7 @@
         "Navigation collapses to a menu on phones; side menus stack above content; wide tables scroll inside their box.",
         "Touch targets at least 44 px; no hover-only actions.",
         "Tested on Android and iOS phones, tablets, laptops and large monitors in portrait and landscape.",
-        "The Flutter mobile app uses the same layouts and adapts to phone and tablet sizes."
+        "The Expo mobile app uses the same layouts and adapts to phone and tablet sizes."
       ]
     },
     {
@@ -649,8 +649,8 @@
           },
           {
             "Layer": "Mobile app",
-            "Choice": "Flutter (Android + iOS)",
-            "Why": "One codebase, offline support, good camera/GPS/signature support"
+            "Choice": "Expo (React Native, Android + iOS)",
+            "Why": "One TypeScript codebase shared with the web SDK; camera, GPS, signature, push and offline via Expo modules"
           },
           {
             "Layer": "Database",

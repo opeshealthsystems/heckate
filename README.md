@@ -13,7 +13,7 @@ ERP, client/supplier portals and mobile app on one API. Full requirements: [docs
 
 ## Status
 
-Phase 0 scaffold. Support & Incidents routes return 501 until Phase 1. Not yet scaffolded: Next.js web (`web/`), Flutter app (`mobile/`), public site (`site/`), Keycloak realm export, outbox relay.
+Phase 0 scaffold. Support & Incidents routes return 501 until Phase 1. Not yet scaffolded: Next.js web (`web/`), Expo app (`mobile/`), public site (`site/`), Keycloak realm export, outbox relay.
 
 ## Develop
 
