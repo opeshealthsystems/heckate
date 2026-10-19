@@ -32,6 +32,12 @@
         {
           "color": "#0b3d91"
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "HEKATE records your position when you check in and out at a client site."
+        }
       ]
     ],
     "scheme": "hekate"

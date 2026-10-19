@@ -8,6 +8,7 @@ export default function RootLayout() {
       <StatusBar style="auto" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="ticket/[id]" options={{ headerShown: true, title: "Ticket" }} />
+        <Stack.Screen name="intervention/[id]" options={{ headerShown: true, title: "Site visit" }} />
       </Stack>
     </SessionProvider>
   );

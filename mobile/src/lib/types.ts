@@ -91,3 +91,13 @@ export interface SupportReport {
   rated: number;
   avg_rating: number | null;
 }
+
+export interface Intervention {
+  id: string; tenant_id: string; engineer: string; status: "scheduled" | "in_progress" | "completed" | "cancelled";
+  scheduled_for: string | null; summary: string; checkin_at: string | null; checkout_at: string | null;
+  report: string | null; signed_by: string | null; has_signature: boolean; document_ref: string | null;
+}
+export interface StockItem { id: string; sku: string; name: string; serialised: boolean; on_hand: number }
+export interface Warehouse { id: string; name: string }
+export interface Timesheet { id: string; work_date: string; hours: number; note: string; status: string }
+export interface EmployeeRecord { full_name: string; annual_leave_entitlement: number; annual_leave_taken: number; annual_leave_balance: number }

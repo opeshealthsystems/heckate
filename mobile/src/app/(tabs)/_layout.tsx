@@ -11,6 +11,7 @@ export default function TabsLayout() {
     <Tabs screenOptions={{ tabBarActiveTintColor: c.brand, headerStyle: { backgroundColor: c.card }, headerTintColor: c.fg, tabBarStyle: { backgroundColor: c.card } }}>
       <Tabs.Screen name="tickets" options={{ title: staff ? "Queue" : "Tickets" }} />
       <Tabs.Screen name="report" options={{ title: staff ? "New ticket" : "Report", href: me?.scope === "other" ? null : undefined }} />
+      <Tabs.Screen name="field" options={{ title: "Field", href: me?.roles.includes("engineer") ? undefined : null }} />
       <Tabs.Screen name="account" options={{ title: "Account" }} />
     </Tabs>
   );
