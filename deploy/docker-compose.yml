@@ -47,6 +47,7 @@ services:
       HEKATE_JWKS_URL: http://keycloak:8080/realms/hekate/protocol/openid-connect/certs
       HEKATE_ISSUER: http://localhost:8081/realms/hekate
       HEKATE_CORS_ORIGINS: http://localhost:3000,http://localhost:3001
+      HEKATE_NATS_URL: nats://nats:4222
     ports: ["8080:8080"]
   web:
     profiles: [full]

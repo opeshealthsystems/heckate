@@ -46,7 +46,18 @@ func main() {
 	}
 	defer pool.Close()
 
-	go platform.RelayOutbox(ctx, pool, platform.LogPublisher{}, 2*time.Second)
+	var pub platform.Publisher = platform.LogPublisher{}
+	if cfg.NATSURL != "" {
+		np, err := platform.NewNATSPublisher(ctx, cfg.NATSURL)
+		if err != nil {
+			slog.Error("nats", "err", err)
+			os.Exit(1)
+		}
+		defer np.Close()
+		pub = np
+		slog.Info("publishing events to NATS JetStream", "url", cfg.NATSURL)
+	}
+	go platform.RelayOutbox(ctx, pool, pub, 2*time.Second)
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,

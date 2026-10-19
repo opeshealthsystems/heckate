@@ -3,6 +3,7 @@ package platform
 import (
 	"context"
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -10,13 +11,15 @@ import (
 
 // Publisher delivers outbox events to a bus (NATS JetStream in production).
 type Publisher interface {
-	Publish(ctx context.Context, subject string, payload []byte) error
+	// Publish delivers one event. id is stable per outbox row, so a broker can drop a redelivery
+	// after a crash between publishing and marking the row published.
+	Publish(ctx context.Context, subject string, payload []byte, id string) error
 }
 
 // LogPublisher is the default publisher until NATS is wired in.
 type LogPublisher struct{}
 
-func (LogPublisher) Publish(_ context.Context, subject string, payload []byte) error {
+func (LogPublisher) Publish(_ context.Context, subject string, payload []byte, _ string) error {
 	slog.Info("event", "subject", subject, "payload", string(payload))
 	return nil
 }
@@ -30,14 +33,15 @@ func RelayOutbox(ctx context.Context, pool *pgxpool.Pool, pub Publisher, every t
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			if err := relayOnce(ctx, pool, pub); err != nil {
+			if err := RelayOnce(ctx, pool, pub); err != nil {
 				slog.Error("outbox relay", "err", err)
 			}
 		}
 	}
 }
 
-func relayOnce(ctx context.Context, pool *pgxpool.Pool, pub Publisher) error {
+// RelayOnce publishes one batch of unpublished events in order.
+func RelayOnce(ctx context.Context, pool *pgxpool.Pool, pub Publisher) error {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -62,7 +66,7 @@ func relayOnce(ctx context.Context, pool *pgxpool.Pool, pub Publisher) error {
 	}
 	rows.Close()
 	for _, e := range evs {
-		if err := pub.Publish(ctx, e.subject, e.payload); err != nil {
+		if err := pub.Publish(ctx, e.subject, e.payload, strconv.FormatInt(e.id, 10)); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `UPDATE platform.outbox SET published_at = now() WHERE id=$1`, e.id); err != nil {

@@ -11,6 +11,7 @@ type Config struct {
 	Audience    string // HEKATE_AUDIENCE (optional)
 	DevSecret   string // HEKATE_DEV_JWT_SECRET: enables HS256 tokens. Never set in production.
 	CORSOrigins string // HEKATE_CORS_ORIGINS, comma separated
+	NATSURL     string // HEKATE_NATS_URL; empty logs events instead
 }
 
 func LoadConfig() Config {
@@ -28,5 +29,6 @@ func LoadConfig() Config {
 		Audience:    os.Getenv("HEKATE_AUDIENCE"),
 		DevSecret:   os.Getenv("HEKATE_DEV_JWT_SECRET"),
 		CORSOrigins: os.Getenv("HEKATE_CORS_ORIGINS"),
+		NATSURL:     os.Getenv("HEKATE_NATS_URL"),
 	}
 }

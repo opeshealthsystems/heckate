@@ -23,7 +23,7 @@ Things I could not do or decide alone. Each says what is needed. Items marked **
 
 - **Keycloak:** `deploy/keycloak/hekate-realm.json` defines roles, the `tenant_id` claim and the web and mobile clients. **Untested** (no container runtime in the sandbox). After import: create users, set each client user's `tenant_id` attribute to their company's tenant id, require TOTP for staff, and set the production redirect URIs. Set `HEKATE_JWKS_URL`, `HEKATE_ISSUER` on the API.
 - **Push notifications:** devices register (`PUT /v1/devices`) but nothing sends yet. Needs an EAS project id (`extra.eas.projectId` in `mobile/app.json`), an FCM key for Android and an APNs key for iOS, and a consumer for the `ticket.*` outbox events.
-- **NATS JetStream:** the outbox relay currently logs events (`LogPublisher`). Wire a NATS publisher once the broker is deployed.
+- **NATS JetStream:** the API publishes outbox events to JetStream when `HEKATE_NATS_URL` is set (tested against an embedded server; the compose file sets it). Deploy and secure the broker in production (credentials, TLS, clustering) and add consumers.
 - **App stores:** Apple Developer and Google Play accounts for builds and release.
 - **Domains and TLS:** `hekatesystems.com`, `api.`, `app.`, `auth.` records and certificates.
 
