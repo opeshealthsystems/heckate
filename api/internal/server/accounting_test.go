@@ -132,7 +132,7 @@ func TestLedgerIsAppendOnlyAndBalancedInTheDatabase(t *testing.T) {
 		"delete entry": `DELETE FROM accounting.entries`,
 		"update line":  `UPDATE accounting.entry_lines SET debit = debit + 1 WHERE debit > 0`,
 		"delete line":  `DELETE FROM accounting.entry_lines`,
-		"truncate":     `TRUNCATE accounting.entry_lines`,
+		"truncate":     `TRUNCATE accounting.entry_lines CASCADE`,
 	} {
 		if _, err := conn.Exec(ctx, sql); err == nil || !strings.Contains(err.Error(), "append-only") {
 			t.Errorf("%s must be rejected as append-only, got %v", name, err)

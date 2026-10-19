@@ -47,6 +47,11 @@ CREATE FUNCTION accounting.bank_statements_guard() RETURNS trigger LANGUAGE plpg
 BEGIN RAISE EXCEPTION 'bank statements cannot be edited or deleted'; END $$;
 CREATE TRIGGER bank_statements_guard BEFORE UPDATE OR DELETE ON accounting.bank_statements FOR EACH ROW EXECUTE FUNCTION accounting.bank_statements_guard();
 
+CREATE FUNCTION accounting.bank_no_truncate() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN RAISE EXCEPTION 'bank statements cannot be truncated'; END $$;
+CREATE TRIGGER bank_statements_no_truncate BEFORE TRUNCATE ON accounting.bank_statements FOR EACH STATEMENT EXECUTE FUNCTION accounting.bank_no_truncate();
+CREATE TRIGGER bank_lines_no_truncate BEFORE TRUNCATE ON accounting.bank_lines FOR EACH STATEMENT EXECUTE FUNCTION accounting.bank_no_truncate();
+
 ALTER TABLE accounting.bank_statements ENABLE ROW LEVEL SECURITY; ALTER TABLE accounting.bank_statements FORCE ROW LEVEL SECURITY;
 ALTER TABLE accounting.bank_lines ENABLE ROW LEVEL SECURITY;      ALTER TABLE accounting.bank_lines FORCE ROW LEVEL SECURITY;
 CREATE POLICY bst_read  ON accounting.bank_statements FOR SELECT USING (accounting.can_read());
