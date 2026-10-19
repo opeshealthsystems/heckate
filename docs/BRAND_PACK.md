@@ -20,6 +20,6 @@ HEKATE supplied an approved Brand & Content Pack (four zip parts that merge into
 
 ## Still to do from the pack
 
-1. Restyle `mobile/` with the same tokens and screen designs. (`web/` is done: navy header, brand fonts and the split-screen sign-in; the dashboard layouts in `design/screens/` are not copied one for one.)
+1. Mobile is restyled (brand tokens, Cinzel and IBM Plex, navy headers, sign-in, icon, adaptive icon and splash from the emblem). It was bundled and typechecked but not run on a device; the remaining screens use the new theme but were not compared one for one with `design/screens/M*.dc.html`. (`web/` is done: navy header, brand fonts and the split-screen sign-in; the dashboard layouts in `design/screens/` are not copied one for one.)
 2. Match the platform's PDF layouts to the pack's forms and certificates, with the brand fonts and security elements.
 3. Codes in the pack's registry (`forms/forms_registry.json`) must match the platform's references exactly.

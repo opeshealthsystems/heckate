@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
-import { Text, TextInput, View } from "react-native";
+import { Image, Text, TextInput, View } from "react-native";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../components/ui";
 import { DEV_LOGIN, OIDC_CLIENT, OIDC_ISSUER } from "../lib/auth";
 import { useSession } from "../lib/session";
-import { useTheme } from "../lib/theme";
+import { font, useTheme } from "../lib/theme";
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function Login() {
-  const { s } = useTheme();
+  const { s, c } = useTheme();
   const { signIn } = useSession();
   const [token, setTok] = useState("");
   const [err, setErr] = useState("");
@@ -34,9 +34,14 @@ export default function Login() {
 
   return (
     <SafeAreaView style={s.screen}>
+      <View style={{ backgroundColor: c.brand, padding: 24, gap: 14 }}>
+        <Image source={require("../../assets/logo-white.png")} accessibilityLabel="HEKATE SYSTEMS" style={{ width: 125, height: 50 }} resizeMode="contain" />
+        <Text style={{ color: "#ffffff", fontSize: 24, lineHeight: 30, fontFamily: font.display }}>One secure account for clients, staff and suppliers.</Text>
+        <Text style={{ color: c.onNavyMuted, fontSize: 15, fontFamily: font.body }}>Tickets, incidents, quotations, invoices, reports and certificates.</Text>
+      </View>
       <View style={s.pad}>
-        <Text style={s.h1}>HEKATE</Text>
-        <Text style={s.muted}>Sign in to report incidents and follow your support tickets.</Text>
+        <Text style={s.h1}>Sign in</Text>
+        <Text style={s.muted}>Use your HEKATE account to report incidents and follow your support tickets.</Text>
         {!!OIDC_ISSUER && <Button primary title="Sign in" disabled={!request} onPress={() => void promptAsync()} />}
         {DEV_LOGIN && (
           <>
@@ -47,6 +52,7 @@ export default function Login() {
         )}
         {!OIDC_ISSUER && !DEV_LOGIN && <Text style={s.error}>Sign-in is not configured.</Text>}
         {!!err && <Text style={s.error}>{err}</Text>}
+        <Text style={s.muted}>Protected by two-factor sign-in · Data hosted in Cameroon</Text>
       </View>
     </SafeAreaView>
   );
