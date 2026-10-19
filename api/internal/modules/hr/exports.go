@@ -35,5 +35,5 @@ func exportClaims(r *http.Request, s *platform.Scope) (*platform.Result, error) 
 	if err != nil {
 		return nil, err
 	}
-	return reports.CSV("expense-claims", []reports.Col{{"Date", "expense_date"}, {"Employee", "actor"}, {"Category", "category"}, {"Description", "description"}, {"Amount (XAF)", "amount"}, {"Status", "status"}, {"Decided by", "decided_by"}, {"Paid by", "paid_by"}}, data)
+	return reports.CSV("expense-claims", []reports.Col{reports.C("Date", "expense_date"), reports.C("Employee", "actor"), reports.C("Category", "category"), reports.C("Description", "description"), reports.C("Amount (XAF)", "amount"), reports.C("Status", "status"), reports.C("Decided by", "decided_by"), reports.C("Paid by", "paid_by")}, data)
 }

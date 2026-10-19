@@ -21,7 +21,7 @@ func exportStock(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	return reports.CSV("stock", []reports.Col{{"SKU", "sku"}, {"Item", "item"}, {"Warehouse", "warehouse"}, {"Quantity", "qty"}}, rows)
+	return reports.CSV("stock", []reports.Col{reports.C("SKU", "sku"), reports.C("Item", "item"), reports.C("Warehouse", "warehouse"), reports.C("Quantity", "qty")}, rows)
 }
 
 func exportAssets(r *http.Request, s *platform.Scope) (*platform.Result, error) {
@@ -45,5 +45,5 @@ func exportAssets(r *http.Request, s *platform.Scope) (*platform.Result, error) 
 	if err != nil {
 		return nil, err
 	}
-	return reports.CSV("assets", []reports.Col{{"Serial", "serial"}, {"Item", "item"}, {"Status", "status"}, {"Held by", "holder"}, {"Client id (installed at)", "tenant_id"}}, rows)
+	return reports.CSV("assets", []reports.Col{reports.C("Serial", "serial"), reports.C("Item", "item"), reports.C("Status", "status"), reports.C("Held by", "holder"), reports.C("Client id (installed at)", "tenant_id")}, rows)
 }

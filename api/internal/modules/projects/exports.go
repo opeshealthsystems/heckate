@@ -35,5 +35,5 @@ func exportTimesheets(r *http.Request, s *platform.Scope) (*platform.Result, err
 	if err != nil {
 		return nil, err
 	}
-	return reports.CSV("timesheets", []reports.Col{{"Date", "work_date"}, {"Employee", "actor"}, {"Hours", "hours"}, {"Project id", "project_id"}, {"Ticket id", "ticket_id"}, {"Note", "note"}, {"Status", "status"}, {"Approved by", "approved_by"}}, data)
+	return reports.CSV("timesheets", []reports.Col{reports.C("Date", "work_date"), reports.C("Employee", "actor"), reports.C("Hours", "hours"), reports.C("Project id", "project_id"), reports.C("Ticket id", "ticket_id"), reports.C("Note", "note"), reports.C("Status", "status"), reports.C("Approved by", "approved_by")}, data)
 }

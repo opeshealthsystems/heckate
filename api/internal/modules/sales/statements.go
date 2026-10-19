@@ -231,7 +231,7 @@ func (m *module) exportStatement(r *http.Request, s *platform.Scope) (*platform.
 	if err != nil {
 		return nil, err
 	}
-	return reports.CSV("statement-"+safeName(st.Client), []reports.Col{{"Date", "date"}, {"Type", "kind"}, {"Reference", "ref"}, {"Description", "description"}, {"Billed (XAF)", "debit"}, {"Paid or credited (XAF)", "credit"}, {"Balance (XAF)", "balance"}}, rows)
+	return reports.CSV("statement-"+safeName(st.Client), []reports.Col{reports.C("Date", "date"), reports.C("Type", "kind"), reports.C("Reference", "ref"), reports.C("Description", "description"), reports.C("Billed (XAF)", "debit"), reports.C("Paid or credited (XAF)", "credit"), reports.C("Balance (XAF)", "balance")}, rows)
 }
 
 func (m *module) ageingPDF(r *http.Request, s *platform.Scope) (*platform.Result, error) {
@@ -274,7 +274,7 @@ func exportAgeing(r *http.Request, s *platform.Scope) (*platform.Result, error) 
 	if err != nil {
 		return nil, err
 	}
-	return reports.CSV("receivables-ageing", []reports.Col{{"Client", "client"}, {"Not yet due (XAF)", "current"}, {"1-30 days (XAF)", "d1_30"}, {"31-60 days (XAF)", "d31_60"}, {"61-90 days (XAF)", "d61_90"}, {"Over 90 days (XAF)", "over_90"}, {"Total (XAF)", "total"}}, rows)
+	return reports.CSV("receivables-ageing", []reports.Col{reports.C("Client", "client"), reports.C("Not yet due (XAF)", "current"), reports.C("1-30 days (XAF)", "d1_30"), reports.C("31-60 days (XAF)", "d31_60"), reports.C("61-90 days (XAF)", "d61_90"), reports.C("Over 90 days (XAF)", "over_90"), reports.C("Total (XAF)", "total")}, rows)
 }
 
 func exportInvoices(r *http.Request, s *platform.Scope) (*platform.Result, error) {
@@ -299,8 +299,8 @@ func exportInvoices(r *http.Request, s *platform.Scope) (*platform.Result, error
 	if err != nil {
 		return nil, err
 	}
-	return reports.CSV("invoices", []reports.Col{{"Reference", "ref"}, {"Title", "title"}, {"Status", "status"}, {"Client id", "tenant_id"}, {"Issued", "issue_date"}, {"Due", "due_date"},
-		{"Net (XAF)", "net"}, {"TVA (XAF)", "tva"}, {"CAC (XAF)", "cac"}, {"Total (XAF)", "total"}, {"Paid (XAF)", "paid"}, {"Credited (XAF)", "credited"}, {"Balance (XAF)", "balance"}}, rows)
+	return reports.CSV("invoices", []reports.Col{reports.C("Reference", "ref"), reports.C("Title", "title"), reports.C("Status", "status"), reports.C("Client id", "tenant_id"), reports.C("Issued", "issue_date"), reports.C("Due", "due_date"),
+		reports.C("Net (XAF)", "net"), reports.C("TVA (XAF)", "tva"), reports.C("CAC (XAF)", "cac"), reports.C("Total (XAF)", "total"), reports.C("Paid (XAF)", "paid"), reports.C("Credited (XAF)", "credited"), reports.C("Balance (XAF)", "balance")}, rows)
 }
 
 func exportPayments(r *http.Request, s *platform.Scope) (*platform.Result, error) {
@@ -332,5 +332,5 @@ func exportPayments(r *http.Request, s *platform.Scope) (*platform.Result, error
 	if err := q.Err(); err != nil {
 		return nil, err
 	}
-	return reports.CSV("payments", []reports.Col{{"Date", "date"}, {"Invoice", "invoice"}, {"Client", "client"}, {"Amount (XAF)", "amount"}, {"Method", "method"}, {"Reference", "reference"}, {"Recorded by", "by"}}, rows)
+	return reports.CSV("payments", []reports.Col{reports.C("Date", "date"), reports.C("Invoice", "invoice"), reports.C("Client", "client"), reports.C("Amount (XAF)", "amount"), reports.C("Method", "method"), reports.C("Reference", "reference"), reports.C("Recorded by", "by")}, rows)
 }

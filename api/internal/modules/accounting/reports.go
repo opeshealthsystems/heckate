@@ -164,7 +164,7 @@ func exportTrialBalance(r *http.Request, s *platform.Scope) (*platform.Result, e
 	if err != nil {
 		return nil, err
 	}
-	return reports.CSV("trial-balance", []reports.Col{{"Account", "account"}, {"Name", "name"}, {"Debit (XAF)", "debit"}, {"Credit (XAF)", "credit"}, {"Balance (XAF)", "balance"}}, rows)
+	return reports.CSV("trial-balance", []reports.Col{reports.C("Account", "account"), reports.C("Name", "name"), reports.C("Debit (XAF)", "debit"), reports.C("Credit (XAF)", "credit"), reports.C("Balance (XAF)", "balance")}, rows)
 }
 
 // exportLedger lists every ledger line in the period with its entry, for the accountant's own spreadsheets.
@@ -194,6 +194,6 @@ func exportLedger(r *http.Request, s *platform.Scope) (*platform.Result, error) 
 	if err := q.Err(); err != nil {
 		return nil, err
 	}
-	return reports.CSV("ledger", []reports.Col{{"Entry", "seq"}, {"Date", "date"}, {"Journal", "journal"}, {"Reference", "ref"}, {"Narration", "narration"}, {"Source", "source"},
-		{"Account", "account"}, {"Account name", "name"}, {"Debit (XAF)", "debit"}, {"Credit (XAF)", "credit"}, {"Party", "party"}, {"Posted by", "by"}}, rows)
+	return reports.CSV("ledger", []reports.Col{reports.C("Entry", "seq"), reports.C("Date", "date"), reports.C("Journal", "journal"), reports.C("Reference", "ref"), reports.C("Narration", "narration"), reports.C("Source", "source"),
+		reports.C("Account", "account"), reports.C("Account name", "name"), reports.C("Debit (XAF)", "debit"), reports.C("Credit (XAF)", "credit"), reports.C("Party", "party"), reports.C("Posted by", "by")}, rows)
 }

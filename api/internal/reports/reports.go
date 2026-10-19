@@ -19,6 +19,9 @@ import (
 // Col is one CSV column: the heading a person reads and the JSON key it comes from.
 type Col struct{ Header, Key string }
 
+// C is a column: the heading and the JSON key.
+func C(header, key string) Col { return Col{Header: header, Key: key} }
+
 // Safe stops spreadsheet formula injection: a cell that starts with = + - @ or a control character would be run
 // as a formula by Excel or Sheets, so it is prefixed with an apostrophe, which shows as plain text.
 func Safe(s string) string {
