@@ -4,7 +4,7 @@ import { StyleSheet } from "react-native";
 // The brand defines no dark theme, so the app is always light (app.json: userInterfaceStyle "light").
 const c = {
   bg: "#F4F7FB", fg: "#0B1B33", muted: "#5B6675", card: "#ffffff", line: "#DCE4EE", inputBorder: "#788EAC",
-  brand: "#062245", brandFg: "#ffffff", navyRaised: "#0E2F5A", navyLine: "#1B3A66", onNavyMuted: "#C9D6E8",
+  brand: "#062245", brandFg: "#ffffff", navyRaised: "#0E2F5A", navyLine: "#1B3A66", onNavyMuted: "#C9D6E8", onNavyFaint: "#9FB3CC",
   gold: "#B8913F", goldText: "#8B6B2B", goldOnNavy: "#C9A75A",
   ok: "#1E6B3E", bad: "#B3261E", warn: "#8A5300",
 };
@@ -21,7 +21,7 @@ export function useTheme() {
   const s = StyleSheet.create({
     screen: { flex: 1, backgroundColor: c.bg },
     pad: { padding: 16, gap: 12 },
-    card: { backgroundColor: c.card, borderColor: c.line, borderWidth: 1, borderRadius: 10, padding: 14, gap: 4 },
+    card: { backgroundColor: c.card, borderColor: c.line, borderWidth: 1, borderRadius: 6, padding: 16, gap: 4 },
     h1: { color: c.brand, fontSize: 24, fontFamily: font.display },
     text: { color: c.fg, fontSize: 16, fontFamily: font.body },
     muted: { color: c.muted, fontSize: 14, fontFamily: font.body },
@@ -31,6 +31,7 @@ export function useTheme() {
     btnPrimary: { backgroundColor: c.brand, borderColor: c.brand },
     btnText: { color: c.brand, fontSize: 16, fontFamily: font.semibold },
     btnPrimaryText: { color: c.brandFg, fontSize: 16, fontFamily: font.semibold },
+    semibold: { fontFamily: font.semibold },
     error: { color: c.bad, fontSize: 14, fontFamily: font.body },
     row: { flexDirection: "row", gap: 8, flexWrap: "wrap", alignItems: "center" },
   });

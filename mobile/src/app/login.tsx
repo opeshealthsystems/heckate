@@ -34,10 +34,12 @@ export default function Login() {
 
   return (
     <SafeAreaView style={s.screen}>
-      <View style={{ backgroundColor: c.brand, padding: 24, gap: 14 }}>
-        <Image source={require("../../assets/logo-white.png")} accessibilityLabel="HEKATE SYSTEMS" style={{ width: 125, height: 50 }} resizeMode="contain" />
+      <View style={{ backgroundColor: c.brand, padding: 24, gap: 14, overflow: "hidden" }}>
+        <Image source={require("../../assets/seal-white.png")} accessible={false} style={{ position: "absolute", right: -40, bottom: -50, width: 220, height: 220, opacity: 0.06 }} resizeMode="contain" />
+        <Image source={require("../../assets/logo-white.png")} accessibilityLabel="HEKATE SYSTEMS" style={{ width: 104, height: 42 }} resizeMode="contain" />
         <Text style={{ color: "#ffffff", fontSize: 24, lineHeight: 30, fontFamily: font.display }}>One secure account for clients, staff and suppliers.</Text>
-        <Text style={{ color: c.onNavyMuted, fontSize: 15, fontFamily: font.body }}>Tickets, incidents, quotations, invoices, reports and certificates.</Text>
+        <Text style={{ color: c.onNavyMuted, fontSize: 15, fontFamily: font.body }}>Tickets, incidents, quotations, invoices, reports and certificates, on web and the HEKATE app.</Text>
+        <Text style={{ color: c.onNavyFaint, fontSize: 13, fontFamily: font.body, marginTop: 8 }}>Protected by two-factor sign-in · Data hosted in Cameroon</Text>
       </View>
       <View style={s.pad}>
         <Text style={s.h1}>Sign in</Text>
@@ -52,7 +54,6 @@ export default function Login() {
         )}
         {!OIDC_ISSUER && !DEV_LOGIN && <Text style={s.error}>Sign-in is not configured.</Text>}
         {!!err && <Text style={s.error}>{err}</Text>}
-        <Text style={s.muted}>Protected by two-factor sign-in · Data hosted in Cameroon</Text>
       </View>
     </SafeAreaView>
   );

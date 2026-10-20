@@ -9,7 +9,7 @@ import { useTheme } from "../../lib/theme";
 import type { Ticket } from "../../lib/types";
 
 export default function Tickets() {
-  const { s } = useTheme();
+  const { s, c } = useTheme();
   const { me, pendingDrafts, syncDrafts } = useSession();
   const [rows, setRows] = useState<Ticket[]>([]);
   const [err, setErr] = useState("");
@@ -39,13 +39,13 @@ export default function Tickets() {
       ListHeaderComponent={
         <View style={{ gap: 8 }}>
           {pendingDrafts > 0 && <View style={s.card}><Text style={s.text}>{pendingDrafts} report(s) waiting to send. They will be sent when you are back online.</Text></View>}
-          {!!err && <Text style={s.error}>{err}</Text>}
+          {!!err && <View style={[s.card, { borderColor: c.bad }]}><Text style={s.error}>Could not load: {err}</Text><Text style={s.muted}>Pull down to try again.</Text></View>}
         </View>
       }
-      ListEmptyComponent={<Text style={s.muted}>{busy || err ? "" : "No tickets yet."}</Text>}
+      ListEmptyComponent={busy || err ? undefined : <View style={s.card}><Text style={s.text}>No tickets yet.</Text><Text style={s.muted}>Pull down to refresh.</Text></View>}
       renderItem={({ item: t }) => (
         <Pressable accessibilityRole="button" onPress={() => router.push(`/ticket/${t.id}`)} style={s.card}>
-          <Text style={[s.text, { fontWeight: "600" }]}>{t.subject}</Text>
+          <Text style={[s.text, s.semibold]}>{t.subject}</Text>
           <TicketPills t={t} />
           <Text style={s.muted}>{new Date(t.created_at).toLocaleString()}{t.assignee ? ` · ${t.assignee}` : ""}</Text>
         </Pressable>

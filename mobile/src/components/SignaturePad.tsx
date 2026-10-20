@@ -56,7 +56,7 @@ export function SignaturePad({ onDone }: { onDone: (png: string | null) => void 
       <View ref={box} collapsable={false} style={{ height: 160, backgroundColor: "#ffffff", borderColor: c.line, borderWidth: 1, borderRadius: 8 }} {...pan.panHandlers}>
         <Svg width="100%" height="100%">
           {[...paths, current].filter(Boolean).map((d, i) => (
-            <Path key={i} d={d} stroke="#111111" strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            <Path key={i} d={d} stroke={c.fg} strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
           ))}
         </Svg>
       </View>

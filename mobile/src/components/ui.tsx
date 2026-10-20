@@ -1,6 +1,6 @@
 import { Pressable, Text, View } from "react-native";
 import { slaRemaining } from "../lib/sla";
-import { useTheme } from "../lib/theme";
+import { font, useTheme } from "../lib/theme";
 import type { Severity, Ticket } from "../lib/types";
 
 export function Button({ title, onPress, primary, disabled }: { title: string; onPress: () => void; primary?: boolean; disabled?: boolean }) {
@@ -17,7 +17,7 @@ export function Pill({ text, tone }: { text: string; tone?: "ok" | "bad" | "warn
   const color = tone ? c[tone] : c.muted;
   return (
     <View style={{ borderColor: color, borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-      <Text style={{ color, fontSize: 12, fontWeight: "600" }}>{text}</Text>
+      <Text style={{ color, fontSize: 12, fontFamily: font.semibold }}>{text}</Text>
     </View>
   );
 }

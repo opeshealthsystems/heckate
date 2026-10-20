@@ -1,9 +1,11 @@
 import { Redirect } from "expo-router";
 import { Text, View } from "react-native";
 import { useSession } from "../lib/session";
+import { useTheme } from "../lib/theme";
 
 export default function Index() {
   const { me, ready } = useSession();
-  if (!ready) return <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}><Text>Loading…</Text></View>;
+  const { s } = useTheme();
+  if (!ready) return <View style={[s.screen, { justifyContent: "center", alignItems: "center" }]}><Text style={s.muted}>Loading…</Text></View>;
   return <Redirect href={me ? "/(tabs)/tickets" : "/login"} />;
 }

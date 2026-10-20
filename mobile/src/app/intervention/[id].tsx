@@ -97,7 +97,7 @@ export default function InterventionScreen() {
       {v.status === "in_progress" && (
         <>
           <Text style={s.label}>Work done</Text>
-          <TextInput style={[s.input, { minHeight: 110, textAlignVertical: "top" }]} multiline value={report} onChangeText={setReport} placeholder="What you found and what you did (at least 10 characters)" placeholderTextColor="#888" />
+          <TextInput style={[s.input, { minHeight: 110, textAlignVertical: "top" }]} multiline value={report} onChangeText={setReport} placeholder="What you found and what you did (at least 10 characters)" placeholderTextColor={c.muted} />
           {items.length > 0 && wh && (
             <>
               <Text style={s.label}>Spare parts used (from {wh.name})</Text>
@@ -114,7 +114,7 @@ export default function InterventionScreen() {
             </>
           )}
           <Text style={s.label}>Client acceptance</Text>
-          <TextInput style={s.input} value={signedBy} onChangeText={setSignedBy} placeholder="Name of the person signing" placeholderTextColor="#888" />
+          <TextInput style={s.input} value={signedBy} onChangeText={setSignedBy} placeholder="Name of the person signing" placeholderTextColor={c.muted} />
           <SignaturePad onDone={setSignature} />
           <Button primary title={busy ? "Completing…" : "Complete the visit"} disabled={busy || !canFinish} onPress={() => void checkOut()} />
           <Text style={{ color: c.muted, fontSize: 14 }}>Your position is recorded when you check in and out.</Text>

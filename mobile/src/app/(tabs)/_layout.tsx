@@ -1,6 +1,9 @@
 import { Redirect, Tabs } from "expo-router";
+import { Icon, type IconName } from "../../components/Icon";
 import { useSession } from "../../lib/session";
 import { font, useTheme } from "../../lib/theme";
+
+const tabIcon = (name: IconName) => ({ color }: { color: unknown }) => <Icon name={name} color={String(color)} />;
 
 export default function TabsLayout() {
   const { me, ready } = useSession();
@@ -19,10 +22,10 @@ export default function TabsLayout() {
         tabBarStyle: { backgroundColor: c.card, borderTopColor: c.line },
       }}
     >
-      <Tabs.Screen name="tickets" options={{ title: staff ? "Queue" : "Tickets" }} />
-      <Tabs.Screen name="report" options={{ title: staff ? "New ticket" : "Report", href: me?.scope === "other" ? null : undefined }} />
-      <Tabs.Screen name="field" options={{ title: "Field", href: me?.roles.includes("engineer") ? undefined : null }} />
-      <Tabs.Screen name="account" options={{ title: "Account" }} />
+      <Tabs.Screen name="tickets" options={{ title: staff ? "Queue" : "Tickets", tabBarIcon: tabIcon("tickets") }} />
+      <Tabs.Screen name="report" options={{ title: staff ? "New ticket" : "Report", tabBarIcon: tabIcon("plus"), href: me?.scope === "other" ? null : undefined }} />
+      <Tabs.Screen name="field" options={{ title: "Field", tabBarIcon: tabIcon("field"), href: me?.roles.includes("engineer") ? undefined : null }} />
+      <Tabs.Screen name="account" options={{ title: "Account", tabBarIcon: tabIcon("people") }} />
     </Tabs>
   );
 }

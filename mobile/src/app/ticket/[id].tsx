@@ -12,7 +12,7 @@ import type { Comment, Status, Ticket } from "../../lib/types";
 
 export default function TicketScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { s } = useTheme();
+  const { s, c } = useTheme();
   const { me } = useSession();
   const staff = me?.scope === "staff";
   const [t, setT] = useState<Ticket | null>(null);
@@ -61,7 +61,7 @@ export default function TicketScreen() {
       {!comments.length && <Text style={s.muted}>No replies yet.</Text>}
       {t.status !== "closed" && (
         <>
-          <TextInput style={[s.input, { minHeight: 80, textAlignVertical: "top" }]} multiline placeholder="Write a reply" placeholderTextColor="#888" value={body} onChangeText={setBody} />
+          <TextInput style={[s.input, { minHeight: 80, textAlignVertical: "top" }]} multiline placeholder="Write a reply" placeholderTextColor={c.muted} value={body} onChangeText={setBody} />
           {staff && (
             <View style={s.row}>
               <Switch value={internal} onValueChange={setInternal} />
