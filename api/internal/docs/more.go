@@ -58,21 +58,6 @@ func methodLabel(m string) string {
 	return m
 }
 
-// RenderPurchaseOrder draws an approved purchase order addressed to a supplier.
-func RenderPurchaseOrder(o Options, ref string, issued time.Time, title string, supplier Party, lines []Line, net int64) ([]byte, error) {
-	d := newDoc(o, ref, "Purchase order", issued)
-	d.title("PURCHASE ORDER / BON DE COMMANDE", ref)
-	d.kv("Date", date(issued))
-	d.kv("Subject", title)
-	d.pdf.Ln(2)
-	d.party("Supplier", supplier)
-	d.table(lines)
-	d.netTotal(net)
-	d.pdf.Ln(6)
-	d.note("Prices are net, in CFA francs (XAF); taxes are added as applicable. Please quote the purchase order reference on your delivery note and invoice. Verify this order by scanning the QR code or entering its reference on the HEKATE verification page.")
-	return d.bytes()
-}
-
 // QtyLine is an item with a quantity and no price (a request for quotation).
 type QtyLine struct {
 	Description string
@@ -116,31 +101,6 @@ func RenderRFQ(o Options, ref string, issued time.Time, title string, closes *ti
 type Asset struct {
 	Item, Serial, Holder, IssuedBy string
 	IssuedAt                       time.Time
-}
-
-// RenderAssetForm draws the equipment issue and return form with blank lines to sign by hand.
-func RenderAssetForm(o Options, ref string, a Asset) ([]byte, error) {
-	d := newDoc(o, ref, "Asset issue and return", a.IssuedAt)
-	d.title("ASSET ISSUE AND RETURN FORM", ref)
-	d.kv("Equipment", a.Item)
-	d.kv("Serial number", a.Serial)
-	d.kv("Issued to", a.Holder)
-	d.kv("Issued by", a.IssuedBy)
-	d.kv("Date issued", date(a.IssuedAt))
-	d.pdf.Ln(4)
-	d.note("The holder is responsible for this equipment until it is returned to HEKATE stores. Report loss or damage to your manager immediately.")
-	d.pdf.Ln(6)
-	d.signatureLine("Holder: received in good working order", 15)
-	d.signatureLine("Issued by (stores)", 110)
-	d.pdf.Ln(18)
-	d.pdf.SetFont("Helvetica", "B", 10)
-	d.pdf.CellFormat(0, 7, d.tr("Return (completed by hand)"), "", 1, "L", false, 0, "")
-	d.pdf.SetFont("Helvetica", "", 9.5)
-	d.pdf.CellFormat(0, 7, d.tr("Date returned: ____ / ____ / ________      Condition: _______________________________"), "", 1, "L", false, 0, "")
-	d.pdf.Ln(10)
-	d.signatureLine("Holder", 15)
-	d.signatureLine("Received by (stores)", 110)
-	return d.bytes()
 }
 
 func (d *doc) signatureLine(label string, x float64) {
@@ -258,32 +218,4 @@ func RenderNarrative(o Options, ref, kind string, issued time.Time, title string
 // no reference and no QR code, so it can never be mistaken for, or verified as, an issued document.
 func RenderNarrativeDraft(o Options, kind string, at time.Time, title string, client Party, sections []Section, signedBy string) ([]byte, error) {
 	return renderNarrative(o, "DRAFT", kind, at, title, client, sections, signedBy, true)
-}
-
-func renderNarrative(o Options, ref, kind string, issued time.Time, title string, client Party, sections []Section, signedBy string, draft bool) ([]byte, error) {
-	d := newDocMode(o, ref, kind, issued, draft)
-	sub := ref
-	if draft {
-		sub = "Draft - not issued"
-	}
-	d.title(strings.ToUpper(kind), sub)
-	d.kv("Date", date(issued))
-	d.kv("Subject", title)
-	d.pdf.Ln(2)
-	d.party("Prepared for", client)
-	for _, s := range sections {
-		d.pdf.Ln(2)
-		if strings.TrimSpace(s.Heading) != "" {
-			d.pdf.SetFont("Helvetica", "B", 11)
-			d.pdf.CellFormat(0, 7, d.tr(s.Heading), "", 1, "L", false, 0, "")
-		}
-		d.pdf.SetFont("Helvetica", "", 10)
-		d.pdf.MultiCell(0, 5, d.tr(s.Body), "", "L", false)
-	}
-	if strings.TrimSpace(signedBy) != "" {
-		d.pdf.Ln(10)
-		d.pdf.SetFont("Helvetica", "", 10)
-		d.pdf.CellFormat(0, 5, d.tr("For HEKATE SYSTEMS SARL: "+signedBy), "", 1, "L", false, 0, "")
-	}
-	return d.bytes()
 }

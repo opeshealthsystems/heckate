@@ -6,8 +6,29 @@ Every form and template in the approved HEKATE pack, with its official name, the
 
 * **The approved originals are shown untouched.** `web/public/forms/<code>.pdf` are the pack's signed PDFs byte for byte; each file's SHA-256 equals the value in the register (checked when this list was generated). The Documents screen previews them blank, so people see the approved layout before filling anything in.
 * **Filling in** produces a draft text document in HEKATE's brand frame (title, client, sections, signature line). A draft can be previewed as it will print, marked DRAFT PREVIEW - NOT ISSUED - NOT VALID, with no reference and no QR code. Issuing gives it its reference, freezes it and files it in the register.
-* **The platform's printed layout is not yet a pixel copy of the pack's form.** The platform draws its own brand-framed version from the entered fields; copying each pack form's exact boxes and bilingual labels is still open (see `BLOCKERS.md`).
+* **Printed layout follows the pack where it can be done programmatically.** The platform draws, with fixed measurements and no clock, the pack's title block (English and French title, `FORM / FORMULAIRE code - VERSION - date`), bilingual field cells, numbered or lettered section bars, tables with English-over-French headers, check boxes, the bilingual clause panels and the "Name / Nom, Date, Signature & stamp / Signature et cachet" signature blocks. It is a faithful re-drawing, not the pack's artwork: fonts are the PDF core fonts, the pack's watermark and footer line are not copied, and the footer keeps the platform's own reference and verification line (the pack's "Digitally signed" wording is not printed, because issued PDFs are not PAdES-signed). Status per form is in the next section.
+* **How entered text is placed.** A narrative has free titled sections. Those whose heading equals a pack section heading (English or French, number prefix ignored) go into that pack box, in pack order; the rest print afterwards under "Additional sections / Sections complémentaires", never dropped. Pack boxes nobody filled print empty. Blank stays blank: unknown fields (address, NIU, telephone, bank details, staff number ...) are left empty, check boxes are ticked only when the entered text names the option, and fee tables carry no figures unless entered.
+* **Pack wording is copied verbatim** where the pack prints a fixed clause (quotation, invoice and purchase-order terms, the asset declaration, the proposal "About" and "Why HEKATE" text, the order-confirmation and acceptance clauses). These are the company's approved texts, but they state commercial terms (50 % / 50 % payment, 30 days, BEAC rate plus 5 points): confirm they still apply.
 * Classification is printed in the banner of every page and follows the pack's register.
+
+## Printed layout status
+
+Layout-faithful (header cells, section order, bilingual labels, box structure, signature blocks as in the pack; text of the entered fields only):
+
+| Form | Notes |
+| --- | --- |
+| HS-QT Quotation | Document block, A client, B quoted services (7 rows minimum), totals, amount in words (French, computed), C terms, client acceptance boxes. Unit, discount, client ref., address, contact, NIU, telephone are blank (not held). The TVA 17.5 % / CAC labels print the rate only when the amount matches it. |
+| HS-INV Invoice | Same blocks plus C payment (bank block blank) and issuer signature. Still shows nothing that changes after issue. |
+| HS-PO Purchase order | Supplier block, items, net total only (tax lines and words blank), delivery and terms cells blank, three signature blocks. |
+| HS-FRM-38 Asset issue and return | Employee block, asset table, security set-up check boxes (unticked), declaration, three signature blocks. Asset tag, staff no., department, condition, return date are blank (not recorded). |
+| HS-FRM-27 Site visit acceptance | Title, PV no., project, client, acceptance decision boxes, reservations table, clause, client and HEKATE signature blocks (client signature image kept). Deviation: section 1 is headed "Work carried out / Travaux réalisés" with engineer, arrival, completion and report, because a visit records work, not a deliverables list; decision boxes stay unticked because only a signature is recorded. |
+| HS-PR Proposal, HS-SOW Statement of work, HS-OC Order confirmation | All sections in pack order with the pack's blank tables (phases, team, schedule, fees, deliverables, milestones ...). Text entered under a matching heading goes in the box; a table filled in as text replaces the blank grid. |
+| HS-FRM-23 Change request | Priority and decision boxes (ticked from entered text), requested change, impact assessment, two signature blocks. |
+| HS-FRM-14 Incident report | Organisation block, type, severity, personal data and notified check boxes, description and actions boxes, reporter signature, "For HEKATE use only" block (blank). |
+
+Frame only (pack title block and header cells, then each entered section as a numbered bar; the pack's own boxes for that form are not reproduced): HS-FRM-06, 07, 08, 09, 10, 11, 12, 13, 15, 24, 26, 31, 32, 33, 37, 39, 41.
+
+Not changed (still the platform's plain brand-framed layout): HS-CN credit note, HS-RCT receipt, HS-RPT penetration test report, payslips, RFQ, letters, certificates (`HS-CRT-A`, the pack has no certificate PDF to follow), guarantee policies, contracts, HS-FRM-30 (no printable form), HS-FRM-35 and HS-FRM-36 (not printed by the platform), and the generated reports.
 
 ## Forms and templates
 
