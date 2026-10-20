@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { api, fetchFile, raw } from "@/lib/api";
 import { FORMS } from "@/lib/forms-library";
 import { FILLABLE, formPreview, type Narrative } from "@/lib/doc-library";
+import { withPackHeadings } from "@/lib/pack-sections";
 import type { Client } from "@/lib/types";
 import { DocumentPreview, type PreviewSource } from "@/components/DocumentPreview";
 import { Err, Field, useAction } from "@/components/ui";
@@ -22,7 +23,8 @@ function Fill() {
   const [clients, setClients] = useState<Client[]>([]);
   const [tenant, setTenant] = useState("");
   const [title, setTitle] = useState(entry?.title ?? "");
-  const [secs, setSecs] = useState<Sec[]>([{ heading: "", body: "" }]);
+  // A new document starts from the pack form's own headings, so text typed under one prints in that box of the form.
+  const [secs, setSecs] = useState<Sec[]>(() => withPackHeadings(code, []));
   const [signed, setSigned] = useState("");
   const [saved, setSaved] = useState<Narrative | null>(null);
   const [preview, setPreview] = useState<PreviewSource | null>(null);
@@ -34,7 +36,7 @@ function Fill() {
     if (!editId) return;
     raw.get<Narrative & { sections: Sec[]; signed_by: string | null }>(`/v1/narratives/${editId}`).then((n) => {
       const key = Object.entries(FILLABLE).find(([, h]) => h.kind === n.kind && (h.form ? `HS-${h.form}` === `HS-${n.form_code}` : true))?.[0] ?? "";
-      setCode(key); setSaved(n); setTenant(n.tenant_id); setTitle(n.title); setSecs(n.sections.length ? n.sections : [{ heading: "", body: "" }]); setSigned(n.signed_by ?? "");
+      setCode(key); setSaved(n); setTenant(n.tenant_id); setTitle(n.title); setSecs(withPackHeadings(key, n.sections)); setSigned(n.signed_by ?? "");
     }).catch((e) => setLoadErr(e.message));
   }, [editId]);
   const act = useAction();
@@ -44,6 +46,7 @@ function Fill() {
   if (!entry || !how) {
     return (<><h1>Fill in a document</h1><p className="error">That form is not one the platform fills in. <Link href="/documents">Back to the library</Link></p></>);
   }
+  const hasText = secs.some((s) => s.body.trim());
   const body = () => ({ ...(saved ? {} : { kind: how.kind, ...(how.form ? { form: how.form } : {}), tenant_id: tenant }), title, signed_by: signed, sections: secs.filter((s) => s.body.trim()), ...(note.trim() ? { note: note.trim() } : {}) });
   const save = async (): Promise<Narrative> => {
     const n = saved ? await raw.put<Narrative>(`/v1/narratives/${saved.id}`, body()) : await raw.post<Narrative>("/v1/narratives", body());
@@ -67,10 +70,11 @@ function Fill() {
         <Field id="d-title" label="Title"><input id="d-title" required maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
         <fieldset className="lines">
           <legend>Content</legend>
+          <p className="muted small">Each heading is a box of the printed form. Fill in only the ones you need: empty ones print blank and are not saved. For a table write one row per line as &ldquo;row | value | value&rdquo;; for check boxes name the options that apply. Text under a heading of your own is printed under &ldquo;Additional sections&rdquo;.</p>
           {secs.map((s, i) => (
             <div key={i} className="sec">
               <input aria-label={`Heading ${i + 1}`} placeholder="Heading (optional)" value={s.heading} onChange={(e) => setSec(i, "heading", e.target.value)} />
-              <textarea aria-label={`Text ${i + 1}`} rows={4} required={i === 0} placeholder="Text" value={s.body} onChange={(e) => setSec(i, "body", e.target.value)} />
+              <textarea aria-label={`Text ${i + 1}`} rows={4} placeholder="Text" value={s.body} onChange={(e) => setSec(i, "body", e.target.value)} />
               {secs.length > 1 && <button type="button" className="btn ghost" aria-label={`Remove section ${i + 1}`} onClick={() => setSecs(secs.filter((_, j) => j !== i))}><Icon name="close" size={16} /></button>}
             </div>
           ))}
@@ -79,11 +83,11 @@ function Fill() {
         {saved && <Field id="d-note" label="What changed, and why (kept with this version)"><input id="d-note" maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} /></Field>}
         <Field id="d-signed" label="Signed for HEKATE by (optional)"><input id="d-signed" value={signed} onChange={(e) => setSigned(e.target.value)} /></Field>
         <div className="actions">
-          <button type="button" className="btn" disabled={act.busy || !tenant || !title || !secs[0].body.trim()} onClick={() => act.run(async () => {
+          <button type="button" className="btn" disabled={act.busy || !tenant || !title || !hasText} onClick={() => act.run(async () => {
             const n = await save();
             setPreview({ title: `Draft · ${n.title}`, filename: "draft-preview.pdf", note: "Draft preview: not issued and not valid", load: () => fetchFile(`/v1/narratives/${n.id}/preview`) });
           })}><Icon name="eye" size={16} /> Preview as it will print</button>
-          <button className="btn primary" disabled={act.busy}>{saved ? "Save changes" : "Save draft"}</button>
+          <button className="btn primary" disabled={act.busy || !hasText}>{saved ? "Save changes" : "Save draft"}</button>
         </div>
         <p className="muted small">A draft can be changed. You issue it from <Link href="/documents">My documents</Link>; issuing gives it a reference and freezes it.</p>
       </form>
