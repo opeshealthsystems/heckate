@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"crypto/ed25519"
 	"fmt"
-	"image/png"
 	"strings"
 	"time"
 
@@ -291,49 +290,6 @@ func (d *doc) bytes() ([]byte, error) {
 
 func date(t time.Time) string { return t.UTC().Format("02 Jan 2006") }
 
-// RenderInvoice draws an issued invoice. It deliberately shows nothing that changes after issue
-// (payments, balance), so the file, and its recorded hash, stay valid for the invoice's whole life.
-func RenderInvoice(o Options, ref string, issued time.Time, due *time.Time, title string, bill Party, lines []Line, m Money) ([]byte, error) {
-	d := newDoc(o, ref, "Invoice", issued)
-	d.title("INVOICE / FACTURE", ref)
-	d.kv("Issued", date(issued))
-	if due != nil {
-		d.kv("Due", date(*due))
-	}
-	d.kv("Subject", title)
-	d.pdf.Ln(2)
-	d.party("Billed to", bill)
-	d.table(lines)
-	d.totals(m)
-	d.pdf.Ln(6)
-	d.pdf.SetFont("Helvetica", "", 8.5)
-	d.pdf.MultiCell(0, 4.2, d.tr("Amounts are in CFA francs (XAF). TVA and CAC as shown. Verify this invoice by scanning the QR code or entering its reference on the HEKATE verification page."), "", "L", false)
-	return d.bytes()
-}
-
-// RenderQuote draws a quotation as sent to the client.
-func RenderQuote(o Options, ref string, sent time.Time, validUntil *time.Time, title string, client Party, lines []Line, m Money, notes string) ([]byte, error) {
-	d := newDoc(o, ref, "Quotation", sent)
-	d.title("QUOTATION / DEVIS", ref)
-	d.kv("Date", date(sent))
-	if validUntil != nil {
-		d.kv("Valid until", date(*validUntil))
-	}
-	d.kv("Subject", title)
-	d.pdf.Ln(2)
-	d.party("Prepared for", client)
-	d.table(lines)
-	d.totals(m)
-	if strings.TrimSpace(notes) != "" {
-		d.pdf.Ln(6)
-		d.pdf.SetFont("Helvetica", "B", 9.5)
-		d.pdf.CellFormat(0, 6, d.tr("Notes"), "", 1, "L", false, 0, "")
-		d.pdf.SetFont("Helvetica", "", 9)
-		d.pdf.MultiCell(0, 4.5, d.tr(notes), "", "L", false)
-	}
-	return d.bytes()
-}
-
 // Visit is the content of a completed site visit.
 type Visit struct {
 	Engineer          string
@@ -343,44 +299,4 @@ type Visit struct {
 	Report            string
 	SignedBy          string
 	Signature         []byte // PNG; ignored if it does not decode
-}
-
-// RenderVisit draws the acceptance document for a completed site visit.
-func RenderVisit(o Options, ref string, client Party, v Visit) ([]byte, error) {
-	d := newDoc(o, ref, "Intervention report and acceptance", v.CheckOut)
-	d.title("INTERVENTION REPORT AND ACCEPTANCE", ref)
-	d.kv("Client", client.Name)
-	d.kv("Engineer", v.Engineer)
-	if v.Summary != "" {
-		d.kv("Purpose", v.Summary)
-	}
-	d.kv("Arrived", v.CheckIn.UTC().Format("02 Jan 2006 15:04 UTC")+"  ("+v.InPos+")")
-	d.kv("Completed", v.CheckOut.UTC().Format("02 Jan 2006 15:04 UTC")+"  ("+v.OutPos+")")
-	d.pdf.Ln(3)
-	d.pdf.SetFont("Helvetica", "B", 10)
-	d.pdf.CellFormat(0, 6, d.tr("Work carried out"), "", 1, "L", false, 0, "")
-	d.pdf.SetFont("Helvetica", "", 9.5)
-	d.pdf.MultiCell(0, 5, d.tr(v.Report), "", "L", false)
-	d.pdf.Ln(6)
-	if v.SignedBy != "" {
-		d.pdf.SetFont("Helvetica", "B", 10)
-		d.pdf.CellFormat(0, 6, d.tr("Accepted by the client"), "", 1, "L", false, 0, "")
-		if d.pdf.GetY() > 297-22-50 {
-			d.pdf.AddPage()
-		}
-		if _, err := png.DecodeConfig(bytes.NewReader(v.Signature)); err == nil && len(v.Signature) > 0 {
-			d.pdf.RegisterImageOptionsReader("sig", fpdf.ImageOptions{ImageType: "PNG"}, bytes.NewReader(v.Signature))
-			d.pdf.ImageOptions("sig", 15, d.pdf.GetY()+1, 60, 0, false, fpdf.ImageOptions{ImageType: "PNG"}, 0, "")
-			d.pdf.Ln(34)
-		} else {
-			d.pdf.SetFont("Helvetica", "I", 9)
-			d.pdf.CellFormat(0, 6, d.tr("(signature image unavailable)"), "", 1, "L", false, 0, "")
-		}
-		d.pdf.SetFont("Helvetica", "", 9.5)
-		d.pdf.CellFormat(0, 5, d.tr(v.SignedBy), "", 1, "L", false, 0, "")
-	} else {
-		d.pdf.SetFont("Helvetica", "I", 9)
-		d.pdf.CellFormat(0, 6, d.tr("Completed without a client signature."), "", 1, "L", false, 0, "")
-	}
-	return d.bytes()
 }
