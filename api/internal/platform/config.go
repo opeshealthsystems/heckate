@@ -34,8 +34,12 @@ type Config struct {
 	PaymentsWebhookSecret string // HEKATE_PAYMENTS_WEBHOOK_SECRET: signs provider callbacks (HMAC-SHA256); callbacks are refused without it
 	PaymentsSandbox       bool   // HEKATE_PAYMENTS_SANDBOX=1: a fake provider that never moves money. Development only.
 	QRSigningKeyFile      string // HEKATE_QR_SIGNING_KEY_FILE: unencrypted PKCS#8 Ed25519 key in PEM form, from the secret store; empty prints plain /verify?ref= codes
-	MoMo                  MoMoConfig
-	Orange                OrangeConfig
+	// PDF signing (PAdES): PEM certificate (leaf first, then any intermediates) and unencrypted private key, both from
+	// the secret store. Both empty leaves PDFs unsigned, exactly as before; one without the other is refused in production.
+	PDFSigningCertFile string // HEKATE_PDF_SIGNING_CERT_FILE
+	PDFSigningKeyFile  string // HEKATE_PDF_SIGNING_KEY_FILE
+	MoMo               MoMoConfig
+	Orange             OrangeConfig
 }
 
 // MoMoConfig is the MTN Mobile Money Collection API account (all empty: MoMo is off).
@@ -93,6 +97,8 @@ func LoadConfig() Config {
 		PaymentsWebhookSecret: os.Getenv("HEKATE_PAYMENTS_WEBHOOK_SECRET"),
 		PaymentsSandbox:       os.Getenv("HEKATE_PAYMENTS_SANDBOX") == "1",
 		QRSigningKeyFile:      os.Getenv("HEKATE_QR_SIGNING_KEY_FILE"),
+		PDFSigningCertFile:    os.Getenv("HEKATE_PDF_SIGNING_CERT_FILE"),
+		PDFSigningKeyFile:     os.Getenv("HEKATE_PDF_SIGNING_KEY_FILE"),
 		MoMo: MoMoConfig{
 			BaseURL: os.Getenv("HEKATE_MOMO_BASE_URL"), SubscriptionKey: os.Getenv("HEKATE_MOMO_SUBSCRIPTION_KEY"),
 			APIUser: os.Getenv("HEKATE_MOMO_API_USER"), APIKey: os.Getenv("HEKATE_MOMO_API_KEY"),
@@ -173,6 +179,9 @@ func (c Config) Problems() []string {
 	}
 	if strings.Contains(c.DatabaseURL, "sslmode=disable") {
 		p = append(p, "HEKATE_DATABASE_URL has sslmode=disable: database traffic must be encrypted")
+	}
+	if (c.PDFSigningCertFile == "") != (c.PDFSigningKeyFile == "") {
+		p = append(p, "HEKATE_PDF_SIGNING_CERT_FILE and HEKATE_PDF_SIGNING_KEY_FILE must be set together: half a signing pair would silently leave documents unsigned or fail at the first PDF")
 	}
 	if strings.Contains(c.CORSOrigins, "*") {
 		p = append(p, "HEKATE_CORS_ORIGINS must list exact origins, not *")

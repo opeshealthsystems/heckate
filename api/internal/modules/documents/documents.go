@@ -11,10 +11,12 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/opeshealthsystems/heckate/api/internal/docs"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 )
 
@@ -188,6 +190,12 @@ func Lookup(ctx context.Context, s *platform.Scope, ref string) (*Document, erro
 	return scan(s.Tx.QueryRow(ctx, `SELECT `+cols+` FROM documents.register WHERE ref=$1`, ref))
 }
 
+var pdfSigner atomic.Pointer[docs.PDFSigner]
+
+// SetPDFSigner turns PDF signing on for originals rendered from now on; nil turns it off. Originals already
+// stored are never re-signed: one reference stays one file.
+func SetPDFSigner(s *docs.PDFSigner) { pdfSigner.Store(s) }
+
 // ServePDF returns the canonical PDF for a document the caller has already been authorised to see.
 // The first rendering is stored with its hash (and the hash goes into the public register); every
 // later request gets exactly those bytes, so one reference always means one file.
@@ -200,6 +208,17 @@ func ServePDF(ctx context.Context, s *platform.Scope, ref string, render func() 
 		fresh, err := render()
 		if err != nil {
 			return nil, err
+		}
+		if ps := pdfSigner.Load(); ps != nil {
+			// Sign before hashing so the register, the stored original and every download are the same signed bytes.
+			// The signing time is the register's issue time, not the clock, so the signature is reproducible.
+			d, err := Lookup(ctx, s, ref)
+			if err != nil {
+				return nil, err
+			}
+			if fresh, err = ps.SignPDF(fresh, d.IssuedAt); err != nil {
+				return nil, fmt.Errorf("sign %s: %w", ref, err) // never store or serve an unsigned original while signing is on
+			}
 		}
 		sum := sha256.Sum256(fresh)
 		if err := s.Tx.QueryRow(ctx, `SELECT documents.put_artifact($1,$2,$3)`, ref, hex.EncodeToString(sum[:]), fresh).Scan(&stored); err != nil {

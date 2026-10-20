@@ -60,6 +60,10 @@ func main() {
 		slog.Warn("HEKATE_QR_SIGNING_KEY_FILE is not set: document QR codes are plain, unsigned verification links")
 	}
 
+	if cfg.Production() && cfg.PDFSigningCertFile == "" {
+		slog.Warn("HEKATE_PDF_SIGNING_CERT_FILE is not set: issued PDFs are hash-registered and QR-verifiable but not cryptographically signed")
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

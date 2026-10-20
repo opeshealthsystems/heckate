@@ -46,16 +46,18 @@ func TestProductionRefusesUnsafeConfiguration(t *testing.T) {
 		t.Fatalf("a sound production configuration was refused: %v", p)
 	}
 	for name, mod := range map[string]func(*Config){
-		"dev secret":     func(c *Config) { c.DevSecret = "x" },
-		"no jwks":        func(c *Config) { c.JWKSURL = "" },
-		"no issuer":      func(c *Config) { c.Issuer = "" },
-		"no audience":    func(c *Config) { c.Audience = "" },
-		"sandbox pay":    func(c *Config) { c.PaymentsSandbox = true },
-		"plain database": func(c *Config) { c.DatabaseURL = "postgres://u@db/h?sslmode=disable" },
-		"wildcard cors":  func(c *Config) { c.CORSOrigins = "*" },
-		"local portal":   func(c *Config) { c.PortalURL = "http://localhost:3000" },
-		"typo in env":    func(c *Config) { c.Env = "prod" },
-		"bad proxy cidr": func(c *Config) { c.TrustedProxies = []string{"nope"} },
+		"dev secret":       func(c *Config) { c.DevSecret = "x" },
+		"no jwks":          func(c *Config) { c.JWKSURL = "" },
+		"no issuer":        func(c *Config) { c.Issuer = "" },
+		"no audience":      func(c *Config) { c.Audience = "" },
+		"sandbox pay":      func(c *Config) { c.PaymentsSandbox = true },
+		"plain database":   func(c *Config) { c.DatabaseURL = "postgres://u@db/h?sslmode=disable" },
+		"wildcard cors":    func(c *Config) { c.CORSOrigins = "*" },
+		"local portal":     func(c *Config) { c.PortalURL = "http://localhost:3000" },
+		"typo in env":      func(c *Config) { c.Env = "prod" },
+		"cert without key": func(c *Config) { c.PDFSigningCertFile = "/run/secrets/c.pem" },
+		"key without cert": func(c *Config) { c.PDFSigningKeyFile = "/run/secrets/k.pem" },
+		"bad proxy cidr":   func(c *Config) { c.TrustedProxies = []string{"nope"} },
 	} {
 		c := good
 		mod(&c)
