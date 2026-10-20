@@ -3932,6 +3932,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/labour-rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hourly labour cost rates per employee, XAF (CEO, manager, finance) */
+        get: operations["listLabourRates"];
+        /** Set an employee's hourly cost rate from a date; no rate means unpriced (CEO, manager, finance) */
+        put: operations["setLabourRate"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{id}/milestones": {
         parameters: {
             query?: never;
@@ -11005,6 +11023,60 @@ export interface operations {
         responses: {
             /** @description Success */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Object"];
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    listLabourRates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Object"][];
+                    };
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    setLabourRate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    actor: string;
+                    /** Format: date */
+                    effective_from: string;
+                    /** @description XAF per hour */
+                    rate: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Set */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

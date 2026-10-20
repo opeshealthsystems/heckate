@@ -1,11 +1,13 @@
 package projects
 
 import (
+	"context"
 	"math"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/opeshealthsystems/heckate/api/internal/platform"
 )
 
@@ -19,6 +21,8 @@ func registerProgress(a *platform.App) {
 	a.Route("POST /v1/milestones/{id}/done", append([]string{"engineer"}, managers...), platform.Idempotent(completeMilestone))
 	a.Route("POST /v1/projects/{id}/costs", costers, platform.Idempotent(addCost))
 	a.Route("DELETE /v1/costs/{id}", costers, deleteCost)
+	a.Route("GET /v1/labour-rates", costers, listRates)
+	a.Route("PUT /v1/labour-rates", costers, setRate)
 }
 
 type Milestone struct {
@@ -68,10 +72,36 @@ type Progress struct {
 	Behind         bool        `json:"behind_schedule"`
 	Budget         *int64      `json:"budget,omitempty"`
 	Actual         *int64      `json:"actual,omitempty"`
+	Labour         *Labour     `json:"labour,omitempty"`
 	Remaining      *int64      `json:"remaining,omitempty"`
 	OverBudget     *bool       `json:"over_budget,omitempty"`
 	Milestones     []Milestone `json:"milestones"`
 	Costs          *[]Cost     `json:"costs,omitempty"`
+}
+
+// Labour is approved timesheet time priced at the employee's rate effective on the work date. Hours with no rate
+// are reported, never priced.
+type Labour struct {
+	Cost          int64   `json:"cost"`
+	PricedHours   float64 `json:"priced_hours"`
+	UnpricedHours float64 `json:"unpriced_hours"`
+}
+
+// labourSQL prices the approved timesheet hours of the project matching `where`. Columns: priced cost (numeric),
+// priced hours, unpriced hours.
+const labourSQL = `SELECT COALESCE(sum(t.hours * r.rate) FILTER (WHERE r.rate IS NOT NULL),0),
+	COALESCE(sum(t.hours) FILTER (WHERE r.rate IS NOT NULL),0)::float8,
+	COALESCE(sum(t.hours) FILTER (WHERE r.rate IS NULL),0)::float8
+	FROM projects.timesheets t
+	LEFT JOIN LATERAL (SELECT lr.rate FROM projects.labour_rates lr WHERE lr.actor=t.actor AND lr.effective_from<=t.work_date ORDER BY lr.effective_from DESC LIMIT 1) r ON true
+	WHERE t.status='approved' AND t.project_id=`
+
+func labourFor(ctx context.Context, tx pgx.Tx, project string) (Labour, error) {
+	var l Labour
+	var cost float64
+	err := tx.QueryRow(ctx, `SELECT round(c)::float8, h, u FROM (`+labourSQL+`$1::uuid) x(c,h,u)`, project).Scan(&cost, &l.PricedHours, &l.UnpricedHours)
+	l.Cost = int64(math.Round(cost))
+	return l, err
 }
 
 func elapsed(start, end *time.Time, now time.Time) *int {
@@ -140,7 +170,12 @@ func progress(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 			costs = append(costs, c)
 		}
 		rows.Close()
-		out.Costs, out.Actual, out.Budget = &costs, &actual, p.Budget
+		lab, err := labourFor(ctx, s.Tx, p.ID)
+		if err != nil {
+			return nil, err
+		}
+		actual += lab.Cost
+		out.Costs, out.Actual, out.Budget, out.Labour = &costs, &actual, p.Budget, &lab
 		if p.Budget != nil {
 			rem, over := *p.Budget-actual, actual > *p.Budget
 			out.Remaining, out.OverBudget = &rem, &over
@@ -160,6 +195,9 @@ func portfolio(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		(SELECT count(*) FROM projects.milestones m WHERE m.project_id=p.id),
 		(SELECT count(*) FROM projects.milestones m WHERE m.project_id=p.id AND m.status='pending' AND m.due_date < current_date),
 		(SELECT COALESCE(sum(amount),0) FROM projects.costs c WHERE c.project_id=p.id)
+		+ (SELECT round(COALESCE(sum(t.hours * r.rate),0))::bigint FROM projects.timesheets t
+			JOIN LATERAL (SELECT lr.rate FROM projects.labour_rates lr WHERE lr.actor=t.actor AND lr.effective_from<=t.work_date ORDER BY lr.effective_from DESC LIMIT 1) r ON true
+			WHERE t.status='approved' AND t.project_id=p.id)
 		FROM projects.projects p WHERE true`+tc+` ORDER BY p.created_at DESC LIMIT 200`, ta...)
 	if err != nil {
 		return nil, err
@@ -274,6 +312,62 @@ func addCost(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		return nil, err
 	}
 	return &platform.Result{Status: http.StatusCreated, Body: c}, nil
+}
+
+type Rate struct {
+	Actor         string    `json:"actor"`
+	EffectiveFrom time.Time `json:"effective_from"`
+	Rate          int64     `json:"rate"`
+	SetBy         string    `json:"set_by"`
+}
+
+func listRates(r *http.Request, s *platform.Scope) (*platform.Result, error) {
+	rows, err := s.Tx.Query(r.Context(), `SELECT actor, effective_from, rate, set_by FROM projects.labour_rates ORDER BY actor, effective_from DESC LIMIT 2000`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Rate{}
+	for rows.Next() {
+		var x Rate
+		if err := rows.Scan(&x.Actor, &x.EffectiveFrom, &x.Rate, &x.SetBy); err != nil {
+			return nil, err
+		}
+		out = append(out, x)
+	}
+	return &platform.Result{Status: http.StatusOK, Body: map[string]any{"data": out}}, rows.Err()
+}
+
+// setRate records an hourly cost rate from a date. Setting the same date again corrects it; earlier dates keep
+// their own rate, so past projects are not repriced.
+func setRate(r *http.Request, s *platform.Scope) (*platform.Result, error) {
+	var in struct {
+		Actor         string `json:"actor"`
+		EffectiveFrom string `json:"effective_from"`
+		Rate          int64  `json:"rate"`
+	}
+	if err := platform.DecodeBody(r, &in); err != nil {
+		return nil, err
+	}
+	in.Actor = strings.TrimSpace(in.Actor)
+	if in.Actor == "" || in.Rate <= 0 {
+		return nil, platform.Err(http.StatusUnprocessableEntity, "Invalid rate", "actor and a positive rate (XAF per hour) are required")
+	}
+	d, err := time.Parse("2006-01-02", in.EffectiveFrom)
+	if err != nil {
+		return nil, platform.Err(http.StatusUnprocessableEntity, "Invalid rate", "effective_from must be YYYY-MM-DD")
+	}
+	var x Rate
+	err = s.Tx.QueryRow(r.Context(), `INSERT INTO projects.labour_rates (actor, effective_from, rate, set_by) VALUES ($1,$2,$3,$4)
+		ON CONFLICT (actor, effective_from) DO UPDATE SET rate=EXCLUDED.rate, set_by=EXCLUDED.set_by
+		RETURNING actor, effective_from, rate, set_by`, in.Actor, d, in.Rate, s.Claims.Sub).Scan(&x.Actor, &x.EffectiveFrom, &x.Rate, &x.SetBy)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Audit(r.Context(), "set", "labour_rate", in.Actor+"@"+in.EffectiveFrom); err != nil {
+		return nil, err
+	}
+	return &platform.Result{Status: http.StatusOK, Body: x}, nil
 }
 
 func deleteCost(r *http.Request, s *platform.Scope) (*platform.Result, error) {

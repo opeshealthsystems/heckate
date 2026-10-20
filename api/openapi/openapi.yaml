@@ -4119,6 +4119,41 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Object" }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/labour-rates:
+    get:
+      operationId: listLabourRates
+      summary: "Hourly labour cost rates per employee, XAF (CEO, manager, finance)"
+      responses:
+        "200":
+          description: Rates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Object" } }
+        "4XX": { $ref: "#/components/responses/Problem" }
+    put:
+      operationId: setLabourRate
+      summary: "Set an employee's hourly cost rate from a date; no rate means unpriced (CEO, manager, finance)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actor, effective_from, rate]
+              properties:
+                actor: { type: string }
+                effective_from: { type: string, format: date }
+                rate: { type: integer, description: XAF per hour }
+      responses:
+        "200":
+          description: Set
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Object" }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/projects/{id}/milestones:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string } }

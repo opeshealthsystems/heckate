@@ -12,6 +12,7 @@ interface Rule { code: string; label: string; party: "employee" | "employer"; ra
 interface Config { abatement_bp: number; personal_deduction: number; cac_bp: number; rules: Rule[]; brackets: { upto: number | null; rate_bp: number }[] }
 interface CfgView { config: Config; edited_by: string; edited_at: string; validated_by: string | null; validated_at: string | null }
 interface Comp { employee_id: string; full_name: string; effective_from: string; base_salary: number; allowances: number }
+interface LRate { actor: string; effective_from: string; rate: number; set_by: string }
 interface Emp { id: string; actor: string; full_name: string }
 
 const pct = (bp: number) => `${(bp / 100).toFixed(2).replace(/\.?0+$/, "")}%`;
@@ -31,6 +32,10 @@ export default function Payroll() {
   const [emps, setEmps] = useState<Emp[]>([]);
   const [period, setPeriod] = useState(new Date().toISOString().slice(0, 7));
   const [cf, setCf] = useState({ employee_id: "", effective_from: new Date().toISOString().slice(0, 10), base_salary: "", allowances: "0" });
+  const canRate = has("finance", "manager", "ceo");
+  const [rates, setRates] = useState<LRate[]>([]);
+  const [rf, setRf] = useState({ actor: "", effective_from: new Date().toISOString().slice(0, 10), rate: "" });
+  const loadRates = useCallback(() => raw.get<{ data: LRate[] }>("/v1/labour-rates").then((x) => setRates(x.data)).catch(() => {}), []);
   const load = useCallback(async () => {
     const [r, c] = await Promise.all([raw.get<{ data: Run[] }>("/v1/payroll/runs"), raw.get<CfgView>("/v1/payroll/config")]);
     setRuns(r.data);
@@ -41,12 +46,12 @@ export default function Payroll() {
     setOpen((o) => (o ? runs.find((x) => x.id === o.id) ?? o : o));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  useEffect(() => { void load().catch(() => {}); }, [load]);
-  const act = useAction(load);
+  useEffect(() => { void load().catch(() => {}); if (canRate) void loadRates(); }, [load, loadRates, canRate]);
+  const act = useAction(async () => { await load(); if (canRate) await loadRates(); });
   const show = (id: string) => act.run(async () => setOpen(await raw.get<Run>(`/v1/payroll/runs/${id}`)));
   const step = (id: string, what: "approve" | "pay") => act.run(async () => { setOpen(await raw.post<Run>(`/v1/payroll/runs/${id}/${what}`)); });
   const validated = !!cfg?.validated_by;
-  const tabs = ["Runs", "Rules", ...(has("hr", "finance", "ceo") ? ["Salaries"] : [])];
+  const tabs = ["Runs", "Rules", ...(has("hr", "finance", "ceo") ? ["Salaries"] : []), ...(canRate ? ["Labour rates"] : [])];
   return (
     <>
       <h1>Payroll</h1>
@@ -55,6 +60,23 @@ export default function Payroll() {
         <p className="notice" role="status">The payroll rules have not been validated. No run can be prepared until someone other than the editor checks them under Rules.</p>
       )}
       <Tabs tabs={tabs} value={tab} onChange={setTab} />
+      {tab === "Labour rates" && canRate && (
+        <>
+          <p className="small">Hourly cost of an employee&apos;s time (XAF per hour), from a date. Approved timesheet hours on a project are priced at the rate in force on the work date. There is no default: an employee with no rate is reported as unpriced.</p>
+          <Table head={["Employee", "From", "Rate per hour", "Set by"]} empty={rates.length ? undefined : "No rates set. Approved hours stay unpriced."}>
+            {rates.map((x) => <tr key={x.actor + x.effective_from}><td>{x.actor}</td><td>{day(x.effective_from)}</td><td className="num">{xaf(x.rate)}</td><td>{x.set_by}</td></tr>)}
+          </Table>
+          <form className="card form" onSubmit={(e) => { e.preventDefault(); void act.run(async () => { await raw.put("/v1/labour-rates", { actor: rf.actor.trim(), effective_from: rf.effective_from, rate: Math.round(Number(rf.rate)) }); setRf({ ...rf, rate: "" }); }); }}>
+            <Field id="lr-actor" label="Employee (sign-in name)"><input id="lr-actor" list="lr-emps" required value={rf.actor} onChange={(e) => setRf({ ...rf, actor: e.target.value })} /></Field>
+            <datalist id="lr-emps">{emps.map((x) => <option key={x.id} value={x.actor}>{x.full_name}</option>)}</datalist>
+            <div className="grid2">
+              <Field id="lr-from" label="Effective from"><input id="lr-from" type="date" required value={rf.effective_from} onChange={(e) => setRf({ ...rf, effective_from: e.target.value })} /></Field>
+              <Field id="lr-rate" label="Rate (XAF per hour)"><input id="lr-rate" type="number" min="1" step="1" required value={rf.rate} onChange={(e) => setRf({ ...rf, rate: e.target.value })} /></Field>
+            </div>
+            <button className="btn primary" disabled={act.busy}>Set rate</button>
+          </form>
+        </>
+      )}
       {tab === "Runs" && (
         <>
           <Table head={["Month", "Status", "Gross", "Net", "Employer cost", "Prepared by", ""]} empty={runs.length ? undefined : "No payroll runs yet."}>

@@ -3,13 +3,14 @@ import { useCallback, useEffect, useState } from "react";
 import { raw } from "@/lib/api";
 import { useMe } from "@/lib/session";
 import { day, xaf } from "@/lib/format";
+import { unpricedNote } from "@/lib/labour";
 import { Err, Field, Pill, Table, useAction } from "./ui";
 
 interface Milestone { id: string; title: string; due_date: string | null; status: string; late: boolean }
 interface Cost { id: string; cost_date: string; category: string; description: string; amount: number }
 export interface Progress {
   percent: number; tasks_done: number; tasks_total: number; milestones_done: number; milestones_total: number; late_milestones: number; behind_schedule: boolean;
-  time_elapsed_percent: number | null; budget?: number | null; actual?: number; remaining?: number | null; over_budget?: boolean; milestones: Milestone[]; costs?: Cost[];
+  time_elapsed_percent: number | null; budget?: number | null; actual?: number; labour?: { cost: number; priced_hours: number; unpriced_hours: number }; remaining?: number | null; over_budget?: boolean; milestones: Milestone[]; costs?: Cost[];
 }
 
 export function ProgressBar({ percent, label }: { percent: number; label?: string }) {
@@ -44,6 +45,9 @@ export function ProjectProgress({ id }: { id: string }) {
         <ProgressBar percent={p.percent} label="Project progress" />
         {p.budget != null && p.actual != null && (
           <p className="small">Budget {xaf(p.budget)} · spent {xaf(p.actual)} · {p.over_budget ? <strong className="tl bad">over budget by {xaf(-(p.remaining ?? 0))}</strong> : <>{xaf(p.remaining ?? 0)} left</>}</p>
+        )}
+        {p.labour && (
+          <p className="small">Labour from timesheets {xaf(p.labour.cost)} ({p.labour.priced_hours} priced hours, included in spent){p.labour.unpriced_hours > 0 && <> · <strong className="tl bad">{unpricedNote(p.labour.unpriced_hours)}</strong></>}</p>
         )}
         {p.budget != null && p.actual != null && p.budget > 0 && <ProgressBar percent={Math.min(100, Math.round((p.actual * 100) / p.budget))} label="Budget used" />}
       </div>
