@@ -28,8 +28,8 @@ async function login(tok, w = 1280) {
 
 // client reports a P1
 const c = await login(client);
-await c.waitForSelector("text=Your support");
-await c.click("text=Report an incident");
+await c.waitForSelector("h1:has-text('Overview')");
+await c.click("text=Report incident");
 await c.selectOption("#sev", "P1");
 await c.fill("#subject", "Core switch is down");
 await c.fill("#desc", "Whole site offline");
@@ -69,19 +69,21 @@ ok(true, "client confirmed and rated");
 // staff dashboard shows the report
 await s.goto("http://localhost:3000/dashboard");
 await s.waitForSelector("text=Avg rating");
-ok((await s.locator(".stat", { hasText: "Avg rating" }).innerText()).includes("4.0"), "dashboard avg rating 4.0");
+ok((await s.locator(".kpi", { hasText: "Avg rating" }).innerText()).includes("4.0"), "dashboard avg rating 4.0");
 
 // client cannot reach staff pages' data
 await c.goto("http://localhost:3000/clients");
-await c.waitForSelector("text=Your role cannot perform this action");
+await c.waitForSelector("text=Your role does not have access to this page");
 ok(true, "client blocked from clients list");
 
+// (certificate references end in a check character, so a tampered one is rejected as malformed)
 // public enquiry -> lead appears for sales; document issue -> public verify
 await s.request.post("http://localhost:8080/v1/public/enquiries", { data: { name: "Visitor", email: "v@example.com", message: "Need a pentest" } });
 await s.goto("http://localhost:3000/leads");
 await s.waitForSelector("text=Need a pentest");
 ok(true, "website enquiry reached CRM");
 await s.goto("http://localhost:3000/documents");
+await s.click("role=tab[name=\"Issue a reference\"]");
 await s.fill("#c", "CRT-A"); await s.fill("#t", "Certificate of Assessment");
 await s.click("text=Issue reference");
 const ref = await s.locator(".thread li strong").first().innerText();
@@ -92,7 +94,7 @@ await pub.click("button:has-text('Verify')");
 await pub.waitForSelector("text=Authentic HEKATE document");
 await pub.fill("#ref", ref.slice(0, -1) + (ref.endsWith("A") ? "B" : "A"));
 await pub.click("button:has-text('Verify')");
-await pub.waitForSelector("text=Not a valid HEKATE document");
+await pub.waitForSelector("text=Not a valid reference");
 ok(true, "public verify accepts real ref and rejects tampered ref");
 
 // mobile viewport: menu collapses, no horizontal page scroll

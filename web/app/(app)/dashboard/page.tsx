@@ -119,6 +119,7 @@ export default function Dashboard() {
           {(reviewer || approver) && <Kpi label="Approvals waiting" value={approvals.length} />}
           {timeUser && <Kpi label="Hours this week" value={hours.toFixed(1)} />}
           {report && <Kpi label="Open tickets" value={report.open} sub={`${report.p1_open} P1`} />}
+          {report && <Kpi label="Avg rating" value={report.avg_rating == null ? "–" : report.avg_rating.toFixed(1)} sub="client satisfaction, out of 5" />}
         </div>
         <Panel title="Ticket queue" action={<Tabs tabs={["Mine", "Team", "Unassigned"]} value={tab} onChange={setTab} />}>
           <div className="scroll flush">
