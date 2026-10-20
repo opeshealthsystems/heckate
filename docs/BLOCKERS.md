@@ -30,7 +30,7 @@ Things I could not do or decide alone. Each says what is needed. Items marked **
 
 ## Needs a decision or asset for documents
 
-- **PAdES signing** needs a signing certificate (and a choice of CA). PDFs are hash-registered and QR-verifiable but not cryptographically signed.
+- **PAdES signing** is built and off until a certificate is supplied: obtain one from a CA that Adobe and EU trust lists accept (a qualified or advanced-seal certificate; a choice of CA is still open), put the PEM certificate and unencrypted key in the secret store and set `HEKATE_PDF_SIGNING_CERT_FILE` and `HEKATE_PDF_SIGNING_KEY_FILE` (both, or the API refuses to start). Then open the first signed PDF in Adobe Acrobat and an EU DSS validator before relying on it: only poppler `pdfsig` and in-repo tests have checked it. Not implemented: RFC 3161 timestamping and revocation data (LTV), a visible signature, HSM/KMS keys; PDFs stored before a certificate exists stay unsigned. Details in `SECURITY.md` ("PDF signing").
 - **Letterhead and company facts** for PDFs: set `HEKATE_LETTERHEAD` (lines separated by `|`).
 - **Fonts:** PDFs use built-in Latin-1 fonts; characters outside cp1252 need an embedded Unicode font.
 - **Placeholders needing sign-off:** SLA times, approval thresholds, leave rules, TVA/CAC rates and the starter chart of accounts.
@@ -69,7 +69,7 @@ See the status table in the README for what exists per module. Everything in the
 * **Signed QR codes.** The platform can print and verify the pack's signed QR addresses (`/v/<reference>.<version>.<date>.<class>.<signature>`, Ed25519, checked against `HEKATE_QR_Public.pem`). Printing them needs the private key from the secret store: set `HEKATE_QR_SIGNING_KEY_FILE` to an unencrypted PKCS#8 PEM (the pack's key is password-protected; export an unencrypted copy into the secret store, never the repository). Until then QR codes carry plain `/verify?ref=` addresses, which work but prove nothing offline. A key that does not match the published public key stops the API starting.
 * **Access requests.** Someone who verified a document can ask to see it, with a reason; a manager or the CEO approves a time-limited, download-limited link or refuses. The platform has no email channel yet, so the manager copies the link and sends it to the requester.
 * **Check character.** Certificates now use ISO/IEC 7064 MOD 37,36 over the whole reference, as the pack's generators do (HS-ASM-2026-000148 gets P, as on the approved design). The pack's assessment generator uses the prefix `HKS-ASM` where the templates use `HS-ASM`; the platform uses `HS-`.
-* **Signing.** Issued PDFs carry a QR code and a recorded SHA-256 but are not PAdES-signed until a signing certificate exists (see `SECURITY.md`).
+* **Signing.** Issued PDFs carry a QR code and a recorded SHA-256. PAdES signing switches on when a signing certificate and key are configured (see `SECURITY.md`, "PDF signing"); until then they are not signed.
 
 ## Contracts, client forms, projects, labels, employee files, bank accounts: decisions for the company
 

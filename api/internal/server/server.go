@@ -95,6 +95,11 @@ func build(cfg platform.Config, pool *pgxpool.Pool, hub *stream.Hub) *platform.A
 	} else {
 		docOpts.QRSigner = signer
 	}
+	if ps, err := docs.LoadPDFSigner(cfg.PDFSigningCertFile, cfg.PDFSigningKeyFile, time.Now()); err != nil {
+		panic("HEKATE_PDF_SIGNING_*: " + err.Error()) // a configured but unusable pair must stop start-up, not quietly issue unsigned PDFs
+	} else {
+		documents.SetPDFSigner(ps) // nil leaves issued PDFs exactly as rendered
+	}
 	projects.Register(app, docOpts)
 	hr.Register(app)
 	contracts.Register(app, docOpts)
