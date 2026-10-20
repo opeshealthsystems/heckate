@@ -7,5 +7,5 @@ export default function Index() {
   const { me, ready } = useSession();
   const { s } = useTheme();
   if (!ready) return <View style={[s.screen, { justifyContent: "center", alignItems: "center" }]}><Text style={s.muted}>Loading…</Text></View>;
-  return <Redirect href={me ? "/(tabs)/tickets" : "/login"} />;
+  return <Redirect href={me ? "/(tabs)/home" : "/login"} />;
 }

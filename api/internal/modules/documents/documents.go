@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -102,6 +103,7 @@ var issuers = []string{"ceo", "manager", "sales", "finance", "support", "enginee
 
 func Register(a *platform.App, portalURL string) {
 	a.Route("POST /v1/documents", issuers, platform.Idempotent(issue))
+	a.Route("GET /v1/documents", nil, list)
 	a.Route("GET /v1/documents/{ref}", nil, get)
 	a.Route("POST /v1/documents/{ref}/revoke", []string{"ceo", "manager"}, revoke)
 	m := &module{portal: strings.TrimRight(portalURL, "/")}
@@ -164,6 +166,33 @@ func issue(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		return nil, err
 	}
 	return &platform.Result{Status: http.StatusCreated, Body: d}, nil
+}
+
+// listLimit reads ?limit=, defaulting to 50 and never returning more than 200.
+func listLimit(raw string) int {
+	n, err := strconv.Atoi(raw)
+	if err != nil || n < 1 {
+		return 50
+	}
+	return min(n, 200)
+}
+
+// list is the register, newest first. Row-level security gives staff everything and clients their own tenant.
+func list(r *http.Request, s *platform.Scope) (*platform.Result, error) {
+	rows, err := s.Tx.Query(r.Context(), `SELECT `+cols+` FROM documents.register ORDER BY issued_at DESC, ref DESC LIMIT $1`, listLimit(r.URL.Query().Get("limit")))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []*Document{}
+	for rows.Next() {
+		d, err := scan(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, d)
+	}
+	return &platform.Result{Status: http.StatusOK, Body: map[string]any{"data": out}}, rows.Err()
 }
 
 func get(r *http.Request, s *platform.Scope) (*platform.Result, error) {

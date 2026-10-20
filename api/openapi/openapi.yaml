@@ -868,6 +868,22 @@ paths:
                   avg_rating: { type: [number, "null"] }
         "4XX": { $ref: "#/components/responses/Problem" }
   /v1/documents:
+    get:
+      operationId: listDocuments
+      summary: "The document register, newest first (staff see all, clients their own)"
+      parameters: [{ name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }]
+      responses:
+        "200":
+          description: Register entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Document" }
+        "4XX": { $ref: "#/components/responses/Problem" }
     post:
       operationId: issueDocument
       summary: Issue a document reference and register it

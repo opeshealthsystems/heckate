@@ -73,7 +73,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       throw e;
     }
     void registerForPush();
-    router.replace("/(tabs)/tickets");
+    router.replace("/(tabs)/home");
   }, []);
 
   useEffect(() => {
