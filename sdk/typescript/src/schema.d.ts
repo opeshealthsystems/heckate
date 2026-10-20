@@ -742,7 +742,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** The document register, newest first (staff see all, clients their own) */
+        get: operations["listDocuments"];
         put?: never;
         /** Issue a document reference and register it */
         post: operations["issueDocument"];
@@ -5786,6 +5787,31 @@ export interface operations {
                         p1_open?: number;
                         rated?: number;
                         avg_rating?: number | null;
+                    };
+                };
+            };
+            "4XX": components["responses"]["Problem"];
+        };
+    };
+    listDocuments: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Register entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Document"][];
                     };
                 };
             };
