@@ -3,7 +3,7 @@ import type { NewTicket } from "./drafts";
 import type { SendResult } from "./drafts-core";
 import { classify } from "./drafts-core";
 import type { QueuedAction } from "./queue-core";
-import type { Attachment, Comment, EmployeeRecord, Intervention, Me, Status, StockItem, Ticket, Timesheet, Warehouse } from "./types";
+import type { Attachment, Client, Comment, DocumentEntry, EmployeeRecord, Intervention, Me, Status, StockItem, SupportReport, Ticket, Timesheet, Verification, Warehouse } from "./types";
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -72,7 +72,21 @@ export async function replay(a: QueuedAction): Promise<SendResult> {
   }
 }
 
+/** A list endpoint that a role may not read, or that is unreachable, shows as empty rather than breaking the whole screen. */
+export const listOf = async <T>(path: string): Promise<T[]> => {
+  try {
+    return (await call<{ data: T[] }>("GET", path)).data;
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 401) throw e;
+    return [];
+  }
+};
+
 export const api = {
+  report: () => call<SupportReport>("GET", "/v1/reports/support"),
+  clients: () => call<{ data: Client[] }>("GET", "/v1/clients"),
+  documents: (limit = 100) => call<{ data: DocumentEntry[] }>("GET", `/v1/documents?limit=${limit}`),
+  verify: (ref: string) => call<Verification>("GET", `/v1/public/verify/${encodeURIComponent(ref)}`),
   me: () => call<Me>("GET", "/v1/me"),
   tickets: () => call<{ data: Ticket[]; next_cursor: string | null }>("GET", "/v1/tickets?limit=50"),
   ticket: (id: string) => call<Ticket>("GET", `/v1/tickets/${id}`),

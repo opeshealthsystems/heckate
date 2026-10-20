@@ -38,3 +38,11 @@ func TestCheckCharMatchesThePackGenerator(t *testing.T) {
 		t.Error("a wrong check character must be refused")
 	}
 }
+
+func TestListLimit(t *testing.T) {
+	for in, want := range map[string]int{"": 50, "abc": 50, "0": 50, "-3": 50, "10": 10, "200": 200, "9999": 200} {
+		if got := listLimit(in); got != want {
+			t.Errorf("listLimit(%q) = %d, want %d", in, got, want)
+		}
+	}
+}
