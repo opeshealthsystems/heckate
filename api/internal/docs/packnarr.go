@@ -48,6 +48,7 @@ type schema struct {
 	secs         []secDef
 	outro        [2]string
 	signs        []signSpec
+	blocks       []blk // box-level layout drawn by renderBlocks (packblocks.go); replaces the fields above
 }
 
 var bullets = func(a ...string) string { return "- " + strings.Join(a, "\n- ") }
@@ -184,14 +185,27 @@ var packTitles = map[string][2]string{
 	"FRM-41": {"SUPPLIER EVALUATION FORM", "Évaluation fournisseur"},
 }
 
-// LayoutFaithful lists the narrative codes printed with a pack schema (header cells, section order, boxes), and
-// FrameOnly those printed in the pack's title block and bars only. Used by the tests and the documentation.
-func LayoutFaithful() []string { return []string{"PR", "SOW", "OC", "FRM-23", "FRM-14"} }
+// LayoutFaithful lists the narrative codes printed with the pack's own structure (header cells, section order,
+// boxes, tables, check boxes, signature blocks), and FrameOnly those printed in the pack's title block and bars only.
+// Used by the tests and the documentation.
+func LayoutFaithful() []string {
+	out := []string{"PR", "SOW", "OC", "FRM-23", "FRM-14"}
+	for _, c := range packOrder {
+		if _, ok := frameBlocks[c]; ok {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+var packOrder = []string{"FRM-06", "FRM-07", "FRM-08", "FRM-09", "FRM-10", "FRM-11", "FRM-12", "FRM-13", "FRM-15", "FRM-24", "FRM-26", "FRM-31", "FRM-32", "FRM-33", "FRM-37", "FRM-39", "FRM-41"}
 
 func FrameOnly() []string {
 	var out []string
-	for _, c := range []string{"FRM-06", "FRM-07", "FRM-08", "FRM-09", "FRM-10", "FRM-11", "FRM-12", "FRM-13", "FRM-15", "FRM-24", "FRM-26", "FRM-31", "FRM-32", "FRM-33", "FRM-37", "FRM-39", "FRM-41"} {
-		out = append(out, c)
+	for _, c := range packOrder {
+		if _, ok := frameBlocks[c]; !ok {
+			out = append(out, c)
+		}
 	}
 	return out
 }
@@ -212,6 +226,9 @@ func schemaFor(ref, kind string) *schema {
 		if s, ok := schemas[m[1]]; ok {
 			return s
 		}
+		if bs := blockSchema(m[1]); bs != nil {
+			return bs
+		}
 		if t, ok := packTitles[m[1]]; ok {
 			return &schema{code: "HS-" + m[1], en: t[0], fr: t[1]}
 		}
@@ -225,6 +242,9 @@ func schemaFor(ref, kind string) *schema {
 	}
 	for c, t := range packTitles {
 		if strings.ToLower(t[0]) == k {
+			if bs := blockSchema(c); bs != nil {
+				return bs
+			}
 			return &schema{code: "HS-" + c, en: t[0], fr: t[1]}
 		}
 	}
@@ -250,6 +270,10 @@ func renderNarrative(o Options, ref, kind string, issued time.Time, title string
 			d.pdf.MultiCell(0, 4.2, d.tr(sc.intro[0]), "", "L", false)
 			d.pdf.Ln(1)
 		}
+	}
+	if sc.blocks != nil {
+		d.renderBlocks(sc, issued, title, client, sections, signedBy)
+		return d.bytes()
 	}
 	val := func(key string) string {
 		switch key {
@@ -346,6 +370,9 @@ func (d *doc) fillSchema(sc *schema, sections []Section) {
 					if a == h {
 						hit = i
 					}
+				}
+				if hit < 0 && slotMatches(h, sd.en, sd.fr) {
+					hit = i
 				}
 				if hit >= 0 {
 					break
