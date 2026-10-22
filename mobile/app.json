@@ -58,7 +58,8 @@
           "photosPermission": "HEKATE lets you attach photos to incidents and expense claims.",
           "cameraPermission": "HEKATE lets you photograph a problem or a receipt to attach it."
         }
-      ]
+      ],
+      "expo-status-bar"
     ],
     "scheme": "hekate"
   }
