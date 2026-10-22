@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { accessFor, approvalsFor, atRisk, clientActions, clientKpis, filterRegister, hoursThisWeek, queueFor } from "./home-core.ts";
+import { accessFor, approvalsFor, atRisk, clientActions, clientKpis, filterRegister, hoursThisWeek, nextDeadlines, queueFor, sevCounts } from "./home-core.ts";
 import type { Ticket } from "./types";
 
 const now = Date.parse("2026-10-19T10:00:00Z");
@@ -75,4 +75,10 @@ test("register search", () => {
   assert.equal(filterRegister(rows, " pentest ").length, 1);
   assert.equal(filterRegister(rows, "hs-inv").length, 1);
   assert.equal(filterRegister(rows, "").length, 2);
+});
+
+test("sevCounts and nextDeadlines", () => {
+  const open = [t({ severity: "P2", sla_due_at: "2026-01-02T00:00:00Z" }), t({ severity: "P1", sla_due_at: "2026-01-01T00:00:00Z" }), t({ severity: "P3" }), t({ severity: "P2", sla_due_at: "2026-01-03T00:00:00Z" })];
+  assert.deepEqual(sevCounts(open), { P1: 1, P2: 2, P3: 1, P4: 0 });
+  assert.deepEqual(nextDeadlines(open, 2).map((x) => x.sla_due_at), ["2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z"]);
 });
