@@ -93,8 +93,8 @@ export function PostureCard({ title, score, scoreLabel, caption, stats, tone, co
           <View style={{ flex: 1, gap: sp.sm }}>
             {stats.map((st) => (
               <View key={st.label} style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", borderBottomColor: c.lineSoft, borderBottomWidth: StyleSheet.hairlineWidth * 2, paddingBottom: 5 }}>
-                <Text style={[s.muted, { fontSize: 13 }]}>{st.label}</Text>
-                <Text style={{ color: st.tone ? toneColor(c, st.tone) : c.fg, fontSize: 19, fontFamily: font.monoBold }}>{st.value}</Text>
+                <Text style={[s.muted, { fontSize: 13, flexShrink: 1 }]} numberOfLines={1}>{st.label}</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit style={{ color: st.tone ? toneColor(c, st.tone) : c.fg, fontSize: typeof st.value === "string" ? 15 : 19, fontFamily: font.monoBold, flexShrink: 0 }}>{st.value}</Text>
               </View>
             ))}
           </View>

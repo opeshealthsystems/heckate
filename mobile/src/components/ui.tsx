@@ -308,7 +308,7 @@ export function SlaRingView({ t, size = 148, now: nowProp }: { t: Pick<Ticket, "
       <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
         <Circle cx={size / 2} cy={size / 2} r={rad} stroke={c.line} strokeWidth={stroke} fill="none" opacity={0.7} />
         {/* tick marks every quarter */}
-        {[0, 1, 2, 3].map((i) => {
+        {size >= 120 && [0, 1, 2, 3].map((i) => {
           const a = (i * Math.PI) / 2;
           const x1 = size / 2 + Math.sin(a) * (rad - stroke);
           const y1 = size / 2 - Math.cos(a) * (rad - stroke);
@@ -322,7 +322,7 @@ export function SlaRingView({ t, size = 148, now: nowProp }: { t: Pick<Ticket, "
       </Svg>
       <View style={{ alignItems: "center", gap: 2 }}>
         {r.state === "none" ? <Icon name="clock" size={size * 0.24} color={c.muted} /> : (
-          <Text style={[s.mono, { color: c.fg, fontSize: big ? size * 0.16 : size * 0.24, lineHeight: big ? size * 0.2 : size * 0.3, fontFamily: font.monoBold }]}>{big ? countdown(r.remainingMs) : `${Math.round(r.used * 100)}%`}</Text>
+          <Text style={[s.mono, { color: c.fg, fontSize: big ? size * 0.145 : size * 0.21, lineHeight: big ? size * 0.2 : size * 0.26, fontFamily: font.monoBold }]}>{big ? countdown(r.remainingMs) : `${Math.round(r.used * 100)}%`}</Text>
         )}
         {big && <Text style={[s.overline, { color: col, fontSize: 10 }]}>{label}</Text>}
       </View>

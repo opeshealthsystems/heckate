@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { FlatList, RefreshControl, Text, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { Icon } from "../../components/Icon";
@@ -66,6 +66,7 @@ export default function Documents() {
   const [checking, setChecking] = useState<string | null>(null);
   const [result, setResult] = useState<{ ref: string; r: Result } | null>(null);
   const [updated, setUpdated] = useState<Date | null>(null);
+  const list = useRef<FlatList<DocumentEntry>>(null);
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -93,6 +94,7 @@ export default function Documents() {
       setResult({ ref, r: { error: (e as Error).message } });
     }
     setChecking(null);
+    list.current?.scrollToOffset({ offset: 0, animated: true });
   }
 
   if (!me || !accessFor(me).documents) {
@@ -103,6 +105,7 @@ export default function Documents() {
   return (
     <Screen updated={updated}>
       <FlatList
+        ref={list}
         contentContainerStyle={{ padding: sp.lg, gap: sp.sm }}
         data={loaded ? shown : []}
         keyExtractor={(d) => d.ref}

@@ -14,7 +14,7 @@ import { slaRing } from "../../lib/sla";
 import { sp, useTheme } from "../../lib/theme";
 import type { Comment, Status, Ticket } from "../../lib/types";
 
-const stamp = (s: string | null) => (s ? new Date(s).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "–");
+const stamp = (s: string | null) => (s ? new Date(s).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "–");
 
 export default function TicketScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -74,11 +74,11 @@ export default function TicketScreen() {
           <FadeIn>
             <Card style={{ gap: sp.md }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: sp.lg }}>
-                <SlaRingView t={t} size={148} />
+                <SlaRingView t={t} size={132} />
                 <View style={{ flex: 1 }}>
-                  <KV k="Respond by" v={stamp(t.respond_due_at)} mono />
-                  <KV k="First reply" v={first ? stamp(first) : t.respond_due_at && new Date(t.respond_due_at).getTime() < Date.now() ? "Overdue" : "Pending"} mono />
-                  <KV k="Resolve by" v={stamp(t.sla_due_at)} mono />
+                  <KV k="Respond" v={stamp(t.respond_due_at)} mono />
+                  <KV k="Reply" v={first ? stamp(first) : t.respond_due_at && new Date(t.respond_due_at).getTime() < Date.now() ? "Overdue" : "Pending"} mono />
+                  <KV k="Resolve" v={stamp(t.sla_due_at)} mono />
                   {t.resolved_at && <KV k="Resolved" v={stamp(t.resolved_at)} mono />}
                 </View>
               </View>

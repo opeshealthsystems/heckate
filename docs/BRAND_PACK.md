@@ -24,6 +24,8 @@ HEKATE supplied an approved Brand & Content Pack (four zip parts that merge into
 2. PDFs now carry the brand frame on every page (colour logo, classification banner in the pack's colours, gold rule, navy headings, signed-QR block, 1.5 pt microtext footer rule). Documents already issued keep their stored layout (a reference is always one file); only new documents use it. Still to do: the exact field layout of each of the pack's forms, the Lora title font (the PDFs use the built-in Helvetica, so text stays searchable and Latin-1), certificate security print (guilloche, UV plate, hologram, Code128) and PAdES signing, which needs a certificate. The classification of payslips (Restricted), certificates and guarantee policies (Public) is mine: the pack's registry does not list them, so please confirm.
 3. Codes in the pack's registry (`forms/forms_registry.json`) must match the platform's references exactly.
 
+Mobile note: the app defaults to a dark theme derived from the navy family (the pack defines none); see `docs/MOBILE_DESIGN.md`.
+
 ## Deliberate deviations from the pack's tokens
 
 The pack requires text contrast of at least 4.5:1. Three of its own values fall short, so the code uses the smallest darker value that passes (measured with WCAG relative luminance, see `docs/AUDIT.md`). Revert only if the pack's rule is relaxed.

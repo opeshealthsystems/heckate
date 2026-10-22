@@ -181,7 +181,7 @@ export default function Account() {
                   <Text style={{ color: c.fg, fontSize: 20, fontFamily: font.monoBold }}>{rec.annual_leave_balance}<Text style={{ color: c.muted, fontSize: 14 }}> of {rec.annual_leave_entitlement} days left</Text></Text>
                 </View>
               ) : (
-                <Text style={[s.muted, { flex: 1 }]}>{recMsg || "Loading your leave balance…"}</Text>
+                <Text style={[s.muted, { flex: 1 }]}>{recMsg ? (/not found/i.test(recMsg) ? "No employee record yet. Ask HR to create it." : recMsg) : "Loading your leave balance…"}</Text>
               )}
             </Card>
 
