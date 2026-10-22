@@ -4,6 +4,7 @@ import NetInfo from "@react-native-community/netinfo";
 import { api, ApiError, replay, setUnauthorizedHandler } from "./api";
 import { clearToken, loadToken, setToken } from "./auth";
 import { classify, flushDrafts, loadDrafts, saveDrafts } from "./drafts";
+import { landingRoute } from "./home-core";
 import { flushQueue } from "./queue-core";
 import { loadQueue, saveQueue } from "./queue";
 import { registerForPush } from "./push";
@@ -14,7 +15,7 @@ interface Session {
   ready: boolean;
   pendingDrafts: number;
   pendingActions: number;
-  signIn: (token: string) => Promise<void>;
+  signIn: (token: string, next?: string) => Promise<void>;
   signOut: () => Promise<void>;
   syncDrafts: () => Promise<void>;
   refreshDrafts: () => Promise<void>;
@@ -64,7 +65,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     router.replace("/login");
   }, []);
 
-  const signIn = useCallback(async (token: string) => {
+  const signIn = useCallback(async (token: string, next?: string) => {
     await setToken(token);
     try {
       setMe(await api.me());
@@ -73,7 +74,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       throw e;
     }
     void registerForPush();
-    router.replace("/(tabs)/home");
+    router.replace(landingRoute(next) as never);
   }, []);
 
   useEffect(() => {

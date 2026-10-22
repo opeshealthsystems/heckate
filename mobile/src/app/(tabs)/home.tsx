@@ -6,12 +6,12 @@ import { Empty, Kpi, RowItem, Section } from "../../components/dash";
 import { Icon } from "../../components/Icon";
 import { Button, EmptyState, ErrorState, Pill, Screen, ScreenHeader, Segmented, SevBadge, SkeletonRows, SlaChip, SlaRingView, sevColor } from "../../components/ui";
 import { api, listOf } from "../../lib/api";
-import { accessFor, approvalsFor, atRisk, clientActions, clientKpis, hoursThisWeek, isOpen, nextDeadlines, queueFor, sevCounts, type Claim, type ContractRow, type FormRow, type InvoiceRow, type Leave, type QuoteRow, type QueueTab, type Sheet } from "../../lib/home-core";
+import { accessFor, approvalsFor, atRisk, clientActions, clientKpis, hoursThisWeek, isOpen, latestDocuments, nextDeadlines, queueFor, sevCounts, type Claim, type ContractRow, type FormRow, type InvoiceRow, type Leave, type QuoteRow, type QueueTab, type Sheet } from "../../lib/home-core";
 import { FadeIn } from "../../lib/motion";
 import { useSession } from "../../lib/session";
 import { sp, useTheme } from "../../lib/theme";
 import { postureScore } from "../../lib/sla";
-import type { Client, SupportReport, Ticket } from "../../lib/types";
+import type { Client, DocumentEntry, SupportReport, Ticket } from "../../lib/types";
 
 const xaf = (n: number) => `${new Intl.NumberFormat("fr-FR").format(n)} XAF`;
 const day = (s: string) => new Date(s).toLocaleDateString();
@@ -33,6 +33,7 @@ export default function Home() {
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [forms, setForms] = useState<FormRow[]>([]);
   const [contracts, setContracts] = useState<ContractRow[]>([]);
+  const [docs, setDocs] = useState<DocumentEntry[]>([]);
   const [tab, setTab] = useState<QueueTab>("Mine");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -64,6 +65,7 @@ export default function Home() {
         if (a.money) jobs.push(listOf<QuoteRow>("/v1/quotes").then(setQuotes), listOf<InvoiceRow>("/v1/invoices").then(setInvoices));
         if (a.forms) jobs.push(listOf<FormRow>("/v1/form-requests").then(setForms));
         if (a.contracts) jobs.push(listOf<ContractRow>("/v1/contracts").then(setContracts));
+        if (a.documents) jobs.push(api.documents(20).then((r) => setDocs(r.data)).catch(() => {}));
       }
       await Promise.all(jobs);
       setUpdated(new Date());
@@ -211,7 +213,19 @@ export default function Home() {
                 )}
               </Section>
             </FadeIn>
-            <FadeIn index={3}>
+            {access.documents && (
+              <FadeIn index={3}>
+                <Section title="Latest documents" count={docs.length}>
+                  {latestDocuments(docs, 3).map((d, i, all) => (
+                    <RowItem key={d.ref} last={i === all.length - 1} mono={d.ref} title={d.title} sub={`${d.code} · ${day(d.issued_at)}`}
+                      onPress={() => router.push("/(tabs)/documents")}
+                      right={<Pill text={d.status} tone={d.status === "valid" ? "ok" : "bad"} />} />
+                  ))}
+                  {!docs.length && <EmptyState icon="docCheck" title="No documents yet" text="Quotations, invoices and receipts issued to you appear here." />}
+                </Section>
+              </FadeIn>
+            )}
+            <FadeIn index={4}>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: sp.sm }}>
                 <Kpi icon="tickets" label="Resolved this month" value={k.resolved} sub={k.resolved ? `${k.met} within SLA` : "None yet"} tone={k.resolved && k.met === k.resolved ? "ok" : undefined} />
                 {access.money && <Kpi icon="documents" label="Invoices owing" value={k.owing} sub={k.owing ? xaf(k.balance) : "Nothing owed"} />}

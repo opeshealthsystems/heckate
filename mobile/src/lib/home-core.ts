@@ -23,14 +23,16 @@ export interface Access {
 
 export function accessFor(me: Pick<Me, "roles" | "scope">): Access {
   const staff = me.scope === "staff";
-  const client = has(me, ...CLIENT_ROLES);
+  const client = has(me, ...CLIENT_ROLES) && !staff;
   return {
     home: me.scope !== "other" && me.roles.some((r) => !["auditor", "supplier"].includes(r)),
     tickets: has(me, "ceo", "manager", "finance", "sales", "support", "engineer", "hr", "employee", "logistics", "procurement", ...CLIENT_ROLES),
     money: has(me, "ceo", "manager", "finance", "sales", ...CLIENT_ROLES),
     contracts: has(me, "ceo", "manager", "sales", "finance", "support", "engineer", ...CLIENT_ROLES),
     forms: has(me, "ceo", "manager", "sales", "support", "engineer", ...CLIENT_ROLES),
-    documents: staff && !client && has(me, "ceo", "manager", "finance", "sales", "support", "engineer", "hr", "logistics", "procurement"),
+    // Staff see the whole register. A client sees their own company's Confidential and Public documents (the API
+    // filters by tenant and class). The web has no client Documents page, so this is mobile-only and never wider than the API.
+    documents: client || (staff && has(me, "ceo", "manager", "finance", "sales", "support", "engineer", "hr", "logistics", "procurement")),
     clientsLookup: has(me, "ceo", "manager", "sales", "support", "finance", "engineer"),
     report: has(me, "ceo", "manager", "support"),
     reviewer: has(me, "hr", "manager", "ceo"),
@@ -142,4 +144,21 @@ export function nextDeadlines<T extends Pick<Ticket, "sla_due_at">>(open: T[], n
     .filter((t) => !!t.sla_due_at)
     .sort((a, b) => new Date(a.sla_due_at as string).getTime() - new Date(b.sla_due_at as string).getTime())
     .slice(0, n);
+}
+
+/** The most recently issued register entries, newest first. */
+export function latestDocuments<T extends Pick<RegisterEntry, "issued_at">>(rows: T[], n: number): T[] {
+  return [...rows].sort((a, b) => new Date(b.issued_at).getTime() - new Date(a.issued_at).getTime()).slice(0, n);
+}
+
+export const HOME_ROUTE = "/(tabs)/home";
+const LANDING = ["/home", "/tickets", "/report", "/field", "/documents", "/account"];
+
+/** Where to go after sign-in: the in-app route that was asked for before the gate sent the person to sign in, else the home tab. */
+export function landingRoute(requested: string | null | undefined): string {
+  if (!requested) return HOME_ROUTE;
+  const path = requested.split(/[?#]/)[0].replace(/^\/\(tabs\)/, "");
+  if (LANDING.includes(path)) return requested;
+  if ((path.startsWith("/ticket/") && path.length > 8) || (path.startsWith("/intervention/") && path.length > 14)) return requested;
+  return HOME_ROUTE;
 }

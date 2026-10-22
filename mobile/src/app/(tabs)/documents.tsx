@@ -114,7 +114,7 @@ export default function Documents() {
         ListHeaderComponent={
           <View style={{ gap: sp.md, marginBottom: sp.sm }}>
             <ScreenHeader overline="Register and verification" title="Documents" />
-            <Text style={s.muted}>Every issued document is numbered and can be checked by its reference.</Text>
+            <Text style={s.muted}>{me.scope === "client" ? "Documents issued to your company. Each is numbered and can be checked by its reference." : "Every issued document is numbered and can be checked by its reference."}</Text>
             <Input label="Search or verify" accessibilityLabel="Search the register" placeholder="Reference, code or title" mono value={q} onChangeText={setQ} autoCapitalize="none" autoCorrect={false} />
             {!!typed && !shown.length && <Button icon="scan" title={`Verify “${typed}” directly`} loading={checking === typed} onPress={() => void verify(typed)} />}
             {result && <Verdict r={result.r} reference={result.ref} onClose={() => setResult(null)} />}
