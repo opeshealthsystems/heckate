@@ -177,6 +177,17 @@ func listLimit(raw string) int {
 	return min(n, 200)
 }
 
+// clientVisible reports whether a client may see a register entry: only Confidential and Public classes. Internal and
+// Restricted documents (reports, payslips, HR and security forms) are never shown to a client, even when they carry
+// the client's tenant. Staff and other scopes are not filtered here; row-level security decides for them.
+func clientVisible(s *platform.Scope, ref string) bool {
+	if s.Claims == nil || s.Claims.Scope() != "client" {
+		return true
+	}
+	c := docs.Classification(ref)
+	return c == "CONFIDENTIAL" || c == "PUBLIC"
+}
+
 // list is the register, newest first. Row-level security gives staff everything and clients their own tenant.
 func list(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	rows, err := s.Tx.Query(r.Context(), `SELECT `+cols+` FROM documents.register ORDER BY issued_at DESC, ref DESC LIMIT $1`, listLimit(r.URL.Query().Get("limit")))
@@ -190,7 +201,9 @@ func list(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, d)
+		if clientVisible(s, d.Ref) {
+			out = append(out, d)
+		}
 	}
 	return &platform.Result{Status: http.StatusOK, Body: map[string]any{"data": out}}, rows.Err()
 }
@@ -199,6 +212,9 @@ func get(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	d, err := scan(s.Tx.QueryRow(r.Context(), `SELECT `+cols+` FROM documents.register WHERE ref=$1`, r.PathValue("ref")))
 	if err != nil {
 		return nil, err
+	}
+	if !clientVisible(s, d.Ref) {
+		return nil, platform.Err(http.StatusNotFound, "Not found", "document not found")
 	}
 	return &platform.Result{Status: http.StatusOK, Body: d}, nil
 }

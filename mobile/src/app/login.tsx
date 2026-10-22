@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useLocalSearchParams } from "expo-router";
 import { Image, ScrollView, Text, View } from "react-native";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
@@ -18,7 +19,10 @@ const FACTS: [IconName, string, string][] = [
 
 export default function Login() {
   const { s, c } = useTheme();
-  const { signIn } = useSession();
+  const { signIn: signInTo } = useSession();
+  const { next } = useLocalSearchParams<{ next?: string }>();
+  // After sign-in the person returns to the route they asked for (a deep link), not always the home tab.
+  const signIn = useCallback((token: string) => signInTo(token, next), [signInTo, next]);
   const [token, setTok] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);

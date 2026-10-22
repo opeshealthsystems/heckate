@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { accessFor, approvalsFor, atRisk, clientActions, clientKpis, filterRegister, hoursThisWeek, nextDeadlines, queueFor, sevCounts } from "./home-core.ts";
+import { accessFor, approvalsFor, atRisk, clientActions, clientKpis, filterRegister, hoursThisWeek, landingRoute, latestDocuments, nextDeadlines, queueFor, sevCounts } from "./home-core.ts";
 import type { Ticket } from "./types";
 
 const now = Date.parse("2026-10-19T10:00:00Z");
@@ -8,7 +8,8 @@ const t = (o: Partial<Ticket>): Ticket => ({ id: "1", tenant_id: "x", subject: "
 
 test("RBAC mirrors the web menu", () => {
   const client = accessFor({ roles: ["client_user"], scope: "client" });
-  assert.ok(client.money && client.contracts && client.forms && client.tickets && !client.documents);
+  assert.ok(client.money && client.contracts && client.forms && client.tickets && client.documents);
+  assert.ok(!accessFor({ roles: ["supplier"], scope: "other" }).documents);
   const eng = accessFor({ roles: ["engineer"], scope: "staff" });
   assert.ok(!eng.money && eng.contracts && eng.forms && eng.documents && eng.timeUser);
   const hr = accessFor({ roles: ["hr"], scope: "staff" });
@@ -75,6 +76,23 @@ test("register search", () => {
   assert.equal(filterRegister(rows, " pentest ").length, 1);
   assert.equal(filterRegister(rows, "hs-inv").length, 1);
   assert.equal(filterRegister(rows, "").length, 2);
+});
+
+test("latestDocuments returns the newest first and caps the count", () => {
+  const rows = [{ issued_at: "2026-01-01T00:00:00Z", n: 1 }, { issued_at: "2026-03-01T00:00:00Z", n: 3 }, { issued_at: "2026-02-01T00:00:00Z", n: 2 }];
+  assert.deepEqual(latestDocuments(rows, 2).map((r) => r.n), [3, 2]);
+  assert.equal(rows[0].n, 1, "input is not mutated");
+});
+
+test("landingRoute keeps a requested in-app route and defaults to home", () => {
+  assert.equal(landingRoute(undefined), "/(tabs)/home");
+  assert.equal(landingRoute("/"), "/(tabs)/home");
+  assert.equal(landingRoute("/login"), "/(tabs)/home");
+  assert.equal(landingRoute("/documents"), "/documents");
+  assert.equal(landingRoute("/(tabs)/documents"), "/(tabs)/documents");
+  assert.equal(landingRoute("/ticket/abc"), "/ticket/abc");
+  assert.equal(landingRoute("/ticket/"), "/(tabs)/home");
+  assert.equal(landingRoute("//evil.example"), "/(tabs)/home");
 });
 
 test("sevCounts and nextDeadlines", () => {
