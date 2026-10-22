@@ -128,3 +128,18 @@ export function filterRegister<T extends Pick<RegisterEntry, "ref" | "code" | "t
   const n = q.trim().toLowerCase();
   return n ? rows.filter((r) => `${r.ref} ${r.code} ${r.title}`.toLowerCase().includes(n)) : rows;
 }
+
+/** Open tickets by severity, for the posture bar. */
+export function sevCounts(open: Pick<Ticket, "severity">[]): Record<"P1" | "P2" | "P3" | "P4", number> {
+  const out = { P1: 0, P2: 0, P3: 0, P4: 0 };
+  for (const t of open) out[t.severity]++;
+  return out;
+}
+
+/** The open tickets whose resolution deadline comes first (overdue ones first of all). */
+export function nextDeadlines<T extends Pick<Ticket, "sla_due_at">>(open: T[], n: number): T[] {
+  return open
+    .filter((t) => !!t.sla_due_at)
+    .sort((a, b) => new Date(a.sla_due_at as string).getTime() - new Date(b.sla_due_at as string).getTime())
+    .slice(0, n);
+}
