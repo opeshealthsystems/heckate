@@ -10,6 +10,7 @@ import (
 // packBoxes lists, per form drawn from blocks, texts printed in the approved pack PDF, in the pack's order.
 // Cell labels print in capitals; bars print as "N  TITLE".
 var packBoxes = map[string][]string{
+	"RPT":    {"PENETRATION TEST REPORT", "RAPPORT DE TEST D", "RESTRICTED. Distribution limited", "REPORT NO.", "TEST PERIOD", "LEAD ASSESSOR", "0  DISTRIBUTION", "Organisation", "Copy ID", "1  EXECUTIVE SUMMARY", "OVERALL RESULT, KEY RISKS", "Critical", "2  SCOPE AND RULES OF ENGAGEMENT", "TARGETS, APPROACH, DATES, EXCLUSIONS", "3  METHODOLOGY", "Testing followed OWASP WSTG", "Immediate compromise of critical systems", "Good-practice observation", "4  FINDINGS SUMMARY", "Asset", "5  DETAILED FINDINGS", "FINDING ID", "SEVERITY / CVSS", "AFFECTED ASSETS", "DESCRIPTION AND EVIDENCE", "IMPACT", "RECOMMENDATION", "FINDING ID", "AFFECTED ASSETS", "RECOMMENDATION", "6  STRATEGIC RECOMMENDATIONS", "7  LIMITATIONS", "This assessment reflects the state", "LEAD ASSESSOR", "QUALITY REVIEW"},
 	"FRM-06": {"TRANSMITTAL AND FAX COVER SHEET", "TO", "FROM", "PAGES", "PURPOSE", "For approval / Pour approbation", "Document", "Copies", "Observations", "MESSAGE", "CONFIDENTIAL. This transmission"},
 	"FRM-07": {"1  ORGANISATION", "LEGAL NAME", "RCCM NO.", "SECTOR", "Banking & finance", "SIZE", "2  CONTACTS", "Primary contact", "Escalation / Escalade", "3  BILLING", "PO REQUIRED?", "4  SERVICES OF INTEREST", "5  DOCUMENTS TO ATTACH", "Signed NDA", "AUTHORISED SIGNATORY", "FOR HEKATE USE ONLY", "KYC RESULT"},
 	"FRM-08": {"ORGANISATION", "REQUEST DATE", "1  WHAT DO YOU NEED?", "Penetration test", "DESCRIBE THE NEED", "2  DRIVERS", "3  ENVIRONMENT", "NUMBER OF USERS", "KEY SYSTEMS AND TECHNOLOGIES", "4  TIMING AND BUDGET", "DECISION PROCESS", "REQUESTER / DEMANDEUR", "FOR HEKATE USE ONLY", "QUOTATION NO."},
@@ -144,5 +145,41 @@ func TestDraftOfFramedFormFindsItsLayoutByTitle(t *testing.T) {
 	mustHave(t, "draft", b, "RATE CARD", "GRILLE TARIFAIRE", "FCFA HT", "Red-team exercise", "1500000", "2000000", "DRAFT PREVIEW - NOT ISSUED")
 	if bytes.Contains(b, []byte("Document no.")) {
 		t.Error("a draft has no document number")
+	}
+}
+
+func TestPentestReportFindingRowsAndBlanks(t *testing.T) {
+	secs := []Section{
+		{"Findings summary", "HS-F-01 | Exposed admin panel | High | 8.1 | vpn.example.test | Open\nNot a table line"},
+		{"Findings by severity", "High | 1 | 1 | 0"},
+		{"Finding ID / Réf.", "F-01"},
+		{"Executive summary", "ignored heading"},
+	}
+	b, err := RenderNarrative(opts, "HS-RPT-2026-000001", "", at, "Quarterly test", packClient, secs, "A. Lead")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustHave(t, "rpt", b, "HS-F-01", "Exposed admin panel", "8.1", "vpn.example.test", "Not a table line", "F-01", "HS-RPT-2026-000001", "A. Lead")
+	if n := bytes.Count(b, []byte("HS-RPT-2026-000001")); n < 1 {
+		t.Error("report number missing")
+	}
+	// only the unmatched heading is additional
+	if !bytes.Contains(b, []byte("ADDITIONAL SECTIONS")) {
+		t.Error("unmatched heading must not be dropped")
+	}
+	blank, _ := RenderNarrative(opts, "HS-RPT-2026-000001", "", at, "T", packClient, nil, "")
+	for _, bad := range []string{"CVE-", "CVSS 9", "ADDITIONAL SECTIONS", "XAF"} {
+		if bytes.Contains(blank, []byte(bad)) {
+			t.Errorf("blank report must not contain %q", bad)
+		}
+	}
+	hs := PackHeadings()["HS-RPT"]
+	if len(hs) < 15 {
+		t.Errorf("RPT headings: %v", hs)
+	}
+	for _, h := range hs {
+		if h == "" {
+			t.Error("empty heading")
+		}
 	}
 }

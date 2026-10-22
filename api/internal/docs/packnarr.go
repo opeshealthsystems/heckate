@@ -166,6 +166,7 @@ var schemas = map[string]*schema{
 // packTitles holds the English and French titles of the pack's other numbered forms. Those print in the pack's
 // title block and header cells with the entered sections as numbered bars; their own boxes are not reproduced.
 var packTitles = map[string][2]string{
+	"RPT":    {"PENETRATION TEST REPORT", "Rapport de test d’intrusion"},
 	"FRM-06": {"TRANSMITTAL AND FAX COVER SHEET", "Bordereau d’envoi et page de garde fax"},
 	"FRM-07": {"CLIENT INFORMATION AND ONBOARDING FORM", "Fiche d’identification et d’ouverture de compte client"},
 	"FRM-08": {"SERVICE REQUEST AND REQUIREMENTS QUESTIONNAIRE", "Demande de service et questionnaire des besoins"},
@@ -198,7 +199,7 @@ func LayoutFaithful() []string {
 	return out
 }
 
-var packOrder = []string{"FRM-06", "FRM-07", "FRM-08", "FRM-09", "FRM-10", "FRM-11", "FRM-12", "FRM-13", "FRM-15", "FRM-24", "FRM-26", "FRM-31", "FRM-32", "FRM-33", "FRM-37", "FRM-39", "FRM-41"}
+var packOrder = []string{"RPT", "FRM-06", "FRM-07", "FRM-08", "FRM-09", "FRM-10", "FRM-11", "FRM-12", "FRM-13", "FRM-15", "FRM-24", "FRM-26", "FRM-31", "FRM-32", "FRM-33", "FRM-37", "FRM-39", "FRM-41"}
 
 func FrameOnly() []string {
 	var out []string

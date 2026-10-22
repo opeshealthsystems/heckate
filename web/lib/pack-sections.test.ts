@@ -7,7 +7,8 @@ test("every pack form the editor fills in starts from the pack's own headings", 
     assert.ok(packHeadings(`HS-FRM-${n}`).length > 0, `HS-FRM-${n}`);
   }
   for (const c of ["HS-PR", "HS-OC", "HS-SOW"]) assert.ok(packHeadings(c).length > 0, c);
-  assert.deepEqual(packHeadings("HS-RPT"), [], "the penetration test report has no pack layout");
+  assert.ok(packHeadings("HS-RPT").length > 15, "the penetration test report has a pack layout");
+  assert.ok(packHeadings("HS-RPT").includes("Findings summary"));
 });
 
 test("headings carry English and French as the pack prints them", () => {
@@ -28,5 +29,5 @@ test("new documents get every heading empty; drafts keep their text and gain the
 });
 
 test("a form without a pack layout starts with one untitled section", () => {
-  assert.deepEqual(withPackHeadings("HS-RPT", []), [{ heading: "", body: "" }]);
+  assert.deepEqual(withPackHeadings("HS-LT", []), [{ heading: "", body: "" }]);
 });

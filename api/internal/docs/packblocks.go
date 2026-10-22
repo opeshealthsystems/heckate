@@ -51,6 +51,7 @@ type tblDef struct {
 type blk struct {
 	kind   blkKind
 	no     bool // bar: numbered
+	zero   bool // bar: numbered "0" without advancing the count (HS-RPT's distribution list)
 	en, fr string
 	cells  []hc
 	opts   []string
@@ -69,6 +70,7 @@ func row(cells ...hc) blk { return blk{kind: bCells, cells: cells} }
 func bar(en, fr string) blk {
 	return blk{kind: bBar, no: true, en: en, fr: fr}
 }
+func bar0(en, fr string) blk { return blk{kind: bBar, zero: true, en: en, fr: fr} }
 func barU(en, fr string) blk { return blk{kind: bBar, en: en, fr: fr} }
 func chk(en, fr string, perRow int, multi bool, opts ...string) blk {
 	return blk{kind: bChecks, en: en, fr: fr, perRow: perRow, multi: multi, opts: opts}
@@ -102,22 +104,25 @@ func col1(a ...string) [][]string {
 }
 
 const (
-	certifyEN  = "I certify that the information provided is accurate and authorise HEKATE SYSTEMS SARL to verify it and to process it for the purpose of the business relationship, in accordance with its Data Protection Policy."
-	certifyFR  = "Je certifie l’exactitude des informations fournies et autorise HEKATE SYSTEMS SARL à les vérifier et à les traiter aux fins de la relation d’affaires, conformément à sa politique de protection des données."
-	pentestEN  = "The signatory confirms that the client owns or is authorised to have tested every target listed above, and authorises HEKATE SYSTEMS SARL to test them within the limits of this form and of the Rules of Engagement."
-	pentestFR  = "Le signataire confirme que le client est propriétaire de chaque cible listée ou dûment autorisé, et autorise HEKATE SYSTEMS SARL à les tester dans les limites du présent formulaire et des règles d’engagement."
-	dpaEN      = "Integration is subject to the Data Processing Addendum (HS-DOC-34) and to a lawful basis and consent for each data subject (HS-DOC-32)."
-	dpaFR      = "L’intégration est soumise à l’avenant sur le traitement des données (HS-DOC-34) et à une base légale et au consentement de chaque personne (HS-DOC-32)."
-	applyEN    = "I certify the information above is true and consent to background screening (HS-DOC-32) if I am shortlisted."
-	applyFR    = "Je certifie l’exactitude de ces informations et accepte une vérification d’antécédents (HS-DOC-32) si je suis présélectionné(e)."
-	offerEN    = "Following our recent interviews, HEKATE SYSTEMS SARL is pleased to offer you employment on the terms below, subject to satisfactory background screening and to the signature of the employment contract (HS-DOC-35)."
-	offerFR    = "Suite à nos entretiens, HEKATE SYSTEMS SARL a le plaisir de vous proposer un emploi aux conditions ci-dessous, sous réserve d’une vérification d’antécédents satisfaisante et de la signature du contrat de travail (HS-DOC-35)."
-	offerAccEN = "Please confirm acceptance by signing and returning this letter within 7 days. This offer lapses after that date."
-	offerAccFR = "Merci de confirmer votre accord en retournant ce courrier signé sous 7 jours, faute de quoi l’offre deviendra caduque."
-	supplierEN = "The supplier confirms the accuracy of this information, complies with the HEKATE Code of Conduct and anti-bribery rules (HS-DOC-28), and will notify any change of bank details in writing, signed by its legal representative."
-	supplierFR = "Le fournisseur certifie ces informations, respecte le Code de conduite et les règles anticorruption HEKATE (HS-DOC-28) et notifiera par écrit signé tout changement de coordonnées bancaires."
-	faxEN      = "CONFIDENTIAL. This transmission is intended only for the addressee. If you received it in error, notify the sender and destroy it; any use or disclosure is prohibited."
-	faxFR      = "CONFIDENTIEL. Destiné exclusivement au destinataire ; en cas d’erreur, prévenir l’expéditeur et détruire ; toute utilisation est interdite."
+	certifyEN   = "I certify that the information provided is accurate and authorise HEKATE SYSTEMS SARL to verify it and to process it for the purpose of the business relationship, in accordance with its Data Protection Policy."
+	certifyFR   = "Je certifie l’exactitude des informations fournies et autorise HEKATE SYSTEMS SARL à les vérifier et à les traiter aux fins de la relation d’affaires, conformément à sa politique de protection des données."
+	rptMethEN   = "Testing followed OWASP WSTG, PTES and NIST SP 800-115: reconnaissance, vulnerability discovery, manual exploitation, post-exploitation within the agreed limits, and remediation verification. Automated tools were used only to support manual testing. Severity is rated with CVSS v3.1 and adjusted to business impact."
+	rptLimitEN  = "This assessment reflects the state of the systems in scope during the test period only. It is time-boxed and cannot guarantee that no other weakness exists. Systems outside the scope were not tested."
+	rptBannerEN = "RESTRICTED. Distribution limited to the persons named in section 0. Contains vulnerability details that could be used to attack the client."
+	pentestEN   = "The signatory confirms that the client owns or is authorised to have tested every target listed above, and authorises HEKATE SYSTEMS SARL to test them within the limits of this form and of the Rules of Engagement."
+	pentestFR   = "Le signataire confirme que le client est propriétaire de chaque cible listée ou dûment autorisé, et autorise HEKATE SYSTEMS SARL à les tester dans les limites du présent formulaire et des règles d’engagement."
+	dpaEN       = "Integration is subject to the Data Processing Addendum (HS-DOC-34) and to a lawful basis and consent for each data subject (HS-DOC-32)."
+	dpaFR       = "L’intégration est soumise à l’avenant sur le traitement des données (HS-DOC-34) et à une base légale et au consentement de chaque personne (HS-DOC-32)."
+	applyEN     = "I certify the information above is true and consent to background screening (HS-DOC-32) if I am shortlisted."
+	applyFR     = "Je certifie l’exactitude de ces informations et accepte une vérification d’antécédents (HS-DOC-32) si je suis présélectionné(e)."
+	offerEN     = "Following our recent interviews, HEKATE SYSTEMS SARL is pleased to offer you employment on the terms below, subject to satisfactory background screening and to the signature of the employment contract (HS-DOC-35)."
+	offerFR     = "Suite à nos entretiens, HEKATE SYSTEMS SARL a le plaisir de vous proposer un emploi aux conditions ci-dessous, sous réserve d’une vérification d’antécédents satisfaisante et de la signature du contrat de travail (HS-DOC-35)."
+	offerAccEN  = "Please confirm acceptance by signing and returning this letter within 7 days. This offer lapses after that date."
+	offerAccFR  = "Merci de confirmer votre accord en retournant ce courrier signé sous 7 jours, faute de quoi l’offre deviendra caduque."
+	supplierEN  = "The supplier confirms the accuracy of this information, complies with the HEKATE Code of Conduct and anti-bribery rules (HS-DOC-28), and will notify any change of bank details in writing, signed by its legal representative."
+	supplierFR  = "Le fournisseur certifie ces informations, respecte le Code de conduite et les règles anticorruption HEKATE (HS-DOC-28) et notifiera par écrit signé tout changement de coordonnées bancaires."
+	faxEN       = "CONFIDENTIAL. This transmission is intended only for the addressee. If you received it in error, notify the sender and destroy it; any use or disclosure is prohibited."
+	faxFR       = "CONFIDENTIEL. Destiné exclusivement au destinataire ; en cas d’erreur, prévenir l’expéditeur et détruire ; toute utilisation est interdite."
 )
 
 var signClient = func(t string) signSpec { return signSpec{title: t} }
@@ -125,6 +130,50 @@ var signHekate = func(t string) signSpec { return signSpec{title: t, hekate: tru
 
 // frameBlocks holds the block layouts, keyed by the form code ("FRM-06").
 var frameBlocks = map[string][]blk{
+	// HS-RPT, transcribed from web/public/forms/HS-RPT.pdf (3 pages). The pack gives the structure and its fixed
+	// wording only: no findings, CVSS values, counts or dates are supplied here. The detailed-finding block
+	// appears twice, as in the pack; further findings are added as rows of the findings summary and as
+	// additional sections.
+	"RPT": {
+		text(rptBannerEN),
+		row(fck("Report no.", "N°", 60, "ref"), fcl("Version", "", 30), fck("Client", "", 90, "client")),
+		row(fcl("Test period", "Période", 70), fck("Report date", "Date", 50, "date"), fcl("Lead assessor", "Auditeur", 60)),
+		bar0("Distribution", "Diffusion"),
+		table("Distribution", "", tblDef{cols: []gcol{{"Name", "Nom", 60, "L"}, {"Organisation", "", 50, "L"}, {"Role", "Rôle", 44, "L"}, {"Copy ID", "", 26, "L"}}, n: 3}),
+		bar("Executive summary", "Synthèse managériale"),
+		box("Overall result, key risks, business impact, priorities", "Résultat, risques clés, priorités", 30),
+		table("Findings by severity", "Constats par gravité", tblDef{cols: []gcol{{"Severity", "Gravité", 60, "L"}, {"Count", "Nombre", 40, "R"}, {"Open", "Ouvert", 40, "R"}, {"Fixed", "Corrigé", 40, "R"}},
+			rows: fixedRows(4, []string{"Critical"}, []string{"High"}, []string{"Medium"}, []string{"Low"}, []string{"Info"}), n: 5, fixedCols: 1}),
+		bar("Scope and rules of engagement", "Périmètre et règles"),
+		box("Targets, approach, dates, exclusions (from HS-FRM-09)", "Cibles, approche, exclusions", 30),
+		bar("Methodology", "Méthodologie"),
+		text(rptMethEN),
+		table("", "", tblDef{cols: []gcol{{"Severity", "Gravité", 40, "L"}, {"CVSS", "", 30, "L"}, {"Meaning", "Signification", 110, "L"}},
+			rows: fixedRows(3,
+				[]string{"Critical", "9.0–10", "Immediate compromise of critical systems or data; fix now"},
+				[]string{"High", "7.0–8.9", "Likely compromise; fix within 7 days"},
+				[]string{"Medium", "4.0–6.9", "Exploitable under conditions; fix within 30 days"},
+				[]string{"Low", "0.1–3.9", "Limited impact; fix in normal cycle"},
+				[]string{"Info", "0", "Good-practice observation"}), n: 5, fixedCols: 3}),
+		bar("Findings summary", "Synthèse des constats"),
+		table("Findings summary", "", tblDef{cols: []gcol{{"ID", "", 22, "L"}, {"Title", "Intitulé", 62, "L"}, {"Severity", "Gravité", 22, "L"}, {"CVSS", "", 16, "L"}, {"Asset", "Actif", 34, "L"}, {"Status", "", 24, "L"}}, n: 8}),
+		bar("Detailed findings", "Constats détaillés"),
+		row(fcl("Finding ID", "Réf.", 40), fcl("Title", "Intitulé", 90), fcl("Severity / CVSS", "", 50)),
+		box("Affected assets", "Actifs touchés", 10),
+		box("Description and evidence", "Description et preuves", 30),
+		box("Impact", "", 14),
+		box("Recommendation", "Recommandation", 14),
+		row(fcl("Finding ID", "Réf.", 40), fcl("Title", "Intitulé", 90), fcl("Severity / CVSS", "", 50)),
+		box("Affected assets", "Actifs touchés", 10),
+		box("Description and evidence", "Description et preuves", 30),
+		box("Impact", "", 14),
+		box("Recommendation", "Recommandation", 14),
+		bar("Strategic recommendations", "Recommandations stratégiques"),
+		box("Recommendations", "Recommandations", 30),
+		bar("Limitations", "Limites"),
+		text(rptLimitEN),
+		signs(signHekate("Lead assessor / Auditeur principal"), signClient("Quality review / Contrôle qualité")),
+	},
 	"FRM-06": {
 		row(fcl("To", "À", 90), fcl("From", "De", 90)),
 		row(fck("Organisation", "", 70, "client"), fck("Date", "", 50, "date"), fcl("Pages (incl. this)", "Pages", 60)),
@@ -426,7 +475,9 @@ func PackHeadings() map[string][]string {
 					}
 				}
 			case bChecks, bTable, bBoxK:
-				hs = append(hs, heading(b.en, b.fr))
+				if b.en != "" {
+					hs = append(hs, heading(b.en, b.fr))
+				}
 			}
 		}
 		out["HS-"+c] = hs
@@ -472,6 +523,8 @@ func (d *doc) renderBlocks(sc *schema, issued time.Time, title string, client Pa
 	}
 	val := func(key string) string {
 		switch key {
+		case "ref":
+			return d.docNo()
 		case "date":
 			return date(issued)
 		case "client":
@@ -495,7 +548,7 @@ func (d *doc) renderBlocks(sc *schema, issued time.Time, title string, client Pa
 	}
 	// Values the pack form has no cell for are kept in one extra row: document number, client, subject.
 	var pre []fcell
-	if n := d.docNo(); n != "" {
+	if n := d.docNo(); n != "" && !hasKey["ref"] {
 		pre = append(pre, fc("Document no.", "N°", n, 60))
 	}
 	if !hasKey["client"] && client.Name != "" {
@@ -519,6 +572,8 @@ func (d *doc) renderBlocks(sc *schema, issued time.Time, title string, client Pa
 			if b.no {
 				no++
 				t = itoa(no)
+			} else if b.zero {
+				t = "0"
 			}
 			d.packBar(t, b.en, b.fr)
 		case bCells:
