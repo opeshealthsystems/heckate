@@ -1,23 +1,30 @@
 import { useRef, useState, type ComponentRef } from "react";
-import { PanResponder, Text, View } from "react-native";
+import { Modal, PanResponder, Platform, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Line, Path } from "react-native-svg";
 import { captureRef } from "react-native-view-shot";
 import { haptic } from "../lib/haptics";
-import { radius, useTheme } from "../lib/theme";
-import { Button } from "./ui";
+import { radius, sp, useTheme } from "../lib/theme";
+import { Button } from "./Button";
+import { Text } from "./Text";
 
-// The pad is paper: white with dark ink in every theme, because the PNG is stored on the acceptance document.
+// The pad is paper: white with dark ink in every appearance, because the PNG is stored on the acceptance document.
+const PAPER = "#FFFFFF";
 const INK = "#0B1B33";
+const GUIDE = "#8E8E93";
 
-/** Draw a signature with a finger. `onDone` receives a PNG data URL, or null after Clear. */
-export function SignaturePad({ onDone }: { onDone: (png: string | null) => void }) {
-  const { s, c } = useTheme();
+/**
+ * A native modal with a paper-white signature area. `onDone` receives a PNG data URL when "Use signature" is tapped.
+ * Cancel closes without changing anything.
+ */
+export function SignatureSheet({ visible, onClose, onDone }: { visible: boolean; onClose: () => void; onDone: (png: string) => void }) {
+  const { c } = useTheme();
+  const insets = useSafeAreaInsets();
   const box = useRef<ComponentRef<typeof View>>(null);
   const [paths, setPaths] = useState<string[]>([]);
   const [current, setCurrent] = useState("");
   const live = useRef("");
   const finished = useRef<string[]>([]);
-  const [saved, setSaved] = useState(false);
 
   const pan = useRef(
     PanResponder.create({
@@ -27,7 +34,6 @@ export function SignaturePad({ onDone }: { onDone: (png: string | null) => void 
       onPanResponderGrant: (e) => {
         live.current = `M${e.nativeEvent.locationX.toFixed(1)},${e.nativeEvent.locationY.toFixed(1)}`;
         setCurrent(live.current);
-        setSaved(false);
       },
       onPanResponderMove: (e) => {
         live.current += ` L${e.nativeEvent.locationX.toFixed(1)},${e.nativeEvent.locationY.toFixed(1)}`;
@@ -42,37 +48,39 @@ export function SignaturePad({ onDone }: { onDone: (png: string | null) => void 
     }),
   ).current;
 
-  async function done() {
+  async function use() {
     if (!box.current || paths.length === 0) return;
     const uri = await captureRef(box.current, { format: "png", result: "data-uri", quality: 1 });
     haptic.success();
-    setSaved(true);
     onDone(uri);
+    onClose();
   }
   function clear() {
     finished.current = [];
     setPaths([]);
     setCurrent("");
-    setSaved(false);
-    onDone(null);
   }
 
   return (
-    <View style={{ gap: 8 }}>
-      <View ref={box} collapsable={false} accessibilityLabel="Signature area" style={{ height: 170, backgroundColor: "#ffffff", borderColor: saved ? c.ok : c.gold, borderWidth: 1.5, borderRadius: radius.md, overflow: "hidden" }} {...pan.panHandlers}>
-        <Svg width="100%" height="100%">
-          <Line x1="16" x2="96%" y1="132" y2="132" stroke="#9FB3CC" strokeWidth={1} strokeDasharray="4 4" />
-          {[...paths, current].filter(Boolean).map((d, i) => (
-            <Path key={i} d={d} stroke={INK} strokeWidth={2.6} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          ))}
-        </Svg>
-        {paths.length === 0 && !current && <Text pointerEvents="none" style={{ position: "absolute", left: 16, top: 138, color: "#5B6675", fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase" }}>Sign above the line</Text>}
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: c.bg, paddingTop: Platform.OS === "ios" ? sp.lg : insets.top + sp.sm, paddingBottom: insets.bottom + sp.lg, paddingHorizontal: sp.lg, gap: sp.lg }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Button title="Cancel" onPress={onClose} style={{ paddingHorizontal: 0 }} />
+          <Text v="headline" weight="semibold" accessibilityRole="header">Signature</Text>
+          <Button title="Clear" onPress={clear} disabled={paths.length === 0} style={{ paddingHorizontal: 0 }} />
+        </View>
+        <View ref={box} collapsable={false} accessibilityLabel="Signature area" style={{ height: 240, backgroundColor: PAPER, borderRadius: radius.group, borderWidth: StyleSheet.hairlineWidth, borderColor: c.separator, overflow: "hidden" }} {...pan.panHandlers}>
+          <Svg width="100%" height="100%">
+            <Line x1="16" x2="97%" y1="190" y2="190" stroke={GUIDE} strokeWidth={1} />
+            {[...paths, current].filter(Boolean).map((d, i) => (
+              <Path key={i} d={d} stroke={INK} strokeWidth={2.6} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            ))}
+          </Svg>
+          {paths.length === 0 && !current && <Text v="footnote" pointerEvents="none" style={{ position: "absolute", left: 16, top: 196, color: GUIDE }}>Sign above the line</Text>}
+        </View>
+        <Text v="footnote" tone="label2">The signature is attached to the acceptance document when you complete the visit.</Text>
+        <Button kind="primary" title="Use signature" disabled={paths.length === 0} onPress={() => void use()} />
       </View>
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        <Button small icon="x" title="Clear" onPress={clear} style={{ flex: 1 }} />
-        <Button small primary icon={saved ? "check" : "pen"} title={saved ? "Signature saved" : "Use signature"} disabled={paths.length === 0} onPress={() => void done()} style={{ flex: 2 }} />
-      </View>
-      {saved && <Text style={s.muted}>Signature captured. It is attached to the acceptance document when you complete the visit.</Text>}
-    </View>
+    </Modal>
   );
 }

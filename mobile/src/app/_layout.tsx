@@ -1,34 +1,40 @@
 import { useEffect } from "react";
 import { Cinzel_700Bold } from "@expo-google-fonts/cinzel";
-import { IBMPlexMono_500Medium, IBMPlexMono_600SemiBold } from "@expo-google-fonts/ibm-plex-mono";
-import { IBMPlexSans_400Regular, IBMPlexSans_500Medium, IBMPlexSans_600SemiBold } from "@expo-google-fonts/ibm-plex-sans";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { useStackOptions } from "../components/Header";
 import { LockGate } from "../components/LockScreen";
 import { LockProvider } from "../lib/lock";
 import { SessionProvider } from "../lib/session";
 import { ThemeProvider, useTheme } from "../lib/theme";
 
-// Keep the splash screen up until the brand fonts are ready (or have failed: the app still works with system fonts).
+// Keep the splash screen up until the wordmark font is ready (or has failed: the wordmark then falls back to the system font).
 void SplashScreen.preventAutoHideAsync();
 
 function Shell() {
   const { c } = useTheme();
+  const base = useStackOptions();
   return (
-    <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <StatusBar style={c.mode === "dark" ? "light" : "dark"} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg }, animation: "slide_from_right" }} />
+    <View style={{ flex: 1, backgroundColor: c.canvas as string }}>
+      <StatusBar style="auto" />
+      <Stack screenOptions={{ ...base, headerShown: false, headerBackButtonDisplayMode: "minimal" }}>
+        <Stack.Screen name="ticket/[id]" options={{ headerShown: Platform.OS !== "web", title: "Ticket" }} />
+        <Stack.Screen name="intervention/[id]" options={{ headerShown: Platform.OS !== "web", title: "Site visit" }} />
+        <Stack.Screen name="document/[ref]" options={{ headerShown: Platform.OS !== "web", title: "Document" }} />
+        <Stack.Screen name="report" options={{ presentation: "modal", headerShown: Platform.OS !== "web" }} />
+      </Stack>
       <LockGate />
     </View>
   );
 }
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({ Cinzel_700Bold, IBMPlexSans_400Regular, IBMPlexSans_500Medium, IBMPlexSans_600SemiBold, IBMPlexMono_500Medium, IBMPlexMono_600SemiBold });
+  // Cinzel is loaded for the HEKATE wordmark on the sign-in and lock screens only. Everything else is the system font.
+  const [loaded, error] = useFonts({ Cinzel_700Bold });
   useEffect(() => {
     if (loaded || error) void SplashScreen.hideAsync();
   }, [loaded, error]);

@@ -1,24 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
-import { Image, ScrollView, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
-import { Icon, type IconName } from "../components/Icon";
-import { Button, Card, Emblem, Input, Notice, Screen } from "../components/ui";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Banner } from "../components/Banner";
+import { Button } from "../components/Button";
+import { Section } from "../components/List";
+import { Seal, Wordmark } from "../components/Seal";
+import { Text } from "../components/Text";
+import { Field } from "../components/TextField";
 import { DEV_LOGIN, OIDC_CLIENT, OIDC_ISSUER } from "../lib/auth";
 import { useSession } from "../lib/session";
 import { sp, useTheme } from "../lib/theme";
 
 WebBrowser.maybeCompleteAuthSession();
 
-const FACTS: [IconName, string, string][] = [
-  ["key", "Browser sign-in", "OIDC with PKCE in the system browser. This app never sees your password."],
-  ["lock", "Token in the keychain", "Your session token is kept in the device's secure storage, not in app files."],
-  ["fingerprint", "App lock", "Biometric or device passcode at launch and after 60 s in the background."],
-];
-
 export default function Login() {
-  const { s, c } = useTheme();
+  const { c } = useTheme();
+  const insets = useSafeAreaInsets();
   const { signIn: signInTo } = useSession();
   const { next } = useLocalSearchParams<{ next?: string }>();
   // After sign-in the person returns to the route they asked for (a deep link), not always the home tab.
@@ -44,47 +44,33 @@ export default function Login() {
   }, [response, discovery, request, redirectUri, signIn]);
 
   return (
-    <Screen noStrip>
-      <ScrollView contentContainerStyle={{ padding: sp.lg, paddingBottom: sp.xl, gap: sp.lg, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-        <View style={{ alignItems: "center", gap: sp.md, paddingTop: sp.lg }}>
-          <Emblem size={124} />
-          <Image source={require("../../assets/logo-white.png")} accessibilityLabel="HEKATE SYSTEMS" style={{ width: 150, height: 60 }} resizeMode="contain" />
-        </View>
-        <View style={{ gap: 6, alignItems: "center" }}>
-          <Text style={[s.overline, { color: c.goldText }]}>Secure access</Text>
-          <Text style={[s.h1, { textAlign: "center" }]} accessibilityRole="header">Sign in to your account</Text>
-          <Text style={[s.muted, { textAlign: "center", maxWidth: 320 }]}>For HEKATE clients, staff and suppliers. Tickets, field visits and issued documents.</Text>
-        </View>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.canvas }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top + sp.xl, paddingBottom: insets.bottom + sp.lg, paddingHorizontal: sp.lg }} keyboardShouldPersistTaps="handled">
+        <View style={{ width: "100%", maxWidth: 420, alignSelf: "center", flexGrow: 1 }}>
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: sp.md, paddingVertical: sp.xl }}>
+            <Seal size={96} />
+            <Wordmark />
+            <Text tone="label2" style={{ textAlign: "center", marginTop: sp.xs }}>Sign in with your HEKATE account.</Text>
+          </View>
 
-        {!!OIDC_ISSUER && <Button primary icon="key" title="Continue to secure sign-in" disabled={!request} loading={busy} onPress={() => { setBusy(true); void promptAsync().finally(() => setBusy(false)); }} />}
-        {!OIDC_ISSUER && !DEV_LOGIN && <Notice tone="bad" icon="alert">Sign-in is not configured in this build.</Notice>}
-        {!!err && <Notice tone="bad" icon="alert">{err}</Notice>}
-
-        {DEV_LOGIN && (
-          <Card style={{ borderStyle: "dashed", borderColor: c.warn, gap: sp.sm }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Icon name="wrench" size={14} color={c.warn} />
-              <Text style={[s.overline, { color: c.warn }]}>Developer access</Text>
-            </View>
-            <Input label="Development token" multiline mono autoCapitalize="none" autoCorrect={false} value={token} onChangeText={setTok} />
-            <Button title="Continue with token" disabled={!token.trim()} onPress={() => signIn(token).catch((e) => setErr(e.message))} />
-          </Card>
-        )}
-
-        <View style={{ gap: sp.sm, marginTop: sp.sm }}>
-          {FACTS.map(([icon, title, text]) => (
-            <View key={title} style={{ flexDirection: "row", gap: sp.md, alignItems: "flex-start" }}>
-              <View style={{ width: 34, height: 34, borderRadius: 8, borderWidth: 1, borderColor: c.line, backgroundColor: c.surface, alignItems: "center", justifyContent: "center" }}>
-                <Icon name={icon} size={18} color={c.goldText} />
+          <View style={{ gap: sp.lg }}>
+            {!OIDC_ISSUER && !DEV_LOGIN && <Banner icon="warning" tone="red">Sign-in is not configured in this build.</Banner>}
+            {!!err && <Banner icon="warning" tone="red">{err}</Banner>}
+            {DEV_LOGIN && (
+              <Section header="Development token">
+                <Field placeholder="Paste a token" autoCapitalize="none" autoCorrect={false} autoComplete="off" textContentType="none" returnKeyType="go" value={token} onChangeText={setTok} onSubmitEditing={() => token.trim() && signIn(token).catch((e) => setErr(e.message))} mono />
+                <Button title="Continue with token" disabled={!token.trim()} onPress={() => signIn(token).catch((e) => setErr(e.message))} style={{ alignSelf: "flex-start" }} />
+              </Section>
+            )}
+            {!!OIDC_ISSUER && (
+              <View style={{ gap: sp.sm }}>
+                <Button kind="primary" title="Sign in" disabled={!request} loading={busy} onPress={() => { setBusy(true); void promptAsync().finally(() => setBusy(false)); }} />
+                <Text v="footnote" tone="label2" style={{ textAlign: "center" }}>You will sign in with your organisation's account in the system browser.</Text>
               </View>
-              <View style={{ flex: 1, gap: 1 }}>
-                <Text style={[s.text, s.semibold, { fontSize: 14 }]}>{title}</Text>
-                <Text style={[s.muted, { fontSize: 13 }]}>{text}</Text>
-              </View>
-            </View>
-          ))}
+            )}
+          </View>
         </View>
       </ScrollView>
-    </Screen>
+    </KeyboardAvoidingView>
   );
 }

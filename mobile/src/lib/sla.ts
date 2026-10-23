@@ -43,26 +43,29 @@ export function slaRing(
   return { used, remainingMs, state };
 }
 
-const p2 = (n: number) => String(n).padStart(2, "0");
-
-/** "04:12:09" for under 100 hours, "3d 04h" beyond; negative values are shown as their absolute size. */
-export function countdown(ms: number): string {
+/** "3 h 59 m", "12 m" or "2 d 4 h": the size of a span, never negative. */
+export function span(ms: number): string {
   const abs = Math.abs(ms);
-  const s = Math.floor(abs / 1000);
-  const h = Math.floor(s / 3600);
-  if (h >= 100) return `${Math.floor(h / 24)}d ${p2(h % 24)}h`;
-  return `${p2(h)}:${p2(Math.floor((s % 3600) / 60))}:${p2(s % 60)}`;
+  const h = Math.floor(abs / 3_600_000);
+  const m = Math.floor((abs % 3_600_000) / 60_000);
+  if (h >= 48) return `${Math.floor(h / 24)} d ${h % 24} h`;
+  return h > 0 ? (m === 0 ? `${h} h` : `${h} h ${m} m`) : `${m} m`;
 }
 
-/** Circle stroke maths: dash length of the used arc and the gap that follows for a given radius. */
-export function arcDash(used: number, radius: number): { dash: number; gap: number; circumference: number } {
-  const circumference = 2 * Math.PI * radius;
-  const dash = Math.min(1, Math.max(0, used)) * circumference;
-  return { dash, gap: circumference - dash, circumference };
-}
+export interface SlaLine { text: string; tone: "label2" | "orange" | "red" }
 
-/** Posture score for the Home header: the share of open tickets that are not at risk, or null with nothing open. */
-export function postureScore(open: number, atRisk: number): number | null {
-  if (open <= 0) return null;
-  return Math.round(((open - Math.min(atRisk, open)) / open) * 100);
+/**
+ * The single SLA line for a ticket: "3 h 59 m left" (neutral), the same in orange when at risk,
+ * "Overdue by 1 h 12 m" in red once breached. A resolved ticket says whether it met its SLA. No deadline: null.
+ */
+export function slaLine(
+  t: { created_at: string; sla_due_at: string | null; resolved_at: string | null; sla_breached: boolean },
+  now = Date.now(),
+): SlaLine | null {
+  if (!t.sla_due_at) return null;
+  const r = slaRing(t, now);
+  if (t.resolved_at) return r.state === "missed" ? { text: "Resolved after its deadline", tone: "red" } : { text: "Resolved within its deadline", tone: "label2" };
+  if (r.remainingMs <= 0) return { text: `Overdue by ${span(r.remainingMs)}`, tone: "red" };
+  if (t.sla_breached) return { text: "Deadline breached", tone: "red" };
+  return { text: `${span(r.remainingMs)} left`, tone: r.state === "warn" ? "orange" : "label2" };
 }

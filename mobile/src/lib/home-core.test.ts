@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { accessFor, approvalsFor, atRisk, clientActions, clientKpis, filterRegister, hoursThisWeek, landingRoute, latestDocuments, nextDeadlines, queueFor, sevCounts } from "./home-core.ts";
+import { accessFor, approvalsFor, atRisk, clientActions, clientKpis, filterRegister, hoursThisWeek, landingRoute, latestDocuments, needsAttention, nextDeadlines, queueFor, sevCounts } from "./home-core.ts";
 import type { Ticket } from "./types";
 
 const now = Date.parse("2026-10-19T10:00:00Z");
@@ -22,6 +22,18 @@ test("RBAC mirrors the web menu", () => {
 test("SLA at risk counts overdue, breached and due within 4h", () => {
   const rows = [t({ sla_due_at: "2026-10-19T09:00:00Z" }), t({ sla_due_at: "2026-10-19T13:00:00Z" }), t({ sla_due_at: "2026-10-20T13:00:00Z" }), t({ sla_breached: true })];
   assert.equal(atRisk(rows, now), 3);
+});
+
+test("needs attention: at-risk tickets this person can act on, soonest deadline first", () => {
+  const rows = [
+    t({ id: "late", assignee: "me", sla_due_at: "2026-10-19T08:00:00Z" }),
+    t({ id: "soon", sla_due_at: "2026-10-19T12:00:00Z" }),
+    t({ id: "theirs", assignee: "you", sla_due_at: "2026-10-19T09:00:00Z" }),
+    t({ id: "fine", assignee: "me", sla_due_at: "2026-10-21T09:00:00Z" }),
+    t({ id: "flag", assignee: "me", sla_breached: true }),
+  ];
+  assert.deepEqual(needsAttention(rows, "me", now).map((x) => x.id), ["late", "soon", "flag"]);
+  assert.equal(needsAttention(rows, "me", now, 1).length, 1);
 });
 
 test("queue tabs", () => {

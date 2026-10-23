@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { arcDash, countdown, postureScore, slaRemaining, slaRing } from "./sla.ts";
+import { slaLine, slaRemaining, slaRing, span } from "./sla.ts";
 
 test("formats time left and overdue", () => {
   const now = Date.parse("2026-01-01T12:00:00Z");
@@ -44,26 +44,24 @@ test("ring: no due date, a flagged breach and a degenerate window", () => {
   assert.equal(z.used, 1);
 });
 
-test("countdown formatting", () => {
-  assert.equal(countdown(4 * 3_600_000 + 12 * 60_000 + 9_000), "04:12:09");
-  assert.equal(countdown(-61_000), "00:01:01");
-  assert.equal(countdown(0), "00:00:00");
-  assert.equal(countdown(76 * 3_600_000), "76:00:00");
-  assert.equal(countdown(130 * 3_600_000), "5d 10h");
+test("span formatting: hours and minutes, days beyond 48 h, never negative", () => {
+  assert.equal(span(3 * 3_600_000 + 59 * 60_000), "3 h 59 m");
+  assert.equal(span(-(72 * 60_000)), "1 h 12 m");
+  assert.equal(span(12 * 60_000), "12 m");
+  assert.equal(span(0), "0 m");
+  assert.equal(span(76 * 3_600_000), "3 d 4 h");
 });
 
-test("arc dash splits the circumference and clamps", () => {
-  const a = arcDash(0.25, 10);
-  assert.ok(Math.abs(a.circumference - 62.8319) < 1e-3);
-  assert.ok(Math.abs(a.dash - 15.708) < 1e-3);
-  assert.ok(Math.abs(a.dash + a.gap - a.circumference) < 1e-9);
-  assert.equal(arcDash(2, 10).gap, 0);
-  assert.equal(arcDash(-1, 10).dash, 0);
+test("sla line: neutral, orange when at risk, red and 'Overdue by' once breached", () => {
+  const at = (h: number) => Date.parse("2026-01-01T00:00:00Z") + h * 3_600_000;
+  assert.deepEqual(slaLine(T, at(1)), { text: "7 h left", tone: "label2" });
+  assert.deepEqual(slaLine(T, at(4) + 60_000), { text: "3 h 59 m left", tone: "orange" });
+  assert.deepEqual(slaLine(T, at(9.2)), { text: "Overdue by 1 h 12 m", tone: "red" });
+  assert.deepEqual(slaLine({ ...T, sla_breached: true }, at(1)), { text: "Deadline breached", tone: "red" });
+  assert.equal(slaLine({ ...T, sla_due_at: null }, at(1)), null);
 });
 
-test("posture score", () => {
-  assert.equal(postureScore(0, 0), null);
-  assert.equal(postureScore(4, 1), 75);
-  assert.equal(postureScore(3, 9), 0);
-  assert.equal(postureScore(5, 0), 100);
+test("sla line: resolved tickets say whether the deadline was met", () => {
+  assert.deepEqual(slaLine({ ...T, resolved_at: "2026-01-01T04:00:00Z" }, 0), { text: "Resolved within its deadline", tone: "label2" });
+  assert.deepEqual(slaLine({ ...T, resolved_at: "2026-01-01T10:00:00Z", sla_breached: true }, 0), { text: "Resolved after its deadline", tone: "red" });
 });

@@ -47,6 +47,18 @@ export function atRisk(open: Ticket[], now = Date.now()): number {
   return open.filter((t) => t.sla_breached || (slaRemaining(t.sla_due_at, now)?.overdue ?? false) || (!!t.sla_due_at && new Date(t.sla_due_at).getTime() - now < 4 * 3_600_000)).length;
 }
 
+/**
+ * "Needs attention" on My day: open tickets that are at risk or overdue (the same rule as the At risk count)
+ * and that this person can act on, meaning assigned to them or not yet assigned. Soonest deadline first.
+ */
+export function needsAttention(open: Ticket[], sub: string, now = Date.now(), n = 5): Ticket[] {
+  const due = (t: Ticket) => (t.sla_due_at ? new Date(t.sla_due_at).getTime() : Infinity);
+  return open
+    .filter((t) => (t.assignee === sub || !t.assignee) && atRisk([t], now) === 1)
+    .sort((a, b) => due(a) - due(b))
+    .slice(0, n);
+}
+
 export function mondayOf(d: Date): Date {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);

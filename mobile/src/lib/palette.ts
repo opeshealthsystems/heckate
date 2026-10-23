@@ -1,53 +1,59 @@
 // Pure colour tokens (no React Native import, so they can be unit-tested for contrast).
-// Brand values come from the HEKATE brand pack (navy, navy-deep, navy-raised, navy-line, gold-on-navy, on-navy-muted/faint).
-// The pack defines no dark theme: the "Operations" palette below is derived from the brand's own navy family,
-// see docs/MOBILE_DESIGN.md for each derived value and its measured contrast.
+//
+// These hex values are (a) the fallback used on the web preview and on Android, and (b) the values the contrast tests check.
+// On iOS, theme.tsx maps the neutral tokens to the platform's own semantic colours (PlatformColor) so the real app follows the system.
+// Light neutrals equal iOS systemGroupedBackground / secondarySystemGroupedBackground / label; the light semantic colours
+// are Apple's "increased contrast" variants (systemRed #D70015 etc.) so text in them reaches 4.5:1.
+// Every derivation is written down in docs/MOBILE_DESIGN.md.
 
 export interface Palette {
-  mode: "dark" | "light";
-  // layered surfaces, deepest first
-  void: string; bg: string; surface: string; raised: string; line: string; lineSoft: string;
-  // text
-  fg: string; text2: string; muted: string;
-  // accents
-  gold: string; goldText: string; goldFill: string; onGold: string;
-  // status and severity (text/edge colours; each passes 4.5:1 on bg, surface and raised)
-  ok: string; warn: string; bad: string; info: string;
-  p1: string; p2: string; p3: string; p4: string;
-  // tinted fills behind status text
-  okBg: string; warnBg: string; badBg: string; infoBg: string;
-  // controls
-  inputBorder: string; inputBg: string; scrim: string;
-  // legacy names kept so older components keep working
-  card: string; brand: string; brandFg: string; navyRaised: string; navyLine: string; onNavyMuted: string; onNavyFaint: string; goldOnNavy: string;
+  mode: "light" | "dark";
+  /** screen background (iOS systemGroupedBackground) */
+  bg: string;
+  /** plain page background (iOS systemBackground): sign-in, lock, sheets */
+  canvas: string;
+  /** grouped list container, sheets, fields (iOS secondarySystemGroupedBackground) */
+  surface: string;
+  /** hairline between rows (iOS separator, opaque) */
+  separator: string;
+  /** row highlight while pressed (iOS cell selection) */
+  pressed: string;
+  /** primary text (label) */
+  label: string;
+  /** secondary text (secondaryLabel) */
+  label2: string;
+  /** placeholders, chevrons, disabled (tertiaryLabel; UI-component contrast, not body text) */
+  label3: string;
+  /** the one brand accent for text, links, icons, selected tab */
+  tint: string;
+  /** the same brand blue as a fill (primary button, switch track); `onTint` is the label on it */
+  tintFill: string;
+  onTint: string;
+  /** semantic colours, rare: breached or error or destructive / at risk / confirmed success */
+  red: string;
+  orange: string;
+  green: string;
 }
+
+const light: Palette = {
+  mode: "light",
+  canvas: "#FFFFFF", bg: "#F2F2F7", surface: "#FFFFFF", separator: "#C6C6C8", pressed: "#D1D1D6",
+  label: "#000000", label2: "#6C6C70", label3: "#858589",
+  tint: "#062245", tintFill: "#062245", onTint: "#FFFFFF",
+  red: "#D70015", orange: "#C93400", green: "#1E7B34",
+};
 
 const dark: Palette = {
   mode: "dark",
-  void: "#020F20", bg: "#041A36", surface: "#062245", raised: "#0E2F5A", line: "#1B3A66", lineSoft: "#12305A",
-  fg: "#F2F6FB", text2: "#C9D6E8", muted: "#9FB3CC",
-  gold: "#C9A75A", goldText: "#C9A75A", goldFill: "#B8913F", onGold: "#041A36",
-  ok: "#5FD398", warn: "#F5A524", bad: "#FF7B72", info: "#7FB2F5",
-  p1: "#FF7B72", p2: "#F5A524", p3: "#7FB2F5", p4: "#9FB3CC",
-  okBg: "#0B3B35", warnBg: "#3A3010", badBg: "#4A1F2A", infoBg: "#0E2F5A",
-  inputBorder: "#4F6D96", inputBg: "#041A36", scrim: "rgba(2,15,32,0.82)",
-  card: "#062245", brand: "#062245", brandFg: "#ffffff", navyRaised: "#0E2F5A", navyLine: "#1B3A66", onNavyMuted: "#C9D6E8", onNavyFaint: "#9FB3CC", goldOnNavy: "#C9A75A",
+  canvas: "#000000", bg: "#000000", surface: "#1C1C1E", separator: "#38383A", pressed: "#2C2C2E",
+  label: "#FFFFFF", label2: "#98989D", label3: "#7C7C80",
+  // HEKATE navy #062245 is hue 213 deg, saturation 84%. Dark tint: same hue, saturation 90%, lightness 64% = #519AF6.
+  // Fill: same hue, lightness 44% = #0B65D5 (white label 5.5:1, 3.8:1 against black).
+  tint: "#519AF6", tintFill: "#0B65D5", onTint: "#FFFFFF",
+  red: "#FF453A", orange: "#FF9F0A", green: "#30D158",
 };
 
-// The pack's light tokens, unchanged (with the documented contrast deviations).
-const light: Palette = {
-  mode: "light",
-  void: "#EAF0F7", bg: "#F4F7FB", surface: "#FFFFFF", raised: "#F4F7FB", line: "#DCE4EE", lineSoft: "#E8EEF5",
-  fg: "#0B1B33", text2: "#3B4A60", muted: "#5B6675",
-  gold: "#B8913F", goldText: "#8B6B2B", goldFill: "#B8913F", onGold: "#062245",
-  ok: "#1E6B3E", warn: "#8A5300", bad: "#B3261E", info: "#0E4A8F",
-  p1: "#B3261E", p2: "#8A5300", p3: "#0E4A8F", p4: "#5B6675",
-  okBg: "#E6F3EA", warnBg: "#FFF3DC", badBg: "#FDF3F2", infoBg: "#E6EEF9",
-  inputBorder: "#788EAC", inputBg: "#FFFFFF", scrim: "rgba(244,247,251,0.9)",
-  card: "#FFFFFF", brand: "#062245", brandFg: "#ffffff", navyRaised: "#0E2F5A", navyLine: "#1B3A66", onNavyMuted: "#C9D6E8", onNavyFaint: "#9FB3CC", goldOnNavy: "#C9A75A",
-};
-
-export const palettes = { dark, light } as const;
+export const palettes = { light, dark } as const;
 
 function lum(hex: string): number {
   const n = parseInt(hex.slice(1), 16);
