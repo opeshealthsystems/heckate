@@ -29,7 +29,8 @@ export function useStackOptions() {
   return {
     headerTintColor: c.tint,
     headerShadowVisible: false,
-    headerStyle: Platform.OS === "android" ? { backgroundColor: c.bg } : undefined,
+    headerStyle: Platform.OS === "ios" ? undefined : { backgroundColor: c.bg },
+    headerTitleStyle: Platform.OS === "ios" ? undefined : { color: c.label },
     contentStyle: { backgroundColor: c.bg },
   } as const;
 }

@@ -1,10 +1,11 @@
 import { useCallback, useState } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { ErrorBanner } from "../../components/Banner";
 import { Button } from "../../components/Button";
 import { Loading } from "../../components/EmptyState";
 import { useGate } from "../../components/Header";
+import { Icon } from "../../components/Icon";
 import { Row, Section, SwitchRow } from "../../components/List";
 import { AttachmentsSection, PhotoUploadRow } from "../../components/Photos";
 import { Screen } from "../../components/Screen";
@@ -78,14 +79,10 @@ export default function TicketScreen() {
         <Row title="Status" value={STATUS_NAME[t.status]} />
         <Row title="Severity" right={<SeverityText severity={t.severity} />} />
         {t.sla_due_at && <Row title="Deadline" right={<SlaText ticket={t} now={now} v="body" />} />}
-        <Row title="Reporter" value={t.reporter} />
         <Row title="Assignee" value={t.assignee ?? "Unassigned"} />
+        <Row title="Reporter" value={t.reporter} />
         <Row title="Opened" value={stamp(t.created_at)} />
-        {t.respond_due_at && <Row title="Reply due" value={stamp(t.respond_due_at)} />}
-        {t.respond_due_at && <Row title="First reply" value={first ? stamp(first) : new Date(t.respond_due_at).getTime() < now ? "Overdue" : "Pending"} />}
-        {t.sla_due_at && <Row title="Resolve by" value={stamp(t.sla_due_at)} />}
         {t.resolved_at && <Row title="Resolved" value={stamp(t.resolved_at)} />}
-        <Row title="Reference" right={<Text mono tone="label2" selectable>{t.id.slice(0, 8).toUpperCase()}</Text>} />
       </Section>
 
       {!!t.description && (
@@ -121,15 +118,23 @@ export default function TicketScreen() {
 
       {open && (
         <Section header="Add comment">
-          <Field multiline placeholder="Write a reply" returnKeyType="default" value={body} onChangeText={setBody} />
+          <View style={{ flexDirection: "row", alignItems: "flex-end", paddingRight: sp.xs }}>
+            <View style={{ flex: 1 }}>
+              <Field multiline placeholder="Write a reply" returnKeyType="default" value={body} onChangeText={setBody} />
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Send comment"
+              disabled={!body.trim() || busy}
+              hitSlop={4}
+              onPress={() => void run(api.addComment(id, body.trim(), internal, `c-${Date.now()}-${Math.random().toString(36).slice(2)}`).then(() => setBody("")))}
+              android_ripple={{ color: "#00000014", borderless: true, radius: 22 }}
+              style={({ pressed }) => ({ width: 44, height: 44, alignItems: "center", justifyContent: "center", marginBottom: sp.xs, opacity: !body.trim() || busy ? 0.4 : pressed ? 0.5 : 1 })}
+            >
+              <Icon name="send" size={24} tone="tint" />
+            </Pressable>
+          </View>
           {staff && <SwitchRow title="Internal note" subtitle="Only staff can see it." value={internal} onValueChange={setInternal} />}
-          <Row
-            icon="send"
-            action
-            title="Send"
-            disabled={!body.trim() || busy}
-            onPress={() => void run(api.addComment(id, body.trim(), internal, `c-${Date.now()}-${Math.random().toString(36).slice(2)}`).then(() => setBody("")))}
-          />
         </Section>
       )}
 

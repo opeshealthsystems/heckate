@@ -19,8 +19,8 @@ The app looks and behaves like a platform app (Settings, Mail, Wallet, 1Password
 | separator | #C6C6C8 | #38383A | separator |
 | pressed | #D1D1D6 | #2C2C2E | DynamicColorIOS |
 | label | #000000 | #FFFFFF | label |
-| label2 | #6C6C70 | #98989D | secondaryLabel |
-| label3 | #858589 | #7C7C80 | tertiaryLabel |
+| label2 | #6C6C70 | #98989D | DynamicColorIOS (explicit AA) |
+| label3 | #858589 | #7C7C80 | DynamicColorIOS (explicit AA) |
 | tint | #062245 | #519AF6 | DynamicColorIOS |
 | tintFill (button, switch) | #062245 | #0B65D5 | DynamicColorIOS |
 | onTint | #FFFFFF | #FFFFFF | |
@@ -32,17 +32,19 @@ Derivation of the dark tint: HEKATE navy #062245 is hue 213 degrees, saturation 
 
 Rules: no gold anywhere in the UI chrome. Red only for breached, overdue, error, destructive. Orange only for at risk. Green only for the "Authentic" verdict. Everything else is neutral. Severity is text weight (P1 and P2 semibold) plus one small red dot for P1; never a filled badge. No gradients, glows, coloured shadows, blur, textures or watermark.
 
-Android and web use the hex values (neutral Material-style surfaces); wallpaper-derived dynamic colours are not used because they would replace the brand accent. On iOS secondaryLabel is Apple's own value, which is about 3.4:1 on white (Apple's choice); the tested fallback #6C6C70 is darker. Flagged for the owner.
+Android and web use the hex values (neutral Material-style surfaces); wallpaper-derived dynamic colours are not used because they would replace the brand accent. On iOS, label2 and label3 are also these explicit hex values (DynamicColorIOS), NOT Apple's translucent secondaryLabel/tertiaryLabel (about 3.4:1 on white): accessibility beats pixel-matching Apple's alpha. The tests enforce >= 4.5:1 for label2 and >= 3:1 for label3.
 
 ## 3. Typography
 
-System font only (San Francisco, Roboto): no `fontFamily` except below. Scale (`type-scale.ts`): iOS Large title 34/700, Title 22/700, Headline 17/600, Body 17, Callout 16, Subheadline 15, Footnote 13, Caption 12. Android: body 16, title 22, headline 16/600, subhead 14, footnote 13. Weights: regular, semibold, bold. Sentence case; the only uppercase is the grouped-list section header (13 pt, secondaryLabel). Dynamic Type honoured (`allowFontScaling`, `maxFontSizeMultiplier` 1.4, large title 1.2). Monospace (Menlo / monospace) only for references, ids and codes at body size.
+System font only (San Francisco, Roboto): no `fontFamily` except below. Scale (`type-scale.ts`): iOS Large title 34/700, Title 22/700, Headline 17/600, Body 17, Callout 16, Subheadline 15, Footnote 13, Caption 12. Android: body 16, title 22, headline 16/600, subhead 14, footnote 13. Weights: regular, semibold, bold. Sentence case; the only uppercase is the grouped-list section header (13 pt, secondaryLabel). Dynamic Type honoured (`allowFontScaling`, `maxFontSizeMultiplier` 1.4, large title 1.2). Monospace (Menlo / monospace) only for references, ids and codes: body size in detail rows, 13 pt secondary under the title in the Documents list.
 
 **Deliberate deviation from the brand pack (needs the owner's sign-off):** the pack says Cinzel for display and IBM Plex for body. Native UI uses system fonts. Cinzel is loaded only for the HEKATE wordmark on the sign-in and lock screens. `@expo-google-fonts/ibm-plex-*` were removed.
 
 ## 4. Layout
 
 8-pt grid (`sp`), 16 pt screen margins, column capped at 640 pt on tablets. Main structure: inset grouped lists (`Section` + `Row`): 12 pt radius, rows at least 44 pt, hairline separators inset to the text edge, title Body, subtitle Subheadline in secondaryLabel, trailing value or chevron, at most three lines. No cards in cards, no hero, no status strip. Connection, encryption, server, version, last sync and queued updates are ordinary rows under Account > Connection. A quiet inline banner appears only when offline or updates wait to send.
+
+Row anatomy for tickets: line 1 title (up to 2 lines), line 2 "P1 Critical · Client" (red dot for P1 only), SLA as the trailing value before the chevron ("Overdue 1 h 15 m" red, "3 h 55 m" orange only when at risk, neutral otherwise). Documents: title, then reference in 13 pt monospace, date trailing; only exceptions (Revoked, red) show a status. Segmented controls are never inside a list: they sit full width above it (Tickets filter, Account > Appearance). Home shows at most 3 "Needs attention" rows plus "Show all"; the queue belongs to the Tickets tab, and the Overview count rows open Tickets with the matching scope (open, at risk, assigned to me, incidents). Dates use the system date picker (iOS compact, Android dialog), shown in the device locale, ISO to the API; amounts are grouped as typed.
 
 ## 5. Buttons and touch
 
@@ -74,8 +76,10 @@ Flat: seal (96 pt), HEKATE wordmark, one sentence, one primary button. Dev token
 
 ## Deliberately not done
 
-Native date pickers (dates are typed year-month-day to avoid a new dependency); iOS 26 native bar-button items; Android dynamic colour.
+iOS 26 native bar-button items; Android dynamic colour.
 
 ## Unverified without a phone
+
+The native date pickers (`@react-native-community/datetimepicker`) are untested on a device; the web preview uses the browser date input.
 
 Native tab bar, large-title collapse, PlatformColor / DynamicColorIOS rendering, `headerTintColor` with native colours, Dynamic Type (the web check used 1.3x CSS zoom as a proxy), haptics, biometric prompt, safe areas, Android ripple and Material segmented fallback, header search bar, action sheets.

@@ -61,6 +61,12 @@ test("sla line: neutral, orange when at risk, red and 'Overdue by' once breached
   assert.equal(slaLine({ ...T, sla_due_at: null }, at(1)), null);
 });
 
+test("sla line: short form for trailing values", () => {
+  const at = (h: number) => Date.parse("2026-01-01T00:00:00Z") + h * 3_600_000;
+  assert.deepEqual(slaLine(T, at(9.2), true), { text: "Overdue 1 h 12 m", tone: "red" });
+  assert.deepEqual(slaLine(T, at(1), true), { text: "7 h", tone: "label2" });
+});
+
 test("sla line: resolved tickets say whether the deadline was met", () => {
   assert.deepEqual(slaLine({ ...T, resolved_at: "2026-01-01T04:00:00Z" }, 0), { text: "Resolved within its deadline", tone: "label2" });
   assert.deepEqual(slaLine({ ...T, resolved_at: "2026-01-01T10:00:00Z", sla_breached: true }, 0), { text: "Resolved after its deadline", tone: "red" });

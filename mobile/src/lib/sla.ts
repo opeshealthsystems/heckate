@@ -61,11 +61,12 @@ export interface SlaLine { text: string; tone: "label2" | "orange" | "red" }
 export function slaLine(
   t: { created_at: string; sla_due_at: string | null; resolved_at: string | null; sla_breached: boolean },
   now = Date.now(),
+  short = false,
 ): SlaLine | null {
   if (!t.sla_due_at) return null;
   const r = slaRing(t, now);
-  if (t.resolved_at) return r.state === "missed" ? { text: "Resolved after its deadline", tone: "red" } : { text: "Resolved within its deadline", tone: "label2" };
-  if (r.remainingMs <= 0) return { text: `Overdue by ${span(r.remainingMs)}`, tone: "red" };
-  if (t.sla_breached) return { text: "Deadline breached", tone: "red" };
-  return { text: `${span(r.remainingMs)} left`, tone: r.state === "warn" ? "orange" : "label2" };
+  if (t.resolved_at) return r.state === "missed" ? { text: short ? "Missed" : "Resolved after its deadline", tone: "red" } : { text: short ? "Met" : "Resolved within its deadline", tone: "label2" };
+  if (r.remainingMs <= 0) return { text: short ? `Overdue ${span(r.remainingMs)}` : `Overdue by ${span(r.remainingMs)}`, tone: "red" };
+  if (t.sla_breached) return { text: short ? "Breached" : "Deadline breached", tone: "red" };
+  return { text: short ? span(r.remainingMs) : `${span(r.remainingMs)} left`, tone: r.state === "warn" ? "orange" : "label2" };
 }

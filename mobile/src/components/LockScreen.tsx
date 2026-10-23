@@ -15,7 +15,7 @@ export function LockGate() {
   const insets = useSafeAreaInsets();
   if (!locked && !covered) return null;
   return (
-    <View style={[StyleSheet.absoluteFill, { backgroundColor: c.canvas, zIndex: 100, paddingTop: insets.top, paddingBottom: insets.bottom + sp.lg, paddingHorizontal: sp.lg }]} accessibilityViewIsModal>
+    <View style={[StyleSheet.absoluteFill, { backgroundColor: c.bg, zIndex: 100, paddingTop: insets.top, paddingBottom: insets.bottom + sp.lg, paddingHorizontal: sp.lg }]} accessibilityViewIsModal>
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: sp.md }}>
         <Seal size={96} />
         <Wordmark />

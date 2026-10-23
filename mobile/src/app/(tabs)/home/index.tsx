@@ -1,16 +1,14 @@
 import { useCallback, useState } from "react";
-import { View } from "react-native";
 import { router, Stack, useFocusEffect } from "expo-router";
 import { ErrorBanner, SyncBanner } from "../../../components/Banner";
 import { EmptyState, Loading } from "../../../components/EmptyState";
 import { Row, Section } from "../../../components/List";
 import { Screen } from "../../../components/Screen";
-import { Segmented } from "../../../components/Segmented";
 import { DocumentRow } from "../../../components/DocumentRow";
 import { SeverityText, SlaText } from "../../../components/Status";
 import { TicketRow } from "../../../components/TicketRow";
 import { api, listOf } from "../../../lib/api";
-import { accessFor, approvalsFor, atRisk, clientActions, clientKpis, hoursThisWeek, isOpen, latestDocuments, needsAttention, queueFor, type Claim, type ContractRow, type FormRow, type InvoiceRow, type Leave, type QuoteRow, type QueueTab, type Sheet } from "../../../lib/home-core";
+import { accessFor, approvalsFor, atRisk, clientActions, clientKpis, hoursThisWeek, isOpen, latestDocuments, needsAttention, type Claim, type ContractRow, type FormRow, type InvoiceRow, type Leave, type QuoteRow, type Sheet } from "../../../lib/home-core";
 import { useNow } from "../../../lib/now";
 import { useSession } from "../../../lib/session";
 import type { Client, DocumentEntry, SupportReport, Ticket } from "../../../lib/types";
@@ -18,7 +16,6 @@ import type { Client, DocumentEntry, SupportReport, Ticket } from "../../../lib/
 const xaf = (n: number) => `${new Intl.NumberFormat("fr-FR").format(n)} XAF`;
 const day = (s: string) => new Date(s).toLocaleDateString();
 const KIND: Record<string, string> = { quote: "Quotation", invoice: "Invoice", ticket: "Ticket", form: "Form", contract: "Contract" };
-const QUEUE_LABEL: Record<QueueTab, string> = { Mine: "Mine", Team: "Team", Unassigned: "Unassigned" };
 
 export default function Home() {
   const { me } = useSession();
@@ -35,7 +32,6 @@ export default function Home() {
   const [forms, setForms] = useState<FormRow[]>([]);
   const [contracts, setContracts] = useState<ContractRow[]>([]);
   const [docs, setDocs] = useState<DocumentEntry[]>([]);
-  const [tab, setTab] = useState<QueueTab>("Mine");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -52,7 +48,6 @@ export default function Home() {
     try {
       const tk = a.tickets ? (await api.tickets()).data : [];
       setTickets(tk);
-      if (me.scope === "staff" && !tk.some((t) => isOpen(t) && t.assignee === me.sub)) setTab("Team");
       setErr("");
       // Each list is read only when this role may read it; a refusal shows as empty.
       const jobs: Promise<unknown>[] = [];
@@ -98,8 +93,8 @@ export default function Home() {
   );
 
   if (staff) {
-    const queue = queueFor(open, tab, me.sub);
-    const attention = needsAttention(open, me.sub, now);
+    const all = needsAttention(open, me.sub, now, 50);
+    const attention = all.slice(0, 3);
     const approvals = approvalsFor(me.sub, leave, claims, sheets, day, xaf);
     const mineCount = open.filter((t) => t.assignee === me.sub).length;
     return (
@@ -109,23 +104,17 @@ export default function Home() {
           <>
             <Section header="Needs attention">
               {attention.map((t) => <TicketRow key={t.id} ticket={t} now={now} client={clientName.get(t.tenant_id)} />)}
-              {!attention.length && <Row icon="check" iconTone="label2" title="Nothing needs attention" subtitle="No ticket assigned to you or waiting for an owner is at risk." />}
+              {!attention.length && <Row title="Nothing needs attention" subtitle="No ticket assigned to you or waiting for an owner is at risk." />}
+              {all.length > 3 && <Row title={`Show all ${all.length}`} action onPress={() => router.push({ pathname: "/(tabs)/tickets", params: { scope: "risk" } })} />}
             </Section>
 
             <Section header="Overview">
-              <Row title="Open tickets" value={String(report ? report.open : open.length)} onPress={() => router.push("/(tabs)/tickets")} />
-              <Row title="At risk" value={String(risk)} />
-              <Row title="Assigned to me" value={String(mineCount)} />
+              <Row title="Open tickets" value={String(report ? report.open : open.length)} onPress={() => router.push({ pathname: "/(tabs)/tickets", params: { filter: "open" } })} />
+              <Row title="At risk" value={String(risk)} onPress={() => router.push({ pathname: "/(tabs)/tickets", params: { scope: "risk" } })} />
+              <Row title="Assigned to me" value={String(mineCount)} onPress={() => router.push({ pathname: "/(tabs)/tickets", params: { scope: "mine" } })} />
               {report && <Row title="SLA breached" value={String(report.sla_breached)} />}
               {(access.reviewer || access.approver) && <Row title="Approvals waiting" value={String(approvals.length)} />}
               {access.timeUser && <Row title="Hours this week" value={hoursThisWeek(mine).toFixed(1)} />}
-            </Section>
-
-            <Section header="Queue" footer={queue.length > 5 ? `Showing 5 of ${queue.length}.` : undefined}>
-              <Segmented inset options={["Mine", "Team", "Unassigned"] as const} labels={QUEUE_LABEL} value={tab} onChange={setTab} />
-              {queue.slice(0, 5).map((t) => <TicketRow key={t.id} ticket={t} now={now} client={clientName.get(t.tenant_id)} />)}
-              {!queue.length && <Row title="Nothing here" subtitle="The queue for this view is clear." />}
-              <Row title="Show all tickets" action onPress={() => router.push("/(tabs)/tickets")} />
             </Section>
 
             {(access.reviewer || access.approver) && approvals.length > 0 && (
@@ -154,7 +143,10 @@ export default function Home() {
                 <Row
                   key={a.key}
                   title={a.title.replace(/^[^·]+· /, "")}
-                  subtitle={t ? <View style={{ gap: 2 }}><SeverityText severity={t.severity} suffix="Open" /><SlaText ticket={t} now={now} /></View> : `${KIND[a.kind]}${a.sub ? ` · ${a.sub}` : ""}`}
+                  titleLines={2}
+                  subtitle={t ? <SeverityText severity={t.severity} /> : `${KIND[a.kind]}${a.sub ? ` · ${a.sub}` : ""}`}
+                  right={t ? <SlaText ticket={t} now={now} short /> : undefined}
+                  chevron={!!t}
                   onPress={a.kind === "ticket" ? () => router.push(`/ticket/${a.key.slice(1)}`) : undefined}
                 />
               );
@@ -163,8 +155,8 @@ export default function Home() {
           </Section>
 
           <Section header="Overview">
-            <Row title="Open tickets" value={String(k.open)} onPress={() => router.push("/(tabs)/tickets")} />
-            <Row title="Incidents (P1 and P2)" value={String(k.incidents)} />
+            <Row title="Open tickets" value={String(k.open)} onPress={() => router.push({ pathname: "/(tabs)/tickets", params: { filter: "open" } })} />
+            <Row title="Incidents (P1 and P2)" value={String(k.incidents)} onPress={() => router.push({ pathname: "/(tabs)/tickets", params: { scope: "incidents" } })} />
             {access.money && <Row title="Balance due" value={xaf(k.balance)} />}
           </Section>
 

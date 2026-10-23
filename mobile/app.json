@@ -59,7 +59,8 @@
           "cameraPermission": "HEKATE lets you photograph a problem or a receipt to attach it."
         }
       ],
-      "expo-status-bar"
+      "expo-status-bar",
+      "@react-native-community/datetimepicker"
     ],
     "scheme": "hekate"
   }

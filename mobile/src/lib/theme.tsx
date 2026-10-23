@@ -26,8 +26,9 @@ function iosColors(): Colors {
     separator: PlatformColor("separator"),
     pressed: dyn("pressed"),
     label: PlatformColor("label"),
-    label2: PlatformColor("secondaryLabel"),
-    label3: PlatformColor("tertiaryLabel"),
+    // Explicit AA colours, not Apple's translucent secondaryLabel/tertiaryLabel (about 3.4:1 on white).
+    label2: dyn("label2"),
+    label3: dyn("label3"),
     tint: dyn("tint"),
     tintFill: dyn("tintFill"),
     onTint: dyn("onTint"),

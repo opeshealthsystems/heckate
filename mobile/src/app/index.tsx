@@ -8,7 +8,7 @@ export default function Index() {
   const { c } = useTheme();
   if (!ready) {
     return (
-      <View style={{ flex: 1, backgroundColor: c.canvas, alignItems: "center", justifyContent: "center" }}>
+      <View style={{ flex: 1, backgroundColor: c.bg, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator />
       </View>
     );

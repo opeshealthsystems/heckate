@@ -44,7 +44,7 @@ export default function Login() {
   }, [response, discovery, request, redirectUri, signIn]);
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.canvas }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top + sp.xl, paddingBottom: insets.bottom + sp.lg, paddingHorizontal: sp.lg }} keyboardShouldPersistTaps="handled">
         <View style={{ width: "100%", maxWidth: 420, alignSelf: "center", flexGrow: 1 }}>
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: sp.md, paddingVertical: sp.xl }}>

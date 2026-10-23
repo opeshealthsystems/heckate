@@ -54,7 +54,7 @@ export default function Account() {
       <SyncBanner />
 
       <Section>
-        <Row icon="account" iconTone="label2" title={me?.email || me?.sub || "Signed in"} titleLines={1} subtitle={me?.roles.map(roleLabel).join(", ")} />
+        <Row icon="account" iconTone="label2" title={me?.email || me?.sub || "Signed in"} titleLines={2} subtitle={me?.roles.map(roleLabel).join(", ")} />
       </Section>
 
       <Section header="Security" footer="Your session token is kept in the device's secure storage. Sign-in uses your organisation's account in the system browser.">
@@ -65,20 +65,21 @@ export default function Account() {
 
       {staff && (
         <Section header="Time and expenses">
-          <Row icon="calendar" iconTone="label2" title="Annual leave" value={leaveText} />
+          <Row icon="calendar" iconTone="label2" title="Annual leave" subtitle={leaveText} />
           <Row icon="clock" iconTone="label2" title="Log hours" onPress={() => router.push("/(tabs)/account/hours")} />
           <Row icon="calendar" iconTone="label2" title="Request leave" onPress={() => router.push("/(tabs)/account/leave")} />
           <Row icon="receipt" iconTone="label2" title="Expense claim" onPress={() => router.push("/(tabs)/account/expense")} />
         </Section>
       )}
 
-      <Section header="Appearance">
-        <Segmented inset options={PREFS} labels={PREF_LABEL} value={pref} onChange={setPref} />
-      </Section>
+      <View style={{ gap: sp.sm }}>
+        <Text v="footnote" tone="label2" accessibilityRole="header" style={{ textTransform: "uppercase", paddingHorizontal: sp.lg }}>Appearance</Text>
+        <Segmented options={PREFS} labels={PREF_LABEL} value={pref} onChange={setPref} />
+      </View>
 
       <Section header="Connection">
         <Row title="Status" value={net.isConnected === false ? "Offline" : "Online"} />
-        <Row title="Encryption" value={tls ? "HTTPS" : "Not encrypted (development)"} />
+        <Row title="Encryption" value={tls ? "HTTPS" : "No TLS (dev)"} />
         <Row title="Server" value={hostOf(API_URL)} />
         <Row title="Last sync" value={synced ? new Date(synced).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "Not yet"} />
         <Row title="Queued updates" value={String(queued)} />

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FormPage } from "../../../components/Form";
 import { Section } from "../../../components/List";
+import { DateField } from "../../../components/DateField";
 import { Field } from "../../../components/TextField";
 import { useSelfService } from "../../../lib/self-service";
 
@@ -17,8 +18,8 @@ export default function LogHours() {
       disabled={!(Number(f.hours) > 0)}
       onSubmit={() => void submit("Hours", "/v1/timesheets", { work_date: f.date, hours: Number(f.hours), note: f.note }, () => setF({ ...f, note: "" }))}
     >
-      <Section header="Hours" footer="Dates are written year-month-day.">
-        <Field label="Date" placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" autoCorrect={false} returnKeyType="next" value={f.date} onChangeText={(v) => setF({ ...f, date: v })} />
+      <Section header="Hours">
+        <DateField label="Date" value={f.date} onChange={(v) => setF({ ...f, date: v })} />
         <Field label="Hours" placeholder="8" keyboardType="decimal-pad" returnKeyType="next" value={f.hours} onChangeText={(v) => setF({ ...f, hours: v })} />
       </Section>
       <Section header="Note">

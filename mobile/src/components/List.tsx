@@ -76,7 +76,7 @@ export function Row({ title, subtitle, value, valueLines = 1, icon, iconTone = "
       {!!icon && <View style={{ width: ICON_COL, alignItems: "center" }}><Icon name={icon} tone={destructive ? "red" : iconTone} /></View>}
       <View style={{ flex: 1, gap: 2 }}>
         <Text tone={titleTone} mono={mono} numberOfLines={titleLines} weight={action ? "regular" : undefined}>{title}</Text>
-        {typeof subtitle === "string" ? <Text v="subhead" tone="label2" numberOfLines={2}>{subtitle}</Text> : subtitle}
+        {typeof subtitle === "string" ? <Text v="subhead" tone="label2" numberOfLines={4}>{subtitle}</Text> : subtitle}
       </View>
       {!!value && <Text tone="label2" numberOfLines={valueLines} style={{ flexShrink: 1, maxWidth: "60%", textAlign: "right" }}>{value}</Text>}
       {right}
@@ -108,7 +108,7 @@ export function SwitchRow({ title, subtitle, value, onValueChange, icon }: { tit
       title={title}
       subtitle={subtitle}
       icon={icon}
-      right={<Switch accessibilityLabel={title} value={value} onValueChange={(v) => { haptic.select(); onValueChange(v); }} trackColor={{ true: c.tintFill, false: undefined }} ios_backgroundColor={undefined} />}
+      right={<Switch accessibilityLabel={title} value={value} onValueChange={(v) => { haptic.select(); onValueChange(v); }} trackColor={{ true: c.tintFill, false: Platform.OS === "ios" ? undefined : c.label3 }} />}
     />
   );
 }
