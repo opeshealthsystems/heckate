@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { AccessibilityInfo, Appearance, DynamicColorIOS, Platform, PlatformColor, useColorScheme, type ColorValue, type TextStyle } from "react-native";
+import { AccessibilityInfo, Appearance, DynamicColorIOS, Platform, PlatformColor, StyleSheet, useColorScheme, type ColorValue, type TextStyle } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { palettes, type Palette } from "./palette";
 import { androidScale, iosScale, type Variant } from "./type-scale";
@@ -45,6 +45,8 @@ function plainColors(p: Palette): Colors {
 /** 8-pt grid. Screens use 16 pt side margins (`sp.lg`). */
 export const sp = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 export const radius = { field: 10, group: 12, button: 12 } as const;
+/** A true hairline: 0.5 pt on iOS and Android, and on the web preview where hairlineWidth would be a full pixel. */
+export const hairline = Platform.OS === "web" ? 0.5 : StyleSheet.hairlineWidth;
 export const MIN_TARGET = 44;
 export const ROW_MIN = 44;
 export const BUTTON_HEIGHT = 50;

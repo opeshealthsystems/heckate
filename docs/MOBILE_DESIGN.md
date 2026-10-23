@@ -1,51 +1,81 @@
-# Mobile design: the "Operations" theme
+# Mobile design contract
 
-The brand pack (see `BRAND_PACK.md`) defines navy, gold and white, and says nothing about a dark theme. The mobile app now defaults to a dark "Operations" theme derived only from the brand's own navy family; the pack's light tokens remain available under Account > Appearance. Tokens live in `mobile/src/lib/palette.ts`, and `palette.test.ts` checks every text and severity colour at 4.5:1 or more on every surface.
+The app looks and behaves like a platform app (Settings, Mail, Wallet, 1Password), calm and quiet, and happens to be for a security company. This replaces the earlier dark "Operations" theme, which the owner rejected. All tokens live in ONE module: `mobile/src/lib/theme.tsx` (hex values and the contrast maths in `palette.ts`, the type scale in `type-scale.ts`). No screen defines a colour, font size or font family.
 
-## What is brand, what is derived
+## 1. Follow the platform
 
-| Token | Value | Source |
-| --- | --- | --- |
-| surface | `#062245` | brand navy |
-| bg | `#041A36` | brand navy-deep |
-| raised | `#0E2F5A` | brand navy-raised |
-| line | `#1B3A66` | brand navy-line |
-| void (status strip, tab bar, lock) | `#020F20` | derived: one step darker than navy-deep, so the layers read as depth without a gradient |
-| fg / text2 / muted | `#F2F6FB` / `#C9D6E8` / `#9FB3CC` | near-white derived; the other two are the pack's on-navy-muted and on-navy-faint |
-| gold text and accents | `#C9A75A` | brand gold-on-navy |
-| gold button fill | `#B8913F`, text `#041A36` | brand gold, navy text (measured above 4.5:1) |
-| P1 / bad | `#FF7B72` | derived severity colour, red tuned for dark surfaces |
-| P2 / warn | `#F5A524` | derived amber |
-| P3 / info | `#7FB2F5` | derived light steel blue (no cyan) |
-| P4 | `#9FB3CC` | brand on-navy-faint |
-| ok | `#5FD398` | derived green |
-| status fills | `#0B3B35`, `#3A3010`, `#4A1F2A` | derived dark tints behind status text |
-| input border | `#4F6D96` | derived, at least 3:1 on bg (WCAG 1.4.11) |
+- Appearance: Account > Appearance is System / Light / Dark, default System (`Appearance.setColorScheme`, persisted). `app.json` has `userInterfaceStyle: automatic`.
+- Navigation: native stack headers with collapsing large titles on iOS (`headerLargeTitle`), swipe-back, platform back buttons. Tabs are `expo-router/native-tabs` (UITabBarController / Material bottom navigation) with role-hidden triggers. The tab navigator is held until the session is known, so deep links to `/home` or `/documents` resolve (the `landingRoute` and `?next=` fix is unchanged).
+- Native controls: Switch, RefreshControl, ActivityIndicator, `@react-native-segmented-control/segmented-control`, header search (`headerSearchBarOptions`) on Tickets and Documents, native modal for New ticket / Report an incident (`/report`, also the deep link), page-sheet Modal for the signature pad, ActionSheetIOS (Alert on Android) for Take / Choose photo, Alert for sign-out confirmation.
+- Web preview only: `(tabs)/_layout.web.tsx` uses expo-router `Tabs` with default styling, and `Screen webTitle` draws the large title inline. Neither ships on a phone.
 
-Severity is never colour alone: every badge carries its P-number, every verdict carries a word and an icon.
+## 2. Colour: one accent
 
-Deviations from the pack's "no gradients, glows or shadows" rule: none. Depth comes from layered flat surfaces and hairline borders. The grid and seal watermark are low-opacity textures; the watermark is the seal (`seal-white.png`), and the colour emblem (the app icon) is used on the lock and sign-in screens.
+| Token | Light | Dark | iOS native source |
+| --- | --- | --- | --- |
+| canvas | #FFFFFF | #000000 | systemBackground |
+| bg | #F2F2F7 | #000000 | systemGroupedBackground |
+| surface | #FFFFFF | #1C1C1E | secondarySystemGroupedBackground |
+| separator | #C6C6C8 | #38383A | separator |
+| pressed | #D1D1D6 | #2C2C2E | DynamicColorIOS |
+| label | #000000 | #FFFFFF | label |
+| label2 | #6C6C70 | #98989D | secondaryLabel |
+| label3 | #858589 | #7C7C80 | tertiaryLabel |
+| tint | #062245 | #519AF6 | DynamicColorIOS |
+| tintFill (button, switch) | #062245 | #0B65D5 | DynamicColorIOS |
+| onTint | #FFFFFF | #FFFFFF | |
+| red | #D70015 | #FF453A | DynamicColorIOS (Apple's accessible red, systemRed) |
+| orange | #C93400 | #FF9F0A | DynamicColorIOS |
+| green | #1E7B34 | #30D158 | DynamicColorIOS |
 
-## Typography
+Derivation of the dark tint: HEKATE navy #062245 is hue 213 degrees, saturation 84%. The dark tint keeps the hue, saturation 90%, lightness 64% = #519AF6 (7.3:1 on black, 5.9:1 on #1C1C1E). A button fill cannot be both readable text on dark and carry a white label, so the dark fill is the same hue at lightness 44% = #0B65D5 (white label 5.5:1; 3.8:1 against black). `palette.test.ts` checks text >= 4.5:1 and components >= 3:1 for every pair, in both modes, on canvas, bg and surface.
 
-Cinzel for large titles, IBM Plex Sans for text, IBM Plex Mono (new dependency `@expo-google-fonts/ibm-plex-mono`) for ids, references, timestamps and numbers.
+Rules: no gold anywhere in the UI chrome. Red only for breached, overdue, error, destructive. Orange only for at risk. Green only for the "Authentic" verdict. Everything else is neutral. Severity is text weight (P1 and P2 semibold) plus one small red dot for P1; never a filled badge. No gradients, glows, coloured shadows, blur, textures or watermark.
 
-## Components
+Android and web use the hex values (neutral Material-style surfaces); wallpaper-derived dynamic colours are not used because they would replace the brand accent. On iOS secondaryLabel is Apple's own value, which is about 3.4:1 on white (Apple's choice); the tested fallback #6C6C70 is darker. Flagged for the owner.
 
-- Status strip on every tab: link state (Encrypted when the API URL is https, "No TLS" otherwise, Offline from NetInfo), API host, DEV flag, queued updates, last-updated time. All read from the device, nothing assumed.
-- Custom tab bar with a gold indicator and a badge for work waiting to sync.
-- Posture card on Home: ring, three stats, severity bar. The staff score is the share of open tickets not overdue, breached or within 4 h of their deadline; the client score is the SLA met rate this month. Both are computed from the data on screen.
-- SLA ring (react-native-svg): arc is the share of the resolution window used, colour is ok, warn (75% used or under 4 h) or bad, the centre counts down live (every second on detail, every 30 s in lists). Maths in `lib/sla.ts`.
-- Skeleton loaders, pull to refresh, empty and error states, haptics (`expo-haptics`) on presses, tab changes and results, enter animations with `Animated` (react-native-reanimated is not installed). All motion respects the OS reduce-motion setting.
+## 3. Typography
 
-## App lock
+System font only (San Francisco, Roboto): no `fontFamily` except below. Scale (`type-scale.ts`): iOS Large title 34/700, Title 22/700, Headline 17/600, Body 17, Callout 16, Subheadline 15, Footnote 13, Caption 12. Android: body 16, title 22, headline 16/600, subhead 14, footnote 13. Weights: regular, semibold, bold. Sentence case; the only uppercase is the grouped-list section header (13 pt, secondaryLabel). Dynamic Type honoured (`allowFontScaling`, `maxFontSizeMultiplier` 1.4, large title 1.2). Monospace (Menlo / monospace) only for references, ids and codes at body size.
 
-`expo-local-authentication`. The lock engages at cold start and after 60 s in the background (`lib/lock-core.ts`), and the app is hidden in the app switcher while inactive. The device prompt accepts biometrics with the device passcode as fallback. With no biometrics enrolled the passcode is used; with no device screen lock at all the lock cannot be enforced and Account says so. Turning the lock on or off needs a successful prompt. The session token stays in SecureStore; the lock only gates the UI.
+**Deliberate deviation from the brand pack (needs the owner's sign-off):** the pack says Cinzel for display and IBM Plex for body. Native UI uses system fonts. Cinzel is loaded only for the HEKATE wordmark on the sign-in and lock screens. `@expo-google-fonts/ibm-plex-*` were removed.
 
-## Sign-in
+## 4. Layout
 
-Reframed as "Secure access". The copy states only what the code does: OIDC with PKCE in the system browser, token in secure storage, app lock. No certification, "military-grade" or similar claims, no metrics. The development token field stays behind `EXPO_PUBLIC_DEV_LOGIN`.
+8-pt grid (`sp`), 16 pt screen margins, column capped at 640 pt on tablets. Main structure: inset grouped lists (`Section` + `Row`): 12 pt radius, rows at least 44 pt, hairline separators inset to the text edge, title Body, subtitle Subheadline in secondaryLabel, trailing value or chevron, at most three lines. No cards in cards, no hero, no status strip. Connection, encryption, server, version, last sync and queued updates are ordinary rows under Account > Connection. A quiet inline banner appears only when offline or updates wait to send.
 
-## Not verified
+## 5. Buttons and touch
 
-Biometric prompts, haptics, safe-area insets on a notched device, the app-switcher cover and background timing were not run on a device or simulator; only the web export was inspected.
+One primary per screen at most (filled `tintFill`, white label, 50 pt, 12 pt radius, full width in forms). Secondary: plain tinted text. Destructive: red text confirmed with an Alert. Hit targets at least 44 pt. Pressed: system highlight / opacity on iOS, ripple on Android; no scaling. Haptics only on selection change, success, warning and error (existing `lib/haptics.ts`).
+
+## 6. Icons
+
+`<Icon name=... />` maps semantic names to SF Symbols (expo-symbols) on iOS and Material icons (`@expo/vector-icons`) elsewhere. 22 pt in lists, 24 in tabs. The only hand-drawn artwork is the seal.
+
+## 7. Motion
+
+Native transitions, native pull to refresh, ActivityIndicator. No shimmer, pulsing, looping or counting animation. `FadeIn` and `motion.tsx` were deleted.
+
+## 8. Data
+
+SLA is one line (`slaLine` in `lib/sla.ts`): "3 h 59 m left" in secondaryLabel, orange when at risk (75% used or under 4 h), red "Overdue by 1 h 12 m" when breached; lists refresh every 30 s. Home: Needs attention (`needsAttention` in `home-core.ts`), then count rows, then queue. Client Overview: Awaiting your action, counts, balance due, latest documents. Role rules are exactly those of `home-core.ts`.
+
+## 9. Flow
+
+Tabs: Home (My day / Overview), Tickets, Field (engineers), Documents, Account. New ticket is the "+" in the Tickets nav bar (modal) and an empty-state action; `report` is no longer a tab but `/report` still works. Document tap opens `/document/[ref]` with the verdict.
+
+## 10. Sign-in and lock
+
+Flat: seal (96 pt), HEKATE wordmark, one sentence, one primary button. Dev token only behind `DEV_LOGIN`, as a normal grouped field. Lock: seal, "HEKATE is locked", Unlock, plain Sign out.
+
+## Removed
+
+`TabBar`, `charts`, `dash`, `ui`, `PhotoButtons`, `AttachmentList`, `motion`; arc, countdown and posture maths and tests.
+
+## Deliberately not done
+
+Native date pickers (dates are typed year-month-day to avoid a new dependency); iOS 26 native bar-button items; Android dynamic colour.
+
+## Unverified without a phone
+
+Native tab bar, large-title collapse, PlatformColor / DynamicColorIOS rendering, `headerTintColor` with native colours, Dynamic Type (the web check used 1.3x CSS zoom as a proxy), haptics, biometric prompt, safe areas, Android ripple and Material segmented fallback, header search bar, action sheets.

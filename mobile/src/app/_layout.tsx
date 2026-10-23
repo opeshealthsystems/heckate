@@ -4,7 +4,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { Platform, View } from "react-native";
+import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useStackOptions } from "../components/Header";
 import { LockGate } from "../components/LockScreen";
@@ -22,10 +22,10 @@ function Shell() {
     <View style={{ flex: 1, backgroundColor: c.canvas as string }}>
       <StatusBar style="auto" />
       <Stack screenOptions={{ ...base, headerShown: false, headerBackButtonDisplayMode: "minimal" }}>
-        <Stack.Screen name="ticket/[id]" options={{ headerShown: Platform.OS !== "web", title: "Ticket" }} />
-        <Stack.Screen name="intervention/[id]" options={{ headerShown: Platform.OS !== "web", title: "Site visit" }} />
-        <Stack.Screen name="document/[ref]" options={{ headerShown: Platform.OS !== "web", title: "Document" }} />
-        <Stack.Screen name="report" options={{ presentation: "modal", headerShown: Platform.OS !== "web" }} />
+        <Stack.Screen name="ticket/[id]" options={{ headerShown: true, title: "Ticket" }} />
+        <Stack.Screen name="intervention/[id]" options={{ headerShown: true, title: "Site visit" }} />
+        <Stack.Screen name="document/[ref]" options={{ headerShown: true, title: "Document" }} />
+        <Stack.Screen name="report" options={{ presentation: "modal", headerShown: true }} />
       </Stack>
       <LockGate />
     </View>

@@ -15,7 +15,7 @@ export default function TabsLayout() {
   const staff = me?.scope === "staff";
   const access = me ? accessFor(me) : null;
   return (
-    <Tabs screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: c.bg as string }, tabBarActiveTintColor: c.tint as string, tabBarInactiveTintColor: c.label2 as string, tabBarStyle: { backgroundColor: c.surface as string, borderTopColor: c.separator as string } }}>
+    <Tabs screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: c.bg as string }, tabBarActiveTintColor: c.tint as string, tabBarInactiveTintColor: c.label2 as string, tabBarStyle: { height: 64, paddingBottom: 8, backgroundColor: c.surface as string, borderTopColor: c.separator as string } }}>
       <Tabs.Screen name="home" options={{ title: staff ? "My day" : "Overview", href: access?.home ? undefined : null, tabBarIcon: ({ focused }) => <Icon name="home" size={24} tone={focused ? "tint" : "label2"} /> }} />
       <Tabs.Screen name="tickets" options={{ title: "Tickets", href: me?.scope === "other" ? null : undefined, tabBarIcon: ({ focused }) => <Icon name="tickets" size={24} tone={focused ? "tint" : "label2"} /> }} />
       <Tabs.Screen name="field" options={{ title: "Field", href: me?.roles.includes("engineer") ? undefined : null, tabBarIcon: ({ focused }) => <Icon name="field" size={24} tone={focused ? "tint" : "label2"} /> }} />

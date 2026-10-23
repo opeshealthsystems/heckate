@@ -1,7 +1,7 @@
 import { Children, isValidElement, type ReactNode } from "react";
-import { Platform, Pressable, StyleSheet, Switch, View, type StyleProp, type ViewStyle } from "react-native";
+import { Platform, Pressable, Switch, View, type StyleProp, type ViewStyle } from "react-native";
 import { haptic } from "../lib/haptics";
-import { radius, ROW_MIN, sp, useTheme, type Colors } from "../lib/theme";
+import { hairline, radius, ROW_MIN, sp, useTheme, type Colors } from "../lib/theme";
 import { Icon, type IconName } from "./Icon";
 import { Text } from "./Text";
 
@@ -28,7 +28,7 @@ export function Section({ header, footer, footerTone = "label2", children, style
           {rows.map((r, i) => (
             <View key={isValidElement(r) && r.key != null ? r.key : i}>
               {r}
-              {i < rows.length - 1 && <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: c.separator, marginLeft: inset }} />}
+              {i < rows.length - 1 && <View style={{ height: hairline, backgroundColor: c.separator, marginLeft: inset }} />}
             </View>
           ))}
         </View>
@@ -43,6 +43,8 @@ export interface RowProps {
   subtitle?: ReactNode;
   /** trailing text (secondaryLabel) */
   value?: string;
+  /** lines the trailing text may take (default 1) */
+  valueLines?: number;
   /** leading icon, 22 pt */
   icon?: IconName;
   iconTone?: keyof Colors;
@@ -65,7 +67,7 @@ export interface RowProps {
 }
 
 /** One list row, at least 44 pt tall. Pressed = system highlight on iOS, ripple on Android. No bouncing. */
-export function Row({ title, subtitle, value, icon, iconTone = "tint", onPress, chevron, right, action, destructive, mono, titleLines = 2, disabled, accessibilityLabel, accessibilityHint }: RowProps) {
+export function Row({ title, subtitle, value, valueLines = 1, icon, iconTone = "tint", onPress, chevron, right, action, destructive, mono, titleLines = 2, disabled, accessibilityLabel, accessibilityHint }: RowProps) {
   const { c } = useTheme();
   const showChevron = chevron ?? (!!onPress && !right && !action && !destructive);
   const titleTone: keyof Colors = destructive ? "red" : action ? "tint" : "label";
@@ -76,7 +78,7 @@ export function Row({ title, subtitle, value, icon, iconTone = "tint", onPress, 
         <Text tone={titleTone} mono={mono} numberOfLines={titleLines} weight={action ? "regular" : undefined}>{title}</Text>
         {typeof subtitle === "string" ? <Text v="subhead" tone="label2" numberOfLines={2}>{subtitle}</Text> : subtitle}
       </View>
-      {!!value && <Text tone="label2" numberOfLines={1} style={{ flexShrink: 1, maxWidth: "50%", textAlign: "right" }}>{value}</Text>}
+      {!!value && <Text tone="label2" numberOfLines={valueLines} style={{ flexShrink: 1, maxWidth: "60%", textAlign: "right" }}>{value}</Text>}
       {right}
       {showChevron && <Icon name="chevron" size={16} tone="label3" />}
     </View>

@@ -75,7 +75,7 @@ export default function Report() {
 
   const title = staff ? "New ticket" : "Report an incident";
   return (
-    <Screen keyboard webTitle={title}>
+    <Screen keyboard>
       <Stack.Screen options={{ title, headerLeft: () => <HeaderButton title="Cancel" label="Cancel" onPress={close} /> }} />
       {staff && (
         <Section header="Client">

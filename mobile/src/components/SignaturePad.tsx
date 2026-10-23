@@ -1,10 +1,10 @@
 import { useRef, useState, type ComponentRef } from "react";
-import { Modal, PanResponder, Platform, StyleSheet, View } from "react-native";
+import { Modal, PanResponder, Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Line, Path } from "react-native-svg";
 import { captureRef } from "react-native-view-shot";
 import { haptic } from "../lib/haptics";
-import { radius, sp, useTheme } from "../lib/theme";
+import { hairline, radius, sp, useTheme } from "../lib/theme";
 import { Button } from "./Button";
 import { Text } from "./Text";
 
@@ -69,7 +69,7 @@ export function SignatureSheet({ visible, onClose, onDone }: { visible: boolean;
           <Text v="headline" weight="semibold" accessibilityRole="header">Signature</Text>
           <Button title="Clear" onPress={clear} disabled={paths.length === 0} style={{ paddingHorizontal: 0 }} />
         </View>
-        <View ref={box} collapsable={false} accessibilityLabel="Signature area" style={{ height: 240, backgroundColor: PAPER, borderRadius: radius.group, borderWidth: StyleSheet.hairlineWidth, borderColor: c.separator, overflow: "hidden" }} {...pan.panHandlers}>
+        <View ref={box} collapsable={false} accessibilityLabel="Signature area" style={{ height: 240, backgroundColor: PAPER, borderRadius: radius.group, borderWidth: hairline, borderColor: c.separator, overflow: "hidden" }} {...pan.panHandlers}>
           <Svg width="100%" height="100%">
             <Line x1="16" x2="97%" y1="190" y2="190" stroke={GUIDE} strokeWidth={1} />
             {[...paths, current].filter(Boolean).map((d, i) => (

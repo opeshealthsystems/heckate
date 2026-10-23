@@ -131,7 +131,7 @@ export default function InterventionScreen() {
   const canFinish = report.trim().length >= 10 && (!signature || signedBy.trim().length > 0);
   const saved = msg.startsWith("Saved");
   return (
-    <Screen keyboard webTitle="Site visit">
+    <Screen keyboard>
       <Stack.Screen options={{ title: "Site visit" }} />
       <View style={{ paddingHorizontal: sp.xs }}>
         <Text v="title" accessibilityRole="header">{v.summary || "Site visit"}</Text>

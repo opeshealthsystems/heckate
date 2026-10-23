@@ -39,7 +39,7 @@ export default function DocumentScreen() {
   if (gate) return gate;
 
   return (
-    <Screen webTitle="Document">
+    <Screen>
       <Stack.Screen options={{ title: "Document" }} />
       {!r && <Loading />}
       {r && "error" in r && (
@@ -59,7 +59,7 @@ export default function DocumentScreen() {
           </View>
           <Section header="Facts">
             <Row title="Reference" right={<Text mono tone="label2" selectable numberOfLines={1} style={{ flexShrink: 1 }}>{r.v.ref ?? ref}</Text>} />
-            {!!r.v.title && <Row title="Title" value={r.v.title} />}
+            {!!r.v.title && <Row title="Title" value={r.v.title} valueLines={3} />}
             {!!r.v.code && <Row title="Code" right={<Text mono tone="label2" selectable>{r.v.code}</Text>} />}
             {!!r.v.issued_at && <Row title="Issued" value={docDay(r.v.issued_at)} />}
             {!!r.v.status && <Row title="Status" value={r.v.status === "valid" ? "Valid" : r.v.status === "revoked" ? "Revoked" : r.v.status} />}

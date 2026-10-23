@@ -67,7 +67,7 @@ export default function TicketScreen() {
     : t.status === "resolved" ? { title: staff ? "Close ticket" : "Confirm resolved", to: "closed" } : null;
 
   return (
-    <Screen keyboard webTitle="Ticket">
+    <Screen keyboard>
       <Stack.Screen options={{ title: "Ticket" }} />
       {!!err && <ErrorBanner message={err} />}
       <View style={{ gap: sp.xs, paddingHorizontal: sp.xs }}>

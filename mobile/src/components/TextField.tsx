@@ -28,7 +28,7 @@ export function Field({ label, mono, multiline, ...p }: FieldProps) {
       accessibilityLabel={p.accessibilityLabel ?? label ?? p.placeholder}
       style={[
         typeStyle("body"),
-        { color: c.label as string, flex: 1, paddingVertical: 0, outlineStyle: "none" } as object,
+        { color: c.label as string, flex: 1, minWidth: 0, paddingVertical: 0, outlineStyle: "none" } as object,
         mono && { fontFamily: monoFamily },
         multiline && { minHeight: 96, paddingTop: 2 },
         !!label && !multiline && { textAlign: "right" },
