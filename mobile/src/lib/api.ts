@@ -13,6 +13,10 @@ export class ApiError extends Error {
   }
 }
 
+let lastSync: number | null = null;
+/** When the API last answered successfully (shown under Account > Connection). */
+export const getLastSync = () => lastSync;
+
 let onUnauthorized: () => void = () => {};
 export const setUnauthorizedHandler = (f: () => void) => (onUnauthorized = f);
 
@@ -35,6 +39,7 @@ async function call<T>(method: string, path: string, body?: unknown, extra: Reco
     const p = await res.json().catch(() => ({}));
     throw new ApiError(res.status, p.title ?? res.statusText, p.detail ?? "");
   }
+  lastSync = Date.now();
   return res.status === 204 ? (undefined as T) : res.json();
 }
 
