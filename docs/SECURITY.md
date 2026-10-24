@@ -50,6 +50,7 @@ Severity is our own judgement, assuming the platform handled real client data to
 | S-16 | The mobile app has not been tested on a real device, and certificate pinning is not in place | Medium | Device testing; evaluate pinning against the operational cost of key rotation |
 | S-17 | Retention and deletion rules (data protection law, contracts) are not defined; the ledger and audit trail are append-only by design | Medium | Legal input on retention; design a deletion path for personal data that is not legally retained |
 | S-18 | No formal threat model workshop or ASVS verification has been done by a second party; the mapping below is our own | Medium | Review with the auditor |
+| S-19 | **One accepted dependency finding.** The `trivy` scan reports zod 3.25.76 (CVE-2023-54404, denial of service via unbounded array validation). It comes only from `expo` -> `@expo/cli`, a developer tool that is not shipped in the app and does not validate user or network input; zod 3.25.76 is the last 3.x release and `@expo/cli` does not support zod 4. Recorded in `.trivyignore` with an expiry of 2027-01-22, after which the scan fails again | Low | Remove the entry when Expo moves to zod 4, or when the expiry arrives, whichever is first |
 
 ## 3. OWASP ASVS 4.0.3 self-assessment (level 2 target)
 
