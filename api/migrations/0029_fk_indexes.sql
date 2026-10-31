@@ -1,0 +1,33 @@
+-- Indexes for every foreign key that lacked one: joins and the per-client row filters read through these.
+-- (Three tiny reference lookups are skipped on purpose: journals, ledger accounts and API plans have a handful of rows.)
+CREATE INDEX IF NOT EXISTS ix_clients_contacts_tenant_id ON clients.contacts (tenant_id);
+CREATE INDEX IF NOT EXISTS ix_documents_register_tenant_id ON documents.register (tenant_id);
+CREATE INDEX IF NOT EXISTS ix_files_objects_tenant_id ON files.objects (tenant_id);
+CREATE INDEX IF NOT EXISTS ix_inventory_assignments_serial_id ON inventory.assignments (serial_id);
+CREATE INDEX IF NOT EXISTS ix_inventory_count_lines_item_id ON inventory.count_lines (item_id);
+CREATE INDEX IF NOT EXISTS ix_inventory_counts_warehouse_id ON inventory.counts (warehouse_id);
+CREATE INDEX IF NOT EXISTS ix_inventory_moves_warehouse_id ON inventory.moves (warehouse_id);
+CREATE INDEX IF NOT EXISTS ix_inventory_serials_tenant_id ON inventory.serials (tenant_id);
+CREATE INDEX IF NOT EXISTS ix_inventory_serials_warehouse_id ON inventory.serials (warehouse_id);
+CREATE INDEX IF NOT EXISTS ix_payroll_payslips_employee_id ON payroll.payslips (employee_id);
+CREATE INDEX IF NOT EXISTS ix_procurement_evaluations_supplier ON procurement.evaluations (supplier);
+CREATE INDEX IF NOT EXISTS ix_procurement_purchase_orders_rfq_id ON procurement.purchase_orders (rfq_id);
+CREATE INDEX IF NOT EXISTS ix_procurement_purchase_orders_supplier ON procurement.purchase_orders (supplier);
+CREATE INDEX IF NOT EXISTS ix_procurement_rfq_invites_supplier ON procurement.rfq_invites (supplier);
+CREATE INDEX IF NOT EXISTS ix_procurement_rfq_responses_supplier ON procurement.rfq_responses (supplier);
+CREATE INDEX IF NOT EXISTS ix_procurement_supplier_invoices_po_id ON procurement.supplier_invoices (po_id);
+CREATE INDEX IF NOT EXISTS ix_projects_interventions_project_id ON projects.interventions (project_id);
+CREATE INDEX IF NOT EXISTS ix_projects_projects_tenant_id ON projects.projects (tenant_id);
+CREATE INDEX IF NOT EXISTS ix_projects_tasks_tenant_id ON projects.tasks (tenant_id);
+CREATE INDEX IF NOT EXISTS ix_projects_timesheets_project_id ON projects.timesheets (project_id);
+CREATE INDEX IF NOT EXISTS ix_sales_credit_notes_invoice_id ON sales.credit_notes (invoice_id);
+CREATE INDEX IF NOT EXISTS ix_sales_credit_notes_tenant_id ON sales.credit_notes (tenant_id);
+CREATE INDEX IF NOT EXISTS ix_sales_invoice_lines_invoice_id ON sales.invoice_lines (invoice_id);
+CREATE INDEX IF NOT EXISTS ix_sales_invoice_lines_tenant_id ON sales.invoice_lines (tenant_id);
+CREATE INDEX IF NOT EXISTS ix_sales_invoices_quote_id ON sales.invoices (quote_id);
+CREATE INDEX IF NOT EXISTS ix_sales_payments_tenant_id ON sales.payments (tenant_id);
+CREATE INDEX IF NOT EXISTS ix_sales_quote_lines_quote_id ON sales.quote_lines (quote_id);
+CREATE INDEX IF NOT EXISTS ix_sales_quote_lines_tenant_id ON sales.quote_lines (tenant_id);
+CREATE INDEX IF NOT EXISTS ix_sales_recurring_runs_invoice_id ON sales.recurring_runs (invoice_id);
+CREATE INDEX IF NOT EXISTS ix_sales_recurring_tenant_id ON sales.recurring (tenant_id);
+CREATE INDEX IF NOT EXISTS ix_support_ticket_comments_tenant_id ON support.ticket_comments (tenant_id);

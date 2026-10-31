@@ -1,0 +1,92 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hekate
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      HEKATE_TEST_DB: postgres://postgres:postgres@localhost:5432/hekate?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+      # First as an ordinary database owner, in a fresh cluster: production should not own the schema
+      # with a superuser, and superusers hide row-level-security mistakes. Raw-SQL trigger tests use the
+      # admin connection (HEKATE_TEST_ADMIN_DB).
+      - name: Tests as a non-superuser owner
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres \
+            -c "CREATE ROLE app_owner LOGIN PASSWORD 'pw' CREATEROLE NOSUPERUSER NOBYPASSRLS" \
+            -c "CREATE DATABASE ownerdb OWNER app_owner"
+          cd api && go vet ./... && go test -race ./...
+        env:
+          HEKATE_TEST_DB: postgres://app_owner:pw@localhost:5432/ownerdb?sslmode=disable
+          HEKATE_TEST_ADMIN_DB: postgres://postgres:postgres@localhost:5432/ownerdb?sslmode=disable
+      - name: Tests as a superuser
+        run: make test
+      - run: make build
+      # A backup nobody has restored is a hope, not a backup: back up a database with real ledger and audit
+      # rows, restore it, and require both integrity reports (hash chains, every row count) to match.
+      - name: Backup and restore drill
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq age postgresql-client
+          export PGPASSWORD=postgres
+          psql -h localhost -U postgres -c "CREATE DATABASE drilldb"
+          export DRILL_URL=postgres://postgres:postgres@localhost:5432/drilldb?sslmode=disable
+          (cd api && go build -o /tmp/hekate-api ./cmd/api)
+          (cd api && HEKATE_TEST_DB=$DRILL_URL HEKATE_TEST_ADMIN_DB=$DRILL_URL go test ./internal/server -run 'TestSalesPostToTheLedger|TestAuditTrail|TestPayroll' -count=1)
+          export HEKATE_ENV=development HEKATE_DATABASE_URL=$DRILL_URL HEKATE_API=/tmp/hekate-api
+          export DRILL_ADMIN_URL=postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+          deploy/backup/test.sh
+          deploy/backup/drill.sh
+  openapi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npx --yes @redocly/cli@1.25.0 lint api/openapi/openapi.yaml
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: cd web && npm ci && npm run typecheck && npm test && npm run build
+  sdk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # The generated types must match the contract: regenerate and fail on any difference.
+      - run: cd sdk/typescript && npm ci && npm run check && npm run typecheck && npm test
+  mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: cd mobile && npm ci && npm run typecheck && npm test && npx expo-doctor
+  site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: cd site && npm ci && npm run typecheck && npm test && npm run build

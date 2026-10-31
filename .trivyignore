@@ -1,0 +1,8 @@
+# Accepted risks for the trivy scan in .github/workflows/security.yml. Each entry names one finding, why it is
+# acceptable, and an expiry after which the scan fails again so the decision is revisited. Keep this list short.
+
+# zod 3.25.76 (CVE-2023-54404, denial of service via unbounded array validation). Reached only through
+# expo -> @expo/cli, which declares zod ^3.25.76 and uses it for dev-server plugin schemas on a developer's
+# machine. It is not shipped in the app and does not validate input from users or the network. zod 3.25.76 is the
+# last 3.x release; the fix is in zod 4.x, which @expo/cli does not support. Revisit when Expo moves to zod 4.
+CVE-2023-54404 exp:2027-01-22
