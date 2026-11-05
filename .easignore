@@ -9,3 +9,11 @@ erp-mobile.png
 _tools/
 .claude/
 docs/brand-preview/
+mobile/android/
+mobile/ios/
+mobile/.expo/
+**/node_modules/
+web/.next/
+site/out/
+site/.next/
+api/bin/
