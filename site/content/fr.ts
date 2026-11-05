@@ -156,7 +156,7 @@ export const fr: Dict = {
       { q: "Où sont stockées nos données ?", a: "Les données clients hébergées par HEKATE restent sur l’infrastructure de HEKATE au Cameroun, chiffrées au repos et en transit, sauf accord écrit contraire du client." },
       { q: "Testez-vous nos systèmes sans autorisation écrite ?", a: "Non. Les évaluations de vulnérabilités et les tests d’intrusion exigent une autorisation écrite et des règles d’engagement avant tout travail." },
       { q: "Un re-test est-il inclus après un test d’intrusion ?", a: "Oui. HEKATE offre un nouveau test des constats rapportés dans les 60 jours suivant le rapport, sans frais." },
-      { q: "Comment vérifier qu’un document HEKATE est authentique ?", a: "Chaque document HEKATE porte une signature numérique et un QR code de vérification. Scannez le code ou saisissez la référence sur hekatesystems.com/verify." },
+      { q: "Comment vérifier qu’un document HEKATE est authentique ?", a: "Chaque document HEKATE porte une signature numérique et un QR code de vérification. Scannez le code ou saisissez la référence sur app.hekatesystems.com/verify." },
       { q: "Quelles sont vos heures de support ?", a: "Du lundi au vendredi, 08 h 00–17 h 00 (heure d’Afrique de l’Ouest), hors jours fériés. Une couverture 24 h/24 et 7 j/7 est proposée aux clients ayant ce contrat. Un ingénieur répond aux demandes sous un jour ouvré." },
     ],
   },

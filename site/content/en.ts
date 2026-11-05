@@ -154,7 +154,7 @@ export const en: Dict = {
       { q: "Where is our data stored?", a: "Client data hosted by HEKATE stays on HEKATE infrastructure in Cameroon, encrypted at rest and in transit, unless the client agrees otherwise in writing." },
       { q: "Do you test our systems without written permission?", a: "No. Vulnerability assessments and penetration tests require a written authorisation and rules of engagement before any work starts." },
       { q: "Is a re-test included after a penetration test?", a: "Yes. HEKATE offers one re-test of the reported findings within 60 days of the report, at no charge." },
-      { q: "How can I check that a HEKATE document is genuine?", a: "Every HEKATE document carries a digital signature and a QR verification code. Scan the code or enter the reference on hekatesystems.com/verify." },
+      { q: "How can I check that a HEKATE document is genuine?", a: "Every HEKATE document carries a digital signature and a QR verification code. Scan the code or enter the reference on app.hekatesystems.com/verify." },
       { q: "What are your support hours?", a: "Monday to Friday, 08:00–17:00 (West Africa Time), excluding public holidays. 24/7 cover is available to clients with that contract. An engineer replies to enquiries within one business day." },
     ],
   },
@@ -286,7 +286,7 @@ export const en: Dict = {
       },
       {
         h: "9. Document authenticity guarantee",
-        blocks: [{ t: "p", text: "Every HEKATE document carries a digital signature and a QR verification code. HEKATE guarantees that a document verified as authentic on hekatesystems.com was issued by HEKATE in the form shown, and will confirm authenticity in writing on request." }],
+        blocks: [{ t: "p", text: "Every HEKATE document carries a digital signature and a QR verification code. HEKATE guarantees that a document verified as authentic on app.hekatesystems.com was issued by HEKATE in the form shown, and will confirm authenticity in writing on request." }],
       },
       {
         h: "10. Exclusions",

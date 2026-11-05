@@ -4,8 +4,8 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 # NEXT_PUBLIC_* values are baked into the browser bundle at build time.
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_OIDC_ISSUER
+ARG NEXT_PUBLIC_API_URL=https://api.hekatesystems.com
+ARG NEXT_PUBLIC_OIDC_ISSUER=https://auth.hekatesystems.com/realms/hekate
 ARG NEXT_PUBLIC_OIDC_CLIENT_ID=hekate-web
 ARG NEXT_PUBLIC_DEV_LOGIN=0
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL NEXT_PUBLIC_OIDC_ISSUER=$NEXT_PUBLIC_OIDC_ISSUER \
