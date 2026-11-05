@@ -28,7 +28,7 @@ jobs:
         dir: [web, site, sdk/typescript]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - run: cd ${{ matrix.dir }} && npm ci --ignore-scripts && npm audit --omit=dev --audit-level=high
@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - run: cd mobile && npm ci --ignore-scripts && npm audit --omit=dev --audit-level=critical
