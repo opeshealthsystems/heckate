@@ -1,0 +1,15 @@
+# Throwaway credentials that exist only in developer and CI containers are allowed; real secrets never are.
+[allowlist]
+description = "development and test fixtures"
+regexes = [
+  '''postgres://postgres:(postgres|pw)@localhost''',
+  '''postgres://hekate:dev-only@''',
+  '''e2e-secret''',
+  '''test-secret''',
+  '''pay-secret''',
+]
+paths = [
+  '''e2e/.*''',
+  '''.*_test\.go''',
+  '''deploy/keycloak/hekate-realm\.json''',
+]

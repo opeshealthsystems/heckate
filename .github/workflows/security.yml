@@ -1,0 +1,82 @@
+name: Security
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * *"   # new advisories appear daily; scan even when nobody pushes
+
+permissions:
+  contents: read
+
+jobs:
+  govulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache-dependency-path: api/go.sum
+      # Fails when a known vulnerability is reachable from our code (standard library included).
+      - run: cd api && go install golang.org/x/vuln/cmd/govulncheck@v1.9.0 && govulncheck ./...
+
+  npm-audit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dir: [web, site, sdk/typescript]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: cd ${{ matrix.dir }} && npm ci --ignore-scripts && npm audit --omit=dev --audit-level=high
+
+  # The mobile toolchain (Expo/Metro) is build tooling that never ships inside the app; criticals still fail.
+  npm-audit-mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: cd mobile && npm ci --ignore-scripts && npm audit --omit=dev --audit-level=critical
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Scans the whole history for committed credentials.
+      - run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz | tar xz gitleaks
+          ./gitleaks detect --source . --redact --no-banner --config .gitleaks.toml
+
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Pinned scanner image (no third-party action); fails on fixable HIGH / CRITICAL findings,
+      # committed secrets, and insecure Dockerfile / config choices.
+      - run: |
+          docker run --rm -v "$PWD:/src" -w /src aquasec/trivy:0.58.0 fs \
+            --scanners vuln,secret,misconfig --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
+            --skip-dirs mobile/node_modules,web/node_modules,site/node_modules,sdk/typescript/node_modules,web/.next .
+
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      matrix:
+        language: [go, javascript-typescript]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended
+      - uses: github/codeql-action/analyze@v3

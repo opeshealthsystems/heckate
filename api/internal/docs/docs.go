@@ -1,0 +1,302 @@
+// Package docs renders HEKATE's printable documents (invoice, quotation, site-visit acceptance) as PDF.
+//
+// Output is deterministic: the same inputs produce the same bytes (dates come from the record, not
+// the clock), so the SHA-256 recorded in the document register identifies exactly one file.
+// A QR code on each page links to the public verification page.
+package docs
+
+import (
+	"bytes"
+	"crypto/ed25519"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/go-pdf/fpdf"
+	"github.com/skip2/go-qrcode"
+)
+
+// Options configure rendering. Letterhead lines (RCCM, address, phone) come from configuration so
+// nothing unconfirmed is ever printed.
+type Options struct {
+	PortalURL  string
+	Letterhead []string
+	Compress   bool
+	// QRSigner signs the address in the QR code (see qr.go); empty means plain /verify?ref= addresses.
+	QRSigner ed25519.PrivateKey
+	// Version is the document version printed in the signed address; empty means 1.0.
+	Version string
+}
+
+type Party struct{ Name, RCCM, Email string }
+
+type Line struct {
+	Description string
+	Quantity    float64
+	UnitPrice   int64
+}
+
+type Money struct{ Net, TVA, CAC, Total int64 }
+
+// XAF formats whole francs with spaces between thousands. Plain spaces, so the core PDF fonts can print it.
+func XAF(n int64) string {
+	neg := n < 0
+	if neg {
+		n = -n
+	}
+	s := fmt.Sprintf("%d", n)
+	var out []byte
+	for i, c := range []byte(s) {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			out = append(out, ' ')
+		}
+		out = append(out, c)
+	}
+	if neg {
+		return "-" + string(out) + " XAF"
+	}
+	return string(out) + " XAF"
+}
+
+// LineAmount is quantity x unit price in whole francs, rounded half up (hundredths of a unit in integers).
+func LineAmount(l Line) int64 {
+	q := int64(l.Quantity*100 + 0.5)
+	return (q*l.UnitPrice + 50) / 100
+}
+
+// VerifyURL is the address the QR code points to.
+func (o Options) VerifyURL(ref string) string {
+	return strings.TrimRight(o.PortalURL, "/") + "/verify?ref=" + ref
+}
+
+type doc struct {
+	pdf   *fpdf.Fpdf
+	tr    func(string) string
+	o     Options
+	ref   string
+	draft bool // a preview of something not yet issued: no reference, no QR code, marked as not valid
+}
+
+func newDoc(o Options, ref, kind string, at time.Time) *doc {
+	return newDocMode(o, ref, kind, at, false)
+}
+
+func newDocMode(o Options, ref, kind string, at time.Time, draft bool) *doc {
+	return newDocFrame(o, ref, kind, at, draft, "", "")
+}
+
+// newDocFrame builds the page frame. A draft has no reference or QR code and says it is not valid; a report (reportNote
+// set) is a computed printout, not a numbered document: it has its classification banner and a footer saying when
+// and by whom it was produced, and no QR code.
+func newDocFrame(o Options, ref, kind string, at time.Time, draft bool, reportNote, reportClass string) *doc {
+	pdf := fpdf.New("P", "mm", "A4", "")
+	pdf.SetCompression(o.Compress)
+	pdf.SetCatalogSort(true) // font and image tables are written in sorted order, not map order: deterministic bytes
+	pdf.SetCreationDate(at.UTC())
+	pdf.SetModificationDate(at.UTC())
+	pdf.SetTitle(kind+" "+ref, false)
+	pdf.SetAuthor("HEKATE SYSTEMS SARL", false)
+	pdf.SetMargins(15, 15, 15)
+	pdf.SetAutoPageBreak(true, 22)
+	pdf.AliasNbPages("{nb}")
+	d := &doc{pdf: pdf, tr: pdf.UnicodeTranslatorFromDescriptor(""), o: o, ref: ref, draft: draft}
+
+	var qr []byte
+	if o.PortalURL != "" && !draft && reportNote == "" {
+		qr, _ = qrcode.Encode(o.QRContent(ref, at), qrcode.Medium, 256)
+	}
+	class := Classification(ref)
+	if reportClass != "" {
+		class = reportClass
+	}
+	if draft {
+		class = "DRAFT PREVIEW - NOT ISSUED - NOT VALID"
+	}
+	col := classColour[class]
+	if draft {
+		col = [3]int{169, 101, 0} // the same contrast-safe amber as the CONFIDENTIAL banner
+	}
+	pdf.RegisterImageOptionsReader("logo", fpdf.ImageOptions{ImageType: "PNG"}, bytes.NewReader(logoPNG))
+	pdf.SetHeaderFunc(func() {
+		// Classification banner across the top of every page.
+		pdf.SetFillColor(col[0], col[1], col[2])
+		pdf.Rect(0, 0, 210, 6.5, "F")
+		pdf.SetFont("Helvetica", "B", 7.5)
+		pdf.SetTextColor(255, 255, 255)
+		pdf.SetXY(15, 1.4)
+		pdf.CellFormat(180, 3.8, d.tr(class), "", 0, "L", false, 0, "")
+		pdf.SetTextColor(0, 0, 0)
+		pdf.ImageOptions("logo", 15, 11, 40, 0, false, fpdf.ImageOptions{ImageType: "PNG"}, 0, "")
+		pdf.SetFont("Helvetica", "", 8.5)
+		pdf.SetTextColor(90, 90, 90)
+		pdf.SetXY(15, 27.5)
+		for _, l := range o.Letterhead {
+			pdf.SetX(15)
+			pdf.CellFormat(120, 4, d.tr(l), "", 1, "L", false, 0, "")
+		}
+		pdf.SetTextColor(0, 0, 0)
+		if len(qr) > 0 {
+			pdf.RegisterImageOptionsReader("qr", fpdf.ImageOptions{ImageType: "PNG"}, bytes.NewReader(qr))
+			pdf.ImageOptions("qr", 168, 10, 27, 27, false, fpdf.ImageOptions{ImageType: "PNG"}, 0, "")
+			pdf.SetFont("Helvetica", "", 6.5)
+			pdf.SetXY(160, 37.5)
+			pdf.CellFormat(43, 3, d.tr("Scan to verify"), "", 0, "C", false, 0, "")
+		}
+		pdf.SetDrawColor(gold[0], gold[1], gold[2])
+		pdf.SetLineWidth(0.5)
+		pdf.Line(15, 43, 195, 43)
+		pdf.SetLineWidth(0.2)
+		pdf.SetDrawColor(0, 0, 0)
+		if draft {
+			pdf.SetFont("Helvetica", "B", 96)
+			pdf.SetTextColor(232, 232, 232)
+			pdf.TransformBegin()
+			pdf.TransformRotate(45, 105, 165)
+			pdf.Text(42, 175, "DRAFT")
+			pdf.TransformEnd()
+			pdf.SetTextColor(0, 0, 0)
+		}
+		pdf.SetY(47)
+	})
+	pdf.SetFooterFunc(func() {
+		pdf.SetY(-16)
+		pdf.SetFont("Helvetica", "", 1.5)
+		pdf.SetTextColor(navy[0], navy[1], navy[2])
+		pdf.SetX(15)
+		pdf.CellFormat(180, 1.6, d.tr(microtext(180, pdf.GetStringWidth)), "", 1, "L", false, 0, "")
+		pdf.SetFont("Helvetica", "", 7.5)
+		pdf.SetTextColor(90, 90, 90)
+		pdf.SetX(15)
+		line := class + "  |  Reference " + ref
+		if draft {
+			line = "Draft preview  |  not issued, has no reference and cannot be verified"
+		} else if reportNote != "" {
+			line = class + "  |  " + reportNote
+		} else if o.PortalURL != "" {
+			line += "  |  Verify at " + o.VerifyURL(ref)
+		}
+		pdf.CellFormat(150, 4, d.tr(line), "", 0, "L", false, 0, "")
+		pdf.CellFormat(30, 4, fmt.Sprintf("Page %d / {nb}", pdf.PageNo()), "", 0, "R", false, 0, "")
+		pdf.SetTextColor(0, 0, 0)
+	})
+	pdf.AddPage()
+	return d
+}
+
+func (d *doc) title(kind, sub string) {
+	d.pdf.SetFont("Helvetica", "B", 20)
+	d.pdf.SetTextColor(navy[0], navy[1], navy[2])
+	d.pdf.MultiCell(0, 9, d.tr(kind), "", "L", false) // wraps long titles instead of running off the page
+	d.pdf.SetTextColor(0, 0, 0)
+	d.pdf.SetFont("Helvetica", "", 10)
+	d.pdf.CellFormat(0, 5, d.tr(sub), "", 1, "L", false, 0, "")
+	d.pdf.Ln(3)
+}
+
+func (d *doc) kv(k, v string) {
+	d.pdf.SetFont("Helvetica", "B", 9.5)
+	d.pdf.CellFormat(38, 5.5, d.tr(k), "", 0, "L", false, 0, "")
+	d.pdf.SetFont("Helvetica", "", 9.5)
+	d.pdf.MultiCell(0, 5.5, d.tr(v), "", "L", false)
+}
+
+func (d *doc) party(label string, p Party) {
+	d.pdf.SetFont("Helvetica", "B", 9.5)
+	d.pdf.CellFormat(0, 6, d.tr(label), "", 1, "L", false, 0, "")
+	d.pdf.SetFont("Helvetica", "", 10)
+	d.pdf.CellFormat(0, 5, d.tr(p.Name), "", 1, "L", false, 0, "")
+	d.pdf.SetFont("Helvetica", "", 9)
+	if p.RCCM != "" {
+		d.pdf.CellFormat(0, 4.5, d.tr("RCCM "+p.RCCM), "", 1, "L", false, 0, "")
+	}
+	if p.Email != "" {
+		d.pdf.CellFormat(0, 4.5, d.tr(p.Email), "", 1, "L", false, 0, "")
+	}
+	d.pdf.Ln(3)
+}
+
+// table draws the lines with wrapping descriptions that never split a row across pages badly.
+func (d *doc) table(lines []Line) {
+	p := d.pdf
+	w := []float64{88, 20, 35, 37}
+	head := func() {
+		p.SetFont("Helvetica", "B", 9)
+		p.SetFillColor(bandFill[0], bandFill[1], bandFill[2])
+		p.SetTextColor(navy[0], navy[1], navy[2])
+		for i, h := range []string{"Description", "Qty", "Unit price", "Amount"} {
+			al := "R"
+			if i == 0 {
+				al = "L"
+			}
+			p.CellFormat(w[i], 7, d.tr(h), "B", 0, al, true, 0, "")
+		}
+		p.SetTextColor(0, 0, 0)
+		p.Ln(-1)
+	}
+	head()
+	p.SetFont("Helvetica", "", 9)
+	for _, l := range lines {
+		wrapped := p.SplitLines([]byte(d.tr(l.Description)), w[0]-2)
+		h := float64(len(wrapped))*4.6 + 2
+		if p.GetY()+h > 297-22-10 {
+			p.AddPage()
+			head()
+			p.SetFont("Helvetica", "", 9)
+		}
+		x, y := p.GetX(), p.GetY()
+		p.MultiCell(w[0], 4.6, d.tr(l.Description), "", "L", false)
+		p.SetXY(x+w[0], y)
+		qty := fmt.Sprintf("%g", l.Quantity)
+		p.CellFormat(w[1], h-2, qty, "", 0, "R", false, 0, "")
+		p.CellFormat(w[2], h-2, XAF(l.UnitPrice), "", 0, "R", false, 0, "")
+		p.CellFormat(w[3], h-2, XAF(LineAmount(l)), "", 0, "R", false, 0, "")
+		p.SetXY(x, y+h)
+		p.SetDrawColor(220, 220, 220)
+		p.Line(x, y+h-1, x+180, y+h-1)
+	}
+	p.Ln(3)
+}
+
+func (d *doc) totals(m Money) {
+	p := d.pdf
+	row := func(label string, v int64, bold bool) {
+		if bold {
+			p.SetFont("Helvetica", "B", 10.5)
+		} else {
+			p.SetFont("Helvetica", "", 9.5)
+		}
+		p.SetX(110)
+		p.CellFormat(35, 6, d.tr(label), "", 0, "L", false, 0, "")
+		p.CellFormat(50, 6, XAF(v), "", 1, "R", false, 0, "")
+	}
+	if p.GetY() > 297-22-30 {
+		p.AddPage()
+	}
+	row("Net", m.Net, false)
+	row("TVA", m.TVA, false)
+	row("CAC", m.CAC, false)
+	p.SetDrawColor(120, 120, 120)
+	p.Line(110, p.GetY(), 195, p.GetY())
+	row("Total", m.Total, true)
+}
+
+func (d *doc) bytes() ([]byte, error) {
+	var buf bytes.Buffer
+	if err := d.pdf.Output(&buf); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func date(t time.Time) string { return t.UTC().Format("02 Jan 2006") }
+
+// Visit is the content of a completed site visit.
+type Visit struct {
+	Engineer          string
+	Summary           string
+	CheckIn, CheckOut time.Time
+	InPos, OutPos     string
+	Report            string
+	SignedBy          string
+	Signature         []byte // PNG; ignored if it does not decode
+}

@@ -1,0 +1,45 @@
+# Prometheus alert rules for the HEKATE API (scrape HEKATE_METRICS_ADDR). Written against the metric names
+# the API exports; NOT yet loaded into a real Prometheus (see docs/RUNBOOK.md, "what is untested").
+groups:
+  - name: hekate-availability
+    rules:
+      - alert: HekateApiDown
+        expr: up{job="hekate-api"} == 0
+        for: 2m
+        labels: { severity: page }
+        annotations: { summary: "API instance not scraped for 2 minutes", runbook: "docs/RUNBOOK.md#api-down" }
+      - alert: HekateDatabaseUnreachable
+        expr: hekate_db_up == 0
+        for: 1m
+        labels: { severity: page }
+        annotations: { summary: "API cannot reach PostgreSQL", runbook: "docs/RUNBOOK.md#database-unreachable" }
+      - alert: HekateHighErrorRate
+        expr: |
+          sum(rate(hekate_http_requests_total{class="5xx"}[5m]))
+            / clamp_min(sum(rate(hekate_http_requests_total[5m])), 1) > 0.02
+        for: 5m
+        labels: { severity: page }
+        annotations: { summary: "More than 2% of requests fail with 5xx", runbook: "docs/RUNBOOK.md#high-error-rate" }
+      - alert: HekateSlowRequests
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(hekate_http_request_duration_seconds_bucket[5m]))) > 1
+        for: 10m
+        labels: { severity: ticket }
+        annotations: { summary: "95th percentile latency above 1 second", runbook: "docs/RUNBOOK.md#slow-requests" }
+      - alert: HekateDbPoolExhausted
+        expr: hekate_db_pool_connections{state="acquired"} >= hekate_db_pool_connections{state="max"}
+        for: 5m
+        labels: { severity: ticket }
+        annotations: { summary: "Every database connection is in use", runbook: "docs/RUNBOOK.md#slow-requests" }
+  - name: hekate-integrity
+    rules:
+      - alert: HekateOutboxStuck
+        expr: hekate_outbox_oldest_pending_seconds > 300
+        for: 5m
+        labels: { severity: page }
+        annotations: { summary: "Events have waited more than 5 minutes to be published", runbook: "docs/RUNBOOK.md#outbox-stuck" }
+      - alert: HekateAuditNotSealing
+        expr: hekate_audit_unsealed > 1000
+        for: 10m
+        labels: { severity: page }
+        annotations: { summary: "Audit rows are not being linked into the hash chain", runbook: "docs/RUNBOOK.md#audit-not-sealing" }

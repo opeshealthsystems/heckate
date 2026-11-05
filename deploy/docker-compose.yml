@@ -1,0 +1,72 @@
+# Local development stack. Production runs on the Proxmox hosts described in the spec.
+#   docker compose -f deploy/docker-compose.yml up -d                 # infrastructure only
+#   docker compose -f deploy/docker-compose.yml --profile full up -d --build   # plus api, web, site
+# The API applies its own migrations on start; do not mount them into Postgres.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: hekate
+      POSTGRES_PASSWORD: dev-only
+      POSTGRES_DB: hekate
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hekate"]
+      interval: 5s
+      retries: 10
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: dev-only
+      KC_HOSTNAME: http://localhost:8081
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+    volumes: [./keycloak/hekate-realm.json:/opt/keycloak/data/import/hekate-realm.json:ro]
+    ports: ["8081:8080"]
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: dev
+      MINIO_ROOT_PASSWORD: dev-only-secret
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [miniodata:/data]
+  nats:
+    image: nats:2.10
+    command: ["-js"]
+    ports: ["4222:4222"]
+  api:
+    profiles: [full]
+    build: ../api
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      HEKATE_ENV: development   # this file is a developer stack; production uses deploy/production.md
+      HEKATE_DATABASE_URL: postgres://hekate:dev-only@postgres:5432/hekate?sslmode=disable
+      HEKATE_JWKS_URL: http://keycloak:8080/realms/hekate/protocol/openid-connect/certs
+      HEKATE_ISSUER: http://localhost:8081/realms/hekate
+      HEKATE_CORS_ORIGINS: http://localhost:3000,http://localhost:3001
+      HEKATE_NATS_URL: nats://nats:4222
+    ports: ["8080:8080"]
+  web:
+    profiles: [full]
+    build:
+      context: ../web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8080
+        NEXT_PUBLIC_OIDC_ISSUER: http://localhost:8081/realms/hekate
+    ports: ["3000:3000"]
+  site:
+    profiles: [full]
+    build:
+      context: ../site
+      args:
+        NEXT_PUBLIC_SITE_URL: http://localhost:3001
+        NEXT_PUBLIC_API_URL: http://localhost:8080
+        NEXT_PUBLIC_PORTAL_URL: http://localhost:3000
+    ports: ["3001:8080"]
+volumes:
+  pgdata:
+  miniodata:

@@ -1,0 +1,197 @@
+package platform
+
+import (
+	"fmt"
+	"net"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+)
+
+// Config is read from the environment.
+type Config struct {
+	Env            string        // HEKATE_ENV: "production" (the default) or "development". Production refuses unsafe settings.
+	RateLimit      int           // HEKATE_RATE_LIMIT: requests per minute per caller (default 300)
+	MetricsAddr    string        // HEKATE_METRICS_ADDR: where /metrics is served (internal network only); empty disables it
+	TrustedProxies []string      // HEKATE_TRUSTED_PROXIES: CIDRs of the load balancers allowed to set X-Forwarded-For
+	Addr           string        // HEKATE_ADDR
+	DatabaseURL    string        // HEKATE_DATABASE_URL (owner role; the pool switches to hekate_app)
+	JWKSURL        string        // HEKATE_JWKS_URL (Keycloak certs endpoint)
+	Issuer         string        // HEKATE_ISSUER (optional exact match)
+	Audience       string        // HEKATE_AUDIENCE (optional)
+	DevSecret      string        // HEKATE_DEV_JWT_SECRET: enables HS256 tokens. Never set in production.
+	CORSOrigins    string        // HEKATE_CORS_ORIGINS, comma separated
+	NATSURL        string        // HEKATE_NATS_URL; empty logs events instead
+	PortalURL      string        // HEKATE_PORTAL_URL: where the QR code on documents points (the web app)
+	Letterhead     []string      // HEKATE_LETTERHEAD: lines printed under the company name, separated by |
+	PDFCompress    bool          // HEKATE_PDF_COMPRESS: on unless set to 0 (tests turn it off to read text)
+	PushEnabled    bool          // HEKATE_PUSH=1 sends push notifications through the Expo push service
+	ExpoToken      string        // HEKATE_EXPO_ACCESS_TOKEN, optional
+	RemindersEvery time.Duration // HEKATE_REMINDER_INTERVAL: how often overdue-invoice reminders go out (default 6h; "off" disables)
+	RecurringEvery time.Duration // HEKATE_RECURRING_INTERVAL: how often due recurring invoices become drafts (default 1h; "off" disables)
+
+	PaymentsWebhookSecret string // HEKATE_PAYMENTS_WEBHOOK_SECRET: signs provider callbacks (HMAC-SHA256); callbacks are refused without it
+	PaymentsSandbox       bool   // HEKATE_PAYMENTS_SANDBOX=1: a fake provider that never moves money. Development only.
+	QRSigningKeyFile      string // HEKATE_QR_SIGNING_KEY_FILE: unencrypted PKCS#8 Ed25519 key in PEM form, from the secret store; empty prints plain /verify?ref= codes
+	// PDF signing (PAdES): PEM certificate (leaf first, then any intermediates) and unencrypted private key, both from
+	// the secret store. Both empty leaves PDFs unsigned, exactly as before; one without the other is refused in production.
+	PDFSigningCertFile string // HEKATE_PDF_SIGNING_CERT_FILE
+	PDFSigningKeyFile  string // HEKATE_PDF_SIGNING_KEY_FILE
+	MoMo               MoMoConfig
+	Orange             OrangeConfig
+}
+
+// MoMoConfig is the MTN Mobile Money Collection API account (all empty: MoMo is off).
+type MoMoConfig struct {
+	BaseURL         string // HEKATE_MOMO_BASE_URL, e.g. https://proxy.momoapi.mtn.com
+	SubscriptionKey string // HEKATE_MOMO_SUBSCRIPTION_KEY
+	APIUser         string // HEKATE_MOMO_API_USER
+	APIKey          string // HEKATE_MOMO_API_KEY
+	Environment     string // HEKATE_MOMO_ENVIRONMENT: sandbox or the production target, for X-Target-Environment
+	Currency        string // HEKATE_MOMO_CURRENCY, default XAF
+	CallbackURL     string // HEKATE_MOMO_CALLBACK_URL, optional
+}
+
+// OrangeConfig is the Orange Money WebPay account (all empty: Orange Money is off).
+type OrangeConfig struct {
+	BaseURL      string // HEKATE_ORANGE_BASE_URL, e.g. https://api.orange.com
+	ClientID     string // HEKATE_ORANGE_CLIENT_ID (OAuth client credentials)
+	ClientSecret string // HEKATE_ORANGE_CLIENT_SECRET
+	MerchantKey  string // HEKATE_ORANGE_MERCHANT_KEY
+	Country      string // HEKATE_ORANGE_COUNTRY, default cm
+	Currency     string // HEKATE_ORANGE_CURRENCY, default XAF
+	NotifURL     string // HEKATE_ORANGE_NOTIF_URL: where the provider posts the result
+	ReturnURL    string // HEKATE_ORANGE_RETURN_URL
+	CancelURL    string // HEKATE_ORANGE_CANCEL_URL
+}
+
+func LoadConfig() Config {
+	get := func(k, d string) string {
+		if v := os.Getenv(k); v != "" {
+			return v
+		}
+		return d
+	}
+	return Config{
+		Env:            get("HEKATE_ENV", "production"),
+		MetricsAddr:    os.Getenv("HEKATE_METRICS_ADDR"),
+		RateLimit:      atoiOr(os.Getenv("HEKATE_RATE_LIMIT"), 300),
+		TrustedProxies: splitList(os.Getenv("HEKATE_TRUSTED_PROXIES")),
+		Addr:           get("HEKATE_ADDR", ":8080"),
+		DatabaseURL:    get("HEKATE_DATABASE_URL", "postgres://hekate:dev-only@localhost:5432/hekate?sslmode=disable"),
+		JWKSURL:        os.Getenv("HEKATE_JWKS_URL"),
+		Issuer:         os.Getenv("HEKATE_ISSUER"),
+		Audience:       os.Getenv("HEKATE_AUDIENCE"),
+		DevSecret:      os.Getenv("HEKATE_DEV_JWT_SECRET"),
+		CORSOrigins:    os.Getenv("HEKATE_CORS_ORIGINS"),
+		NATSURL:        os.Getenv("HEKATE_NATS_URL"),
+		PortalURL:      get("HEKATE_PORTAL_URL", "http://localhost:3000"),
+		Letterhead:     splitLetterhead(os.Getenv("HEKATE_LETTERHEAD")),
+		PDFCompress:    os.Getenv("HEKATE_PDF_COMPRESS") != "0",
+		PushEnabled:    os.Getenv("HEKATE_PUSH") == "1",
+		RemindersEvery: durationOr(get("HEKATE_REMINDER_INTERVAL", "6h"), 6*time.Hour),
+		RecurringEvery: durationOr(get("HEKATE_RECURRING_INTERVAL", "1h"), time.Hour),
+		ExpoToken:      os.Getenv("HEKATE_EXPO_ACCESS_TOKEN"),
+
+		PaymentsWebhookSecret: os.Getenv("HEKATE_PAYMENTS_WEBHOOK_SECRET"),
+		PaymentsSandbox:       os.Getenv("HEKATE_PAYMENTS_SANDBOX") == "1",
+		QRSigningKeyFile:      os.Getenv("HEKATE_QR_SIGNING_KEY_FILE"),
+		PDFSigningCertFile:    os.Getenv("HEKATE_PDF_SIGNING_CERT_FILE"),
+		PDFSigningKeyFile:     os.Getenv("HEKATE_PDF_SIGNING_KEY_FILE"),
+		MoMo: MoMoConfig{
+			BaseURL: os.Getenv("HEKATE_MOMO_BASE_URL"), SubscriptionKey: os.Getenv("HEKATE_MOMO_SUBSCRIPTION_KEY"),
+			APIUser: os.Getenv("HEKATE_MOMO_API_USER"), APIKey: os.Getenv("HEKATE_MOMO_API_KEY"),
+			Environment: os.Getenv("HEKATE_MOMO_ENVIRONMENT"), Currency: get("HEKATE_MOMO_CURRENCY", "XAF"),
+			CallbackURL: os.Getenv("HEKATE_MOMO_CALLBACK_URL"),
+		},
+		Orange: OrangeConfig{
+			BaseURL: os.Getenv("HEKATE_ORANGE_BASE_URL"), ClientID: os.Getenv("HEKATE_ORANGE_CLIENT_ID"),
+			ClientSecret: os.Getenv("HEKATE_ORANGE_CLIENT_SECRET"), MerchantKey: os.Getenv("HEKATE_ORANGE_MERCHANT_KEY"),
+			Country: get("HEKATE_ORANGE_COUNTRY", "cm"), Currency: get("HEKATE_ORANGE_CURRENCY", "XAF"),
+			NotifURL: os.Getenv("HEKATE_ORANGE_NOTIF_URL"), ReturnURL: os.Getenv("HEKATE_ORANGE_RETURN_URL"), CancelURL: os.Getenv("HEKATE_ORANGE_CANCEL_URL"),
+		},
+	}
+}
+
+// durationOr parses a Go duration such as "30m"; "off" or "0" gives zero, which disables the job, and a
+// value that does not parse falls back to d rather than silently disabling anything.
+func durationOr(v string, d time.Duration) time.Duration {
+	v = strings.TrimSpace(v)
+	if v == "off" || v == "0" {
+		return 0
+	}
+	if x, err := time.ParseDuration(v); err == nil && x >= time.Minute {
+		return x
+	}
+	return d
+}
+
+func splitLetterhead(v string) []string {
+	var out []string
+	for _, l := range strings.Split(v, "|") {
+		if l = strings.TrimSpace(l); l != "" {
+			out = append(out, l)
+		}
+	}
+	return out
+}
+
+func splitList(v string) []string {
+	var out []string
+	for _, l := range strings.Split(v, ",") {
+		if l = strings.TrimSpace(l); l != "" {
+			out = append(out, l)
+		}
+	}
+	return out
+}
+
+// Production reports whether the safe-by-default rules apply.
+func (c Config) Production() bool { return c.Env != "development" }
+
+// Problems lists everything in the configuration that must not reach production. The server refuses to
+// start while any remain. Development (HEKATE_ENV=development) is exempt so the stack runs on a laptop.
+func (c Config) Problems() []string {
+	var p []string
+	for _, cidr := range c.TrustedProxies {
+		if _, _, err := net.ParseCIDR(cidr); err != nil {
+			p = append(p, fmt.Sprintf("HEKATE_TRUSTED_PROXIES: %q is not a CIDR", cidr))
+		}
+	}
+	if !c.Production() {
+		return p
+	}
+	if u := strings.ToLower(c.PortalURL); !strings.HasPrefix(u, "https://") || strings.Contains(u, "localhost") {
+		p = append(p, "HEKATE_PORTAL_URL must be the public https address of the web app (QR codes and verification links point there)")
+	}
+	if c.Env != "production" {
+		p = append(p, fmt.Sprintf("HEKATE_ENV must be production or development, not %q", c.Env))
+	}
+	if c.DevSecret != "" {
+		p = append(p, "HEKATE_DEV_JWT_SECRET is set: development tokens would be accepted as real ones")
+	}
+	if c.JWKSURL == "" || c.Issuer == "" || c.Audience == "" {
+		p = append(p, "HEKATE_JWKS_URL, HEKATE_ISSUER and HEKATE_AUDIENCE must all be set so tokens are verified against the identity provider")
+	}
+	if c.PaymentsSandbox {
+		p = append(p, "HEKATE_PAYMENTS_SANDBOX=1 would accept fake payments")
+	}
+	if strings.Contains(c.DatabaseURL, "sslmode=disable") {
+		p = append(p, "HEKATE_DATABASE_URL has sslmode=disable: database traffic must be encrypted")
+	}
+	if (c.PDFSigningCertFile == "") != (c.PDFSigningKeyFile == "") {
+		p = append(p, "HEKATE_PDF_SIGNING_CERT_FILE and HEKATE_PDF_SIGNING_KEY_FILE must be set together: half a signing pair would silently leave documents unsigned or fail at the first PDF")
+	}
+	if strings.Contains(c.CORSOrigins, "*") {
+		p = append(p, "HEKATE_CORS_ORIGINS must list exact origins, not *")
+	}
+	return p
+}
+
+func atoiOr(v string, d int) int {
+	if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && n > 0 {
+		return n
+	}
+	return d
+}
