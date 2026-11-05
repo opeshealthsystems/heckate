@@ -1,5 +1,7 @@
 # Production deployment
 
+> Deploying without Docker on a shared Ubuntu server (the planned setup, shared with opesware.com)? Follow **[UBUNTU_SHARED_SERVER.md](UBUNTU_SHARED_SERVER.md)**. This page is the overview; that one is the step-by-step runbook.
+
 ## Domains (hekatesystems.com)
 
 | Host | Serves | Built from |
