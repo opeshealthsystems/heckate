@@ -14,10 +14,10 @@ export default function Interventions() {
   const dispatcher = me.roles.some((r) => ["support", "manager", "ceo"].includes(r));
   const [rows, setRows] = useState<Intervention[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-  const [f, setF] = useState({ tenant_id: "", engineer: "", scheduled_for: "", summary: "" });
+  const [f, setF] = useState({ tenant_id: "", engineer: "", scheduled_for: "", summary: "", site_address: "", site_contact: "" });
   const [loadErr, setLoadErr] = useState("");
   const load = () => raw.get<{ data: Intervention[] }>("/v1/interventions").then((r) => setRows(r.data)).catch((e) => setLoadErr(e.message));
-  const act = useAction(async () => { setF({ tenant_id: "", engineer: "", scheduled_for: "", summary: "" }); await load(); });
+  const act = useAction(async () => { setF({ tenant_id: "", engineer: "", scheduled_for: "", summary: "", site_address: "", site_contact: "" }); await load(); });
   useEffect(() => { void load(); if (dispatcher) api.clients().then((r) => setClients(r.data)).catch(() => {}); }, [dispatcher]);
   return (
     <>
@@ -35,7 +35,7 @@ export default function Interventions() {
       {dispatcher && (
         <>
           <h2>Dispatch an engineer</h2>
-          <form className="card form" onSubmit={(e) => { e.preventDefault(); void act.run(() => raw.post("/v1/interventions", { tenant_id: f.tenant_id, engineer: f.engineer, summary: f.summary, scheduled_for: f.scheduled_for ? new Date(f.scheduled_for).toISOString() : undefined })); }}>
+          <form className="card form" onSubmit={(e) => { e.preventDefault(); void act.run(() => raw.post("/v1/interventions", { tenant_id: f.tenant_id, engineer: f.engineer, summary: f.summary, site_address: f.site_address, site_contact: f.site_contact, scheduled_for: f.scheduled_for ? new Date(f.scheduled_for).toISOString() : undefined })); }}>
             <Field id="iv-client" label="Client">
               <select id="iv-client" required value={f.tenant_id} onChange={(e) => setF({ ...f, tenant_id: e.target.value })}>
                 <option value="">Select…</option>
@@ -45,6 +45,8 @@ export default function Interventions() {
             <Field id="iv-eng" label="Engineer (account id)"><input id="iv-eng" required value={f.engineer} onChange={(e) => setF({ ...f, engineer: e.target.value })} /></Field>
             <Field id="iv-when" label="Scheduled for"><input id="iv-when" type="datetime-local" value={f.scheduled_for} onChange={(e) => setF({ ...f, scheduled_for: e.target.value })} /></Field>
             <Field id="iv-sum" label="Summary"><input id="iv-sum" value={f.summary} onChange={(e) => setF({ ...f, summary: e.target.value })} /></Field>
+            <Field id="iv-addr" label="Site address"><input id="iv-addr" maxLength={500} placeholder="Street, district, city" value={f.site_address} onChange={(e) => setF({ ...f, site_address: e.target.value })} /></Field>
+            <Field id="iv-contact" label="Site contact"><input id="iv-contact" maxLength={200} placeholder="Name and phone" value={f.site_contact} onChange={(e) => setF({ ...f, site_contact: e.target.value })} /></Field>
             <Err msg={act.err} />
             <button className="btn primary" disabled={act.busy}>Dispatch</button>
           </form>

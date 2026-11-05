@@ -11,6 +11,8 @@ export interface Draft {
   key: string;
   body: NewTicket;
   createdAt: number;
+  /** photos taken while offline (local file URIs); uploaded once the ticket exists */
+  photos?: { uri: string; name: string; type: string }[];
 }
 export type SendResult = "sent" | "retry" | "drop";
 

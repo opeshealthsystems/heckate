@@ -102,3 +102,8 @@ export interface SupportReport {
   rated: number;
   avg_rating: number | null;
 }
+
+export interface AccountRequest {
+  id: string; name: string; email: string; phone: string | null; company: string | null; reason: string;
+  status: "pending" | "approved" | "rejected"; role: string | null; decided_by: string | null; decided_at: string | null; note: string | null; created_at: string;
+}

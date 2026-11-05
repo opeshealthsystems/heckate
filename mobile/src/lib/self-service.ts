@@ -44,14 +44,15 @@ export function useSelfService() {
   }, [refreshQueue]);
 
   /** Expense claims keep the new claim's id when sent online, so a receipt photo can be attached to it. */
-  const submitClaim = useCallback(async (body: { expense_date: string; category: string; description: string; amount: number }, done: () => void) => {
+  const submitClaim = useCallback(async (body: { expense_date: string; category: string; description: string; amount: number }, done: () => void, sent?: (id: string) => Promise<void>) => {
     setOut(null);
     const key = newKey("self");
     try {
       const c = await api.claimExpense(body, key);
       haptic.success();
       setLastClaim(c.id);
-      setOut({ text: "Expense claim sent. You can attach a photo of the receipt below.", ok: true });
+      if (sent) await sent(c.id);
+      setOut({ text: "Expense claim sent.", ok: true });
       done();
     } catch (e) {
       if (classify(e instanceof ApiError ? e.status : null) === "retry") {

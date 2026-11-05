@@ -21,6 +21,7 @@ export const fr: Dict = {
       cta: "Continuer vers la connexion sécurisée",
       note: "Connexion à deux facteurs. Tickets, incidents, devis, factures, rapports et certificats au même endroit.",
       verify: "Vérifier un document",
+      app: "Télécharger l’application Android",
     },
     sectors: ["Banque et microfinance", "Santé", "Secteur public", "Télécoms et énergie", "Éducation", "Entreprises"],
     servicesLabel: "SERVICES",

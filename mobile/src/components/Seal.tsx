@@ -1,9 +1,16 @@
 import { Image, Text } from "react-native";
 import { useTheme } from "../lib/theme";
 
-/** The HEKATE seal: the brand artwork, unmodified, with no glow or backdrop. */
-export function Seal({ size = 96 }: { size?: number }) {
-  return <Image source={require("../../assets/splash-icon.png")} accessible accessibilityLabel="HEKATE seal" style={{ width: size, height: size }} resizeMode="contain" />;
+const WHITE = require("../../assets/seal-white.png");
+const NAVY = require("../../assets/seal-navy.png");
+
+/**
+ * The round HEKATE platform seal, whole and uncropped: white on dark surfaces, navy on light ones.
+ * `onDark` forces the white seal on brand surfaces that are always dark (sign-in, request access).
+ */
+export function Seal({ size = 96, onDark }: { size?: number; onDark?: boolean }) {
+  const { scheme } = useTheme();
+  return <Image source={onDark || scheme === "dark" ? WHITE : NAVY} style={{ width: size, height: size }} resizeMode="contain" accessibilityLabel="HEKATE seal" />;
 }
 
 /**

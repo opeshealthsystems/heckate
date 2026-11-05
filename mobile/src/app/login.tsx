@@ -1,76 +1,125 @@
-import { useCallback, useEffect, useState } from "react";
-import { useLocalSearchParams } from "expo-router";
-import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from "react";
+import { Link, useLocalSearchParams } from "expo-router";
+import { TextInput, View } from "react-native";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Banner } from "../components/Banner";
+import { AuthField, AuthShell } from "../components/AuthShell";
 import { Button } from "../components/Button";
-import { Section } from "../components/List";
-import { Seal, Wordmark } from "../components/Seal";
 import { Text } from "../components/Text";
-import { Field } from "../components/TextField";
-import { DEV_LOGIN, OIDC_CLIENT, OIDC_ISSUER } from "../lib/auth";
+import { DEV_LOGIN, OIDC_CLIENT, OIDC_ISSUER, passwordSignIn } from "../lib/auth";
 import { useSession } from "../lib/session";
-import { sp, useTheme } from "../lib/theme";
+import { sp } from "../lib/theme";
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function Login() {
-  const { c } = useTheme();
-  const insets = useSafeAreaInsets();
   const { signIn: signInTo } = useSession();
   const { next } = useLocalSearchParams<{ next?: string }>();
   // After sign-in the person returns to the route they asked for (a deep link), not always the home tab.
   const signIn = useCallback((token: string) => signInTo(token, next), [signInTo, next]);
+
+  const [user, setUser] = useState("");
+  const [pass, setPass] = useState("");
   const [token, setTok] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const passRef = useRef<ComponentRef<typeof TextInput>>(null);
+
+  // Organisation single sign-on in the system browser stays available as the second option (e.g. for MFA set-up).
   const discovery = AuthSession.useAutoDiscovery(OIDC_ISSUER || "https://invalid.invalid");
   const redirectUri = AuthSession.makeRedirectUri({ scheme: "hekate", path: "auth" });
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     { clientId: OIDC_CLIENT, scopes: ["openid", "profile", "email"], redirectUri, usePKCE: true },
     discovery,
   );
-
   useEffect(() => {
     if (response?.type !== "success" || !discovery || !request?.codeVerifier) return;
     AuthSession.exchangeCodeAsync(
       { clientId: OIDC_CLIENT, code: response.params.code, redirectUri, extraParams: { code_verifier: request.codeVerifier } },
       discovery,
     )
-      .then((t) => signIn(t.accessToken))
+      .then((r) => signIn(r.accessToken))
       .catch((e) => setErr(String(e.message ?? e)));
   }, [response, discovery, request, redirectUri, signIn]);
 
-  return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top + sp.xl, paddingBottom: insets.bottom + sp.lg, paddingHorizontal: sp.lg }} keyboardShouldPersistTaps="handled">
-        <View style={{ width: "100%", maxWidth: 420, alignSelf: "center", flexGrow: 1 }}>
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: sp.md, paddingVertical: sp.xl }}>
-            <Seal size={96} />
-            <Wordmark />
-            <Text tone="label2" style={{ textAlign: "center", marginTop: sp.xs }}>Sign in with your HEKATE account.</Text>
-          </View>
+  const submit = async () => {
+    if (!user.trim() || !pass) {
+      setErr("Enter your email and password.");
+      return;
+    }
+    setErr("");
+    setBusy(true);
+    try {
+      await signIn(await passwordSignIn(user, pass));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  };
 
-          <View style={{ gap: sp.lg }}>
-            {!OIDC_ISSUER && !DEV_LOGIN && <Banner icon="warning" tone="red">Sign-in is not configured in this build.</Banner>}
-            {!!err && <Banner icon="warning" tone="red">{err}</Banner>}
-            {DEV_LOGIN && (
-              <Section header="Development token">
-                <Field placeholder="Paste a token" autoCapitalize="none" autoCorrect={false} autoComplete="off" textContentType="none" returnKeyType="go" value={token} onChangeText={setTok} onSubmitEditing={() => token.trim() && signIn(token).catch((e) => setErr(e.message))} mono />
-                <Button title="Continue with token" disabled={!token.trim()} onPress={() => signIn(token).catch((e) => setErr(e.message))} style={{ alignSelf: "flex-start" }} />
-              </Section>
-            )}
-            {!!OIDC_ISSUER && (
-              <View style={{ gap: sp.sm }}>
-                <Button kind="primary" title="Sign in" disabled={!request} loading={busy} onPress={() => { setBusy(true); void promptAsync().finally(() => setBusy(false)); }} />
-                <Text v="footnote" tone="label2" style={{ textAlign: "center" }}>You will sign in with your organisation's account in the system browser.</Text>
-              </View>
-            )}
-          </View>
+  // Keycloak's own reset page: it emails a link, so the new password never passes through the app.
+  const forgot = () => void WebBrowser.openBrowserAsync(`${OIDC_ISSUER}/login-actions/reset-credentials?client_id=${encodeURIComponent(OIDC_CLIENT)}`);
+
+  return (
+    <AuthShell
+      title="Sign in to HEKATE"
+      subtitle="Operations workspace"
+      footer={
+        <View style={{ gap: sp.md, alignItems: "center" }}>
+          {!!OIDC_ISSUER && (
+            <Text v="subhead" tone="label2" style={{ textAlign: "center" }}>
+              New to HEKATE?{" "}
+              <Link href="/request-access" accessibilityRole="link"><Text v="subhead" tone="tint" weight="semibold">Request access</Text></Link>
+            </Text>
+          )}
+          <Text v="caption" tone="label2" style={{ textAlign: "center" }}>Encrypted connection · Session kept in secure device storage</Text>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      }
+    >
+      {!OIDC_ISSUER && !DEV_LOGIN && <Text tone="red">Sign-in is not configured in this build.</Text>}
+
+      {!!OIDC_ISSUER && (
+        <>
+          <AuthField
+            label="Work email"
+            value={user}
+            onChangeText={(v) => { setUser(v); setErr(""); }}
+            placeholder="name@company.com"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="username"
+            textContentType="username"
+            keyboardType="email-address"
+            returnKeyType="next"
+            onSubmitEditing={() => passRef.current?.focus()}
+          />
+          <AuthField
+            label="Password"
+            inputRef={passRef}
+            secure
+            value={pass}
+            onChangeText={(v) => { setPass(v); setErr(""); }}
+            autoComplete="current-password"
+            textContentType="password"
+            returnKeyType="go"
+            onSubmitEditing={() => void submit()}
+          />
+          <View style={{ alignItems: "flex-end" }}>
+            <Button title="Forgot password?" onPress={forgot} style={{ paddingHorizontal: 0 }} />
+          </View>
+          {!!err && <Text v="footnote" tone="red" accessibilityLiveRegion="polite">{err}</Text>}
+          <Button kind="primary" title="Sign in" loading={busy} onPress={() => void submit()} />
+          <Button title="Use organisation sign-in (SSO)" disabled={!request} onPress={() => { setErr(""); void promptAsync(); }} />
+        </>
+      )}
+
+      {DEV_LOGIN && (
+        <>
+          <AuthField label="Development token" value={token} onChangeText={setTok} placeholder="Paste a token" autoCapitalize="none" autoCorrect={false} />
+          <Button title="Continue with token" onPress={() => { if (token.trim()) signIn(token).catch((e) => setErr(e.message)); }} />
+          {!OIDC_ISSUER && !!err && <Text v="footnote" tone="red">{err}</Text>}
+        </>
+      )}
+    </AuthShell>
   );
 }

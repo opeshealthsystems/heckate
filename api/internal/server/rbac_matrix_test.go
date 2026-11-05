@@ -88,7 +88,7 @@ func TestRBACMatrix(t *testing.T) {
 func TestRouteGatesStayNarrow(t *testing.T) {
 	routes, allowed := rbacMatrix(t)
 	public := map[string]bool{"GET /healthz": true, "GET /livez": true, "GET /readyz": true, "GET /v1/public/verify/{ref}": true, "POST /v1/public/enquiries": true,
-		"GET /v1/public/verify-qr/{token}": true, "POST /v1/public/access-requests": true, "GET /v1/public/access/{token}": true}
+		"GET /v1/public/verify-qr/{token}": true, "POST /v1/public/access-requests": true, "GET /v1/public/access/{token}": true, "POST /v1/public/account-requests": true}
 	// Writes a role may make besides its own work: its own devices, a ticket it raises, its own leave and so on.
 	selfService := map[string]bool{
 		"PUT /v1/devices": true, "DELETE /v1/devices/{token}": true, "POST /v1/tickets": true, "PATCH /v1/tickets/{id}": true, "POST /v1/tickets/{id}/comments": true,

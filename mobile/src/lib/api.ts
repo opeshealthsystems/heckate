@@ -3,7 +3,7 @@ import type { NewTicket } from "./drafts";
 import type { SendResult } from "./drafts-core";
 import { classify } from "./drafts-core";
 import type { QueuedAction } from "./queue-core";
-import type { Attachment, Client, Comment, DocumentEntry, EmployeeRecord, Intervention, Me, Status, StockItem, SupportReport, Ticket, Timesheet, Verification, Warehouse } from "./types";
+import type { Attachment, Client, Comment, DocumentEntry, EmployeeRecord, Intervention, ExpenseClaim, LeaveRequest, Me, Severity, Status, StockItem, SupportReport, Ticket, Timesheet, Verification, Warehouse } from "./types";
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -96,12 +96,12 @@ export const api = {
   tickets: () => call<{ data: Ticket[]; next_cursor: string | null }>("GET", "/v1/tickets?limit=50"),
   ticket: (id: string) => call<Ticket>("GET", `/v1/tickets/${id}`),
   createTicket: (b: NewTicket & { tenant_id?: string }, key: string) => call<Ticket>("POST", "/v1/tickets", b, { "Idempotency-Key": key }),
-  updateTicket: (id: string, b: { status?: Status; assignee?: string }, version: number) =>
+  updateTicket: (id: string, b: { status?: Status; assignee?: string; severity?: Severity }, version: number) =>
     call<Ticket>("PATCH", `/v1/tickets/${id}`, b, { "If-Match": `W/"${version}"` }),
   comments: (id: string) => call<{ data: Comment[] }>("GET", `/v1/tickets/${id}/comments`),
   addComment: (id: string, body: string, internal: boolean, key: string) =>
     call<Comment>("POST", `/v1/tickets/${id}/comments`, { body, internal }, { "Idempotency-Key": key }),
-  rate: (id: string, rating: number) => call<Ticket>("POST", `/v1/tickets/${id}/rating`, { rating, comment: "" }),
+  rate: (id: string, rating: number, comment = "") => call<Ticket>("POST", `/v1/tickets/${id}/rating`, { rating, comment }),
   interventions: () => call<{ data: Intervention[] }>("GET", "/v1/interventions"),
   intervention: (id: string) => call<Intervention>("GET", `/v1/interventions/${id}`),
   items: () => call<{ data: StockItem[] }>("GET", "/v1/items"),
@@ -113,5 +113,10 @@ export const api = {
   requestLeave: (b: { kind: string; start_date: string; end_date: string; reason: string }, key: string) => call<unknown>("POST", "/v1/leave", b, { "Idempotency-Key": key }),
   attachments: (entityType: string, entityId: string) => call<{ data: Attachment[] }>("GET", `/v1/attachments?entity_type=${entityType}&entity_id=${entityId}`),
   claimExpense: (b: { expense_date: string; category: string; description: string; amount: number }, key: string) => call<{ id: string }>("POST", "/v1/expenses", b, { "Idempotency-Key": key }),
+  myLeave: () => call<{ data: LeaveRequest[] }>("GET", "/v1/leave"),
+  myExpenses: () => call<{ data: ExpenseClaim[] }>("GET", "/v1/expenses"),
+  decide: (kind: "leave" | "expenses" | "timesheets", id: string, action: "approve" | "reject" | "cancel", key: string) =>
+    call<unknown>("POST", `/v1/${kind}/${id}/${action}`, {}, { "Idempotency-Key": key }),
+  unregisterDevice: (token: string) => call<void>("DELETE", `/v1/devices/${encodeURIComponent(token)}`),
   registerDevice: (token: string, platform: "ios" | "android" | "expo") => call<void>("PUT", "/v1/devices", { token, platform }),
 };

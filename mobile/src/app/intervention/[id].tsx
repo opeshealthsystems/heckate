@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { View } from "react-native";
-import { Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { Linking, Platform, View } from "react-native";
+import { router, Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Banner, ErrorBanner } from "../../components/Banner";
 import { Button } from "../../components/Button";
 import { Loading } from "../../components/EmptyState";
@@ -18,7 +18,8 @@ import { enqueue } from "../../lib/queue";
 import { newKey } from "../../lib/queue-core";
 import { useSession } from "../../lib/session";
 import { sp } from "../../lib/theme";
-import type { Intervention, StockItem, Warehouse } from "../../lib/types";
+import { Icon } from "../../components/Icon";
+import type { Client, Intervention, StockItem, Warehouse } from "../../lib/types";
 
 const stamp = (s: string | null) => (s ? new Date(s).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "–");
 
@@ -47,7 +48,10 @@ export default function InterventionScreen() {
   const [signature, setSignature] = useState<string | null>(null);
   const [padOpen, setPadOpen] = useState(false);
   const [items, setItems] = useState<StockItem[]>([]);
+  const [whs, setWhs] = useState<Warehouse[]>([]);
   const [wh, setWh] = useState<Warehouse | null>(null);
+  const [pickWh, setPickWh] = useState(false);
+  const [clients, setClients] = useState<Client[]>([]);
   const [qty, setQty] = useState<Record<string, number>>({});
 
   const load = useCallback(async () => {
@@ -60,7 +64,8 @@ export default function InterventionScreen() {
   useFocusEffect(useCallback(() => void load(), [load]));
   useEffect(() => {
     api.items().then((r) => setItems(r.data.filter((i) => !i.serialised && i.on_hand > 0))).catch(() => {});
-    api.warehouses().then((r) => setWh(r.data[0] ?? null)).catch(() => {});
+    api.warehouses().then((r) => { setWhs(r.data); setWh(r.data[0] ?? null); }).catch(() => {});
+    api.clients().then((r) => setClients(r.data)).catch(() => {}); // not every role may list clients; the row is then left out
   }, []);
   if (gate) return gate;
 
@@ -142,6 +147,17 @@ export default function InterventionScreen() {
 
       <Section header="Details">
         <Row title="Status" value={visitName(v.status)} />
+        {clients.find((x) => x.tenant_id === v.tenant_id) && <Row title="Client" value={clients.find((x) => x.tenant_id === v.tenant_id)!.legal_name} valueLines={2} />}
+        {(() => { const cl = clients.find((x) => x.tenant_id === v.tenant_id); return cl?.phone ? <Row icon="person" title="Client contact" value={cl.phone} /> : null; })()}
+        {!!v.site_address && <Row icon="location" title="Site" value={v.site_address} valueLines={3} />}
+        {!!v.site_address && (
+          <Row icon="map" title="Open in Maps" action onPress={() => {
+            const q = encodeURIComponent(v.site_address!);
+            void Linking.openURL(Platform.OS === "ios" ? `maps://?q=${q}` : `geo:0,0?q=${q}`).catch(() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${q}`));
+          }} />
+        )}
+        {!!v.site_contact && <Row icon="person" title="Meet" value={v.site_contact} valueLines={2} />}
+        {v.ticket_id && <Row icon="tickets" title="Linked ticket" action onPress={() => router.push(`/ticket/${v.ticket_id}`)} />}
         <Row title="Engineer" value={v.engineer} />
         <Row title="Scheduled" value={stamp(v.scheduled_for)} />
         {v.checkin_at && <Row title="Checked in" value={stamp(v.checkin_at)} />}
@@ -161,17 +177,24 @@ export default function InterventionScreen() {
           </Section>
 
           {items.length > 0 && wh && (
-            <Section header={`Spare parts used · from ${wh.name}`}>
+            <Section header="Spare parts used" footer={whs.length > 1 ? undefined : `Taken from ${wh.name}.`}>
+              {whs.length > 1 && <Row icon="inventory" title="Taken from" value={wh.name} onPress={() => setPickWh((o) => !o)} />}
+              {pickWh && whs.map((w) => (
+                <Row key={w.id} title={w.name} right={w.id === wh.id ? <Icon name="check" size={20} tone="tint" /> : undefined} onPress={() => { setWh(w); setPickWh(false); }} />
+              ))}
               {items.map((i) => (
                 <Row
                   key={i.id}
                   title={i.name}
-                  subtitle={`${i.sku} · ${i.on_hand} in stock`}
-                  right={
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
-                      <Button title="−" accessibilityHint={`Remove one ${i.name}`} onPress={() => setQty({ ...qty, [i.id]: Math.max(0, (qty[i.id] ?? 0) - 1) })} style={{ minWidth: 44 }} />
-                      <Text style={{ minWidth: 24, textAlign: "center" }}>{qty[i.id] ?? 0}</Text>
-                      <Button title="+" accessibilityHint={`Add one ${i.name}`} onPress={() => setQty({ ...qty, [i.id]: Math.min(i.on_hand, (qty[i.id] ?? 0) + 1) })} style={{ minWidth: 44 }} />
+                  titleLines={2}
+                  subtitle={
+                    <View style={{ gap: sp.xs }}>
+                      <Text v="footnote" tone="label2">{`${i.sku} · ${i.on_hand} in stock`}</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: sp.sm }}>
+                        <Button title="−" accessibilityHint={`Remove one ${i.name}`} onPress={() => setQty({ ...qty, [i.id]: Math.max(0, (qty[i.id] ?? 0) - 1) })} style={{ minWidth: 44 }} />
+                        <Text weight="semibold" style={{ minWidth: 28, textAlign: "center" }} accessibilityLabel={`${qty[i.id] ?? 0} used`}>{qty[i.id] ?? 0}</Text>
+                        <Button title="+" accessibilityHint={`Add one ${i.name}`} onPress={() => setQty({ ...qty, [i.id]: Math.min(i.on_hand, (qty[i.id] ?? 0) + 1) })} style={{ minWidth: 44 }} />
+                      </View>
                     </View>
                   }
                 />

@@ -3,7 +3,9 @@ import type { NextConfig } from "next";
 // The browser may talk only to this site, the API and the identity provider; nothing else can be
 // loaded or called, which limits what an injected script could do with a session token.
 const api = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-const oidc = process.env.NEXT_PUBLIC_OIDC_ISSUER ?? "";
+const oidcIssuer = process.env.NEXT_PUBLIC_OIDC_ISSUER ?? "";
+// CSP source with a path only matches that exact path, so allow the whole identity-provider origin.
+const oidc = oidcIssuer ? new URL(oidcIssuer).origin : "";
 const wsApi = api.replace(/^http/, "ws");
 const connect = ["'self'", api, wsApi, oidc].filter(Boolean).join(" ");
 const dev = process.env.NODE_ENV !== "production";

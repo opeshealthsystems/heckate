@@ -250,8 +250,9 @@ func get(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 }
 
 type patchTicket struct {
-	Status   *string `json:"status"`
-	Assignee *string `json:"assignee"`
+	Status   *string   `json:"status"`
+	Assignee *string   `json:"assignee"`
+	Severity *Severity `json:"severity"` // staff only; the deadlines are recomputed from when the ticket was opened
 }
 
 func patch(r *http.Request, s *platform.Scope) (*platform.Result, error) {
@@ -268,7 +269,10 @@ func patch(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 		return nil, platform.Err(http.StatusPreconditionFailed, "Precondition failed", "ticket was modified; reload and retry")
 	}
 	staff := s.Claims.Scope() == "staff"
-	if !staff && (in.Assignee != nil || s.Claims.Scope() != "client") {
+	if in.Severity != nil && !in.Severity.Valid() {
+		return nil, platform.Err(http.StatusUnprocessableEntity, "Invalid ticket", "severity must be P1..P4")
+	}
+	if !staff && (in.Assignee != nil || in.Severity != nil || s.Claims.Scope() != "client") {
 		return nil, platform.Err(http.StatusForbidden, "Forbidden", "clients may only confirm or reopen a resolved ticket")
 	}
 	status := t.Status
@@ -285,11 +289,23 @@ func patch(r *http.Request, s *platform.Scope) (*platform.Result, error) {
 	assignee := t.Assignee
 	if in.Assignee != nil {
 		assignee = in.Assignee
+		if strings.TrimSpace(*in.Assignee) == "" { // an empty assignee releases the ticket back to the queue
+			assignee = nil
+		}
 	}
-	row := s.Tx.QueryRow(ctx, `UPDATE support.tickets SET status=$2, assignee=$3, version=version+1,
+	severity := t.Severity
+	if in.Severity != nil {
+		severity = *in.Severity
+	}
+	row := s.Tx.QueryRow(ctx, `UPDATE support.tickets t SET status=$2, assignee=$3, version=version+1,
 		resolved_at = CASE WHEN $2 = 'resolved' THEN now() WHEN $2 IN ('open','in_progress') THEN NULL ELSE resolved_at END,
-		first_response_at = COALESCE(first_response_at, CASE WHEN $4 THEN now() END)
-		WHERE id=$1 RETURNING `+ticketCols, t.ID, status, assignee, staff)
+		first_response_at = COALESCE(first_response_at, CASE WHEN $4 THEN now() END),
+		severity = $5,
+		respond_due_at = CASE WHEN $5 = t.severity THEN t.respond_due_at ELSE t.created_at + (SELECT COALESCE(c.respond_minutes, p.respond_minutes)
+			FROM support.sla_policies p LEFT JOIN LATERAL contracts.active_sla(t.tenant_id, p.severity) c ON true WHERE p.severity = $5) * interval '1 minute' END,
+		sla_due_at = CASE WHEN $5 = t.severity THEN t.sla_due_at ELSE t.created_at + (SELECT COALESCE(c.resolve_minutes, p.resolve_minutes)
+			FROM support.sla_policies p LEFT JOIN LATERAL contracts.active_sla(t.tenant_id, p.severity) c ON true WHERE p.severity = $5) * interval '1 minute' END
+		WHERE id=$1 RETURNING `+ticketCols, t.ID, status, assignee, staff, string(severity))
 	nt, err := scanTicket(row)
 	if err != nil {
 		return nil, err

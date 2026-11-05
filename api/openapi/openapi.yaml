@@ -683,6 +683,62 @@ paths:
       responses:
         "202": { description: Received }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/public/account-requests:
+    post:
+      operationId: requestAccount
+      summary: Ask for an account from the sign-in screen; a manager approves or rejects
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email]
+              properties:
+                name: { type: string, maxLength: 200 }
+                email: { type: string, format: email }
+                phone: { type: string, maxLength: 40 }
+                company: { type: string, maxLength: 200 }
+                reason: { type: string, maxLength: 1000 }
+                website: { type: string, description: "Honeypot; must be empty" }
+      responses:
+        "202": { description: Received (also returned when a request for this email is already pending) }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/account-requests:
+    get:
+      operationId: listAccountRequests
+      summary: Account requests (ceo, manager); status=pending (default), approved, rejected or all
+      parameters: [{ name: status, in: query, schema: { type: string, enum: [pending, approved, rejected, all] } }]
+      responses:
+        "200": { description: "Requests, plus the roles an approver may grant" }
+        "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/account-requests/{id}/approve:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      operationId: approveAccountRequest
+      summary: Create the Keycloak account with the chosen role and email the person a set-password link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [role], properties: { role: { type: string } } }
+      responses:
+        "200": { description: Approved }
+        "4XX": { $ref: "#/components/responses/Problem" }
+        "5XX": { $ref: "#/components/responses/Problem" }
+  /v1/account-requests/{id}/reject:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      operationId: rejectAccountRequest
+      summary: Reject an account request with an optional internal note
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { note: { type: string } } }
+      responses:
+        "200": { description: Rejected }
+        "4XX": { $ref: "#/components/responses/Problem" }
   /v1/leads:
     get:
       operationId: listLeads
@@ -772,7 +828,7 @@ paths:
         "4XX": { $ref: "#/components/responses/Problem" }
     patch:
       operationId: updateTicket
-      summary: Change status or assignee (clients may only confirm or reopen a resolved ticket)
+      summary: Change status, assignee or severity (clients may only confirm or reopen a resolved ticket)
       parameters:
         - { name: If-Match, in: header, schema: { type: string } }
       requestBody:
@@ -784,6 +840,7 @@ paths:
               properties:
                 status: { $ref: "#/components/schemas/Status" }
                 assignee: { type: string }
+                severity: { type: string, enum: [P1, P2, P3, P4], description: "Staff only; recomputes the response and resolution deadlines" }
       responses:
         "200":
           description: Updated
@@ -1982,6 +2039,8 @@ paths:
                 ticket_id: { type: string, format: uuid }
                 scheduled_for: { type: string, format: date-time }
                 summary: { type: string }
+                site_address: { type: string, maxLength: 500, description: "Where the engineer goes (opened in Maps by the app)" }
+                site_contact: { type: string, maxLength: 200, description: "Person and phone to meet on site" }
       responses:
         "201":
           description: Success

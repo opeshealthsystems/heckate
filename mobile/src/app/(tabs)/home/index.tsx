@@ -113,13 +113,14 @@ export default function Home() {
               <Row title="At risk" value={String(risk)} onPress={() => router.push({ pathname: "/(tabs)/tickets", params: { scope: "risk" } })} />
               <Row title="Assigned to me" value={String(mineCount)} onPress={() => router.push({ pathname: "/(tabs)/tickets", params: { scope: "mine" } })} />
               {report && <Row title="SLA breached" value={String(report.sla_breached)} />}
-              {(access.reviewer || access.approver) && <Row title="Approvals waiting" value={String(approvals.length)} />}
+              {(access.reviewer || access.approver) && <Row title="Approvals waiting" value={String(approvals.length)} onPress={() => router.push("/approvals")} />}
               {access.timeUser && <Row title="Hours this week" value={hoursThisWeek(mine).toFixed(1)} />}
             </Section>
 
             {(access.reviewer || access.approver) && approvals.length > 0 && (
-              <Section header="Approvals" footer="Review these in the web portal.">
-                {approvals.slice(0, 6).map((a) => <Row key={a.key} title={a.text} titleLines={3} />)}
+              <Section header="Approvals">
+                {approvals.slice(0, 3).map((a) => <Row key={a.key} title={a.text} titleLines={3} onPress={() => router.push("/approvals")} />)}
+                <Row title={approvals.length > 3 ? `Review all ${approvals.length}` : "Review"} action onPress={() => router.push("/approvals")} />
               </Section>
             )}
           </>

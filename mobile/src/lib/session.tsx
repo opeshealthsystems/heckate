@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { router } from "expo-router";
 import NetInfo from "@react-native-community/netinfo";
-import { api, ApiError, replay, setUnauthorizedHandler } from "./api";
+import { api, ApiError, replay, setUnauthorizedHandler, uploadPhoto } from "./api";
 import { clearToken, loadToken, setToken } from "./auth";
 import { classify, flushDrafts, loadDrafts, saveDrafts } from "./drafts";
 import { landingRoute } from "./home-core";
@@ -42,7 +42,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (!drafts.length) return;
     const left = await flushDrafts(drafts, async (d) => {
       try {
-        await api.createTicket(d.body, d.key);
+        const t = await api.createTicket(d.body, d.key);
+        // Photos kept with the offline report go up now; one that fails is skipped rather than blocking the report.
+        for (const p of d.photos ?? []) {
+          try { await uploadPhoto("ticket", t.id, p); } catch { /* the file may have been cleared from the cache */ }
+        }
         return "sent";
       } catch (e) {
         return classify(e instanceof ApiError ? e.status : null);

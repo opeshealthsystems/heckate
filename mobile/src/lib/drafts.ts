@@ -20,8 +20,8 @@ export async function saveDrafts(d: Draft[]) {
   await AsyncStorage.setItem(KEY, JSON.stringify(d));
 }
 
-export async function addDraft(body: NewTicket): Promise<Draft> {
-  const draft: Draft = { key: `draft-${Date.now()}-${Math.random().toString(36).slice(2)}`, body, createdAt: Date.now() };
+export async function addDraft(body: NewTicket, photos?: Draft["photos"]): Promise<Draft> {
+  const draft: Draft = { key: `draft-${Date.now()}-${Math.random().toString(36).slice(2)}`, body, createdAt: Date.now(), photos };
   await saveDrafts([...(await loadDrafts()), draft]);
   return draft;
 }

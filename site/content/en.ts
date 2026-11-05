@@ -19,6 +19,7 @@ export const en: Dict = {
       cta: "Continue to secure sign-in",
       note: "Two-factor sign-in. Tickets, incidents, quotations, invoices, reports and certificates in one place.",
       verify: "Verify a document",
+      app: "Download the Android app",
     },
     sectors: ["Banking & microfinance", "Healthcare", "Government", "Telecom & energy", "Education", "Enterprise"],
     servicesLabel: "SERVICES",

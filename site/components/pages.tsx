@@ -34,6 +34,7 @@ export function HomePage({ lang }: { lang: Lang }) {
             <a className="btn navy-solid big block" href={`${company.portalUrl}/login`}>{h.portal.cta}</a>
             <div className="portal-links">
               <a href={`${company.portalUrl}/verify`}>{h.portal.verify}</a>
+              <br /><a href="/downloads/hekate.apk" download>{h.portal.app}</a>
             </div>
           </div>
         </div>

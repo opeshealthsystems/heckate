@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 import { router, Stack } from "expo-router";
 import { Banner } from "../components/Banner";
@@ -15,7 +15,7 @@ import { haptic } from "../lib/haptics";
 import type { Photo } from "../lib/photos";
 import { useSession } from "../lib/session";
 import { sp } from "../lib/theme";
-import type { Severity } from "../lib/types";
+import type { Client, Severity } from "../lib/types";
 
 const LEVELS: [Severity, string, string][] = [
   ["P1", "Critical", "Service is down"],
@@ -37,6 +37,15 @@ export default function Report() {
   const [msg, setMsg] = useState("");
   const [photos, setPhotos] = useState<Photo[]>([]);
   const staff = me?.scope === "staff";
+  // Staff raise tickets for a client: pick the company by name instead of typing its id.
+  const [clients, setClients] = useState<Client[]>([]);
+  const [find, setFind] = useState("");
+  useEffect(() => { if (staff) api.clients().then((r) => setClients(r.data)).catch((e) => setMsg((e as Error).message)); }, [staff]);
+  const picked = clients.find((x) => x.tenant_id === tenant);
+  const matches = useMemo(() => {
+    const n = find.trim().toLowerCase();
+    return (n ? clients.filter((x) => x.legal_name.toLowerCase().includes(n)) : clients).slice(0, 6);
+  }, [clients, find]);
   if (gate) return gate;
 
   async function submit() {
@@ -58,13 +67,13 @@ export default function Report() {
     } catch (e) {
       const status = e instanceof ApiError ? e.status : null;
       if (!staff && classify(status) === "retry") {
-        await addDraft(body); // no connection: keep it and send automatically later (photos are not kept offline)
+        await addDraft(body, photos); // no connection: keep the report and its photos and send them automatically later
         await refreshDrafts();
         haptic.warning();
         setSubject("");
         setDescription("");
         setPhotos([]);
-        setMsg(photos.length ? "You are offline. Your report is saved and will be sent automatically; add the photos from the ticket afterwards." : "You are offline. Your report is saved and will be sent automatically.");
+        setMsg(photos.length ? "You are offline. Your report and photos are saved and will be sent automatically." : "You are offline. Your report is saved and will be sent automatically.");
       } else {
         haptic.error();
         setMsg((e as Error).message);
@@ -78,8 +87,16 @@ export default function Report() {
     <Screen keyboard>
       <Stack.Screen options={{ title, headerLeft: () => <HeaderButton title="Cancel" label="Cancel" onPress={close} /> }} />
       {staff && (
-        <Section header="Client">
-          <Field label="Tenant id" placeholder="Client tenant id" mono autoCapitalize="none" autoCorrect={false} autoComplete="off" returnKeyType="next" value={tenant} onChangeText={setTenant} />
+        <Section header="Client" footer={!picked && clients.length > 6 ? "Type part of the name to find a client." : undefined}>
+          {picked ? (
+            <Row title={picked.legal_name} subtitle="Selected client" right={<Icon name="check" size={20} tone="tint" />} onPress={() => setTenant("")} accessibilityLabel={`${picked.legal_name}, selected. Tap to change.`} />
+          ) : (
+            <>
+              <Field placeholder="Search clients" autoCapitalize="none" autoCorrect={false} returnKeyType="search" value={find} onChangeText={setFind} />
+              {matches.map((x) => <Row key={x.tenant_id} title={x.legal_name} onPress={() => { haptic.select(); setTenant(x.tenant_id); setFind(""); }} />)}
+              {!matches.length && <Row title={clients.length ? "No client matches" : "Loading clients…"} />}
+            </>
+          )}
         </Section>
       )}
 

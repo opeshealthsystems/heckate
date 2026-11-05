@@ -93,8 +93,8 @@ export interface SupportReport {
 }
 
 export interface Intervention {
-  id: string; tenant_id: string; engineer: string; status: "scheduled" | "in_progress" | "completed" | "cancelled";
-  scheduled_for: string | null; summary: string; checkin_at: string | null; checkout_at: string | null;
+  id: string; tenant_id: string; ticket_id: string | null; engineer: string; status: "scheduled" | "in_progress" | "completed" | "cancelled";
+  scheduled_for: string | null; summary: string; site_address: string | null; site_contact: string | null; checkin_at: string | null; checkout_at: string | null;
   report: string | null; signed_by: string | null; has_signature: boolean; document_ref: string | null;
 }
 export interface StockItem { id: string; sku: string; name: string; serialised: boolean; on_hand: number }
@@ -103,3 +103,6 @@ export interface Timesheet { id: string; work_date: string; hours: number; note:
 export interface EmployeeRecord { full_name: string; annual_leave_entitlement: number; annual_leave_taken: number; annual_leave_balance: number }
 
 export interface Attachment { id: string; filename: string; content_type: string; size: number; created_at: string }
+
+export interface LeaveRequest { id: string; kind: "annual" | "sick" | "unpaid" | "other"; start_date: string; end_date: string; days: number; reason: string; status: string; created_at?: string }
+export interface ExpenseClaim { id: string; expense_date: string; category: string; description: string; amount: number; status: string }

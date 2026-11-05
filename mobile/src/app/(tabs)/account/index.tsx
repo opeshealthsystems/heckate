@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { View } from "react-native";
 import Constants from "expo-constants";
 import { router, Stack, useFocusEffect } from "expo-router";
@@ -12,6 +12,7 @@ import { Text } from "../../../components/Text";
 import { api, API_URL, getLastSync } from "../../../lib/api";
 import { confirmDestructive } from "../../../lib/dialogs";
 import { useLock } from "../../../lib/lock";
+import { pushEnabled, setPushEnabled } from "../../../lib/push";
 import { useSession } from "../../../lib/session";
 import { sp, useTheme, type Preference } from "../../../lib/theme";
 import type { EmployeeRecord } from "../../../lib/types";
@@ -31,6 +32,9 @@ export default function Account() {
   const [recMsg, setRecMsg] = useState("");
   const [lockMsg, setLockMsg] = useState("");
   const [synced, setSynced] = useState<number | null>(null);
+  const [push, setPush] = useState(true);
+  const [pushMsg, setPushMsg] = useState("");
+  useEffect(() => { void pushEnabled().then(setPush); }, []);
 
   useFocusEffect(useCallback(() => {
     setSynced(getLastSync());
@@ -57,11 +61,15 @@ export default function Account() {
         <Row icon="account" iconTone="label2" title={me?.email || me?.sub || "Signed in"} titleLines={2} subtitle={me?.roles.map(roleLabel).join(", ")} />
       </Section>
 
-      <Section header="Security" footer="Your session token is kept in the device's secure storage. Sign-in uses your organisation's account in the system browser.">
+      <Section header="Security" footer="Your session token is kept in the device's secure storage. You sign in with your HEKATE email and password inside the app; organisation sign-in opens the browser.">
         <SwitchRow icon="lock" title="App lock" subtitle={lockSub} value={lockOn} onValueChange={(on) => { setLockMsg(""); void lock.setEnabled(on).then((m) => setLockMsg(m ?? "")); }} />
         <Row title="Locks" value="After 60 s away" />
       </Section>
       {!!lockMsg && <Banner icon="warning">{lockMsg}</Banner>}
+
+      <Section header="Notifications" footer={pushMsg || (staff ? "Ticket assignments, replies, deadlines and approvals." : "Replies and status changes on your tickets.")} footerTone={pushMsg ? "red" : "label2"}>
+        <SwitchRow icon="bell" title="Push notifications" value={push} onValueChange={(on) => { setPush(on); setPushMsg(""); void setPushEnabled(on).then((m) => setPushMsg(m ?? "")); }} />
+      </Section>
 
       {staff && (
         <Section header="Time and expenses">
@@ -91,7 +99,7 @@ export default function Account() {
       </Section>
 
       <View style={{ alignItems: "center", gap: sp.sm, paddingTop: sp.sm }}>
-        <Seal size={40} />
+        <Seal size={56} />
         <Text v="footnote" tone="label2">HEKATE Systems</Text>
       </View>
     </Screen>

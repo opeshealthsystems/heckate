@@ -14,6 +14,7 @@ import (
 	"github.com/opeshealthsystems/heckate/api/internal/modules/clients"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/contracts"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/crm"
+	"github.com/opeshealthsystems/heckate/api/internal/modules/identity"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/devapi"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/documents"
 	"github.com/opeshealthsystems/heckate/api/internal/modules/files"
@@ -84,6 +85,7 @@ func build(cfg platform.Config, pool *pgxpool.Pool, hub *stream.Hub) *platform.A
 	app.Mux.HandleFunc("GET /healthz", ready)
 	clients.Register(app)
 	crm.Register(app)
+	identity.Register(app, &identity.Keycloak{AdminURL: cfg.KeycloakAdminURL, TokenURL: cfg.KeycloakTokenURL, ClientID: cfg.KeycloakClientID, ClientSecret: cfg.KeycloakClientSecret})
 	support.Register(app)
 	documents.Register(app, cfg.PortalURL)
 	notify.Register(app)

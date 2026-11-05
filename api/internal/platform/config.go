@@ -40,6 +40,11 @@ type Config struct {
 	PDFSigningKeyFile  string // HEKATE_PDF_SIGNING_KEY_FILE
 	MoMo               MoMoConfig
 	Orange             OrangeConfig
+	// Keycloak admin API for approving account requests (all empty: approvals are refused with 503).
+	KeycloakAdminURL     string // HEKATE_KEYCLOAK_ADMIN_URL, e.g. https://auth.example.com/admin/realms/hekate
+	KeycloakTokenURL     string // HEKATE_KEYCLOAK_TOKEN_URL, e.g. https://auth.example.com/realms/hekate/protocol/openid-connect/token
+	KeycloakClientID     string // HEKATE_KEYCLOAK_CLIENT_ID: service-account client with manage-users and view-realm
+	KeycloakClientSecret string // HEKATE_KEYCLOAK_CLIENT_SECRET
 }
 
 // MoMoConfig is the MTN Mobile Money Collection API account (all empty: MoMo is off).
@@ -76,6 +81,10 @@ func LoadConfig() Config {
 	return Config{
 		Env:            get("HEKATE_ENV", "production"),
 		MetricsAddr:    os.Getenv("HEKATE_METRICS_ADDR"),
+		KeycloakAdminURL:     os.Getenv("HEKATE_KEYCLOAK_ADMIN_URL"),
+		KeycloakTokenURL:     os.Getenv("HEKATE_KEYCLOAK_TOKEN_URL"),
+		KeycloakClientID:     os.Getenv("HEKATE_KEYCLOAK_CLIENT_ID"),
+		KeycloakClientSecret: os.Getenv("HEKATE_KEYCLOAK_CLIENT_SECRET"),
 		RateLimit:      atoiOr(os.Getenv("HEKATE_RATE_LIMIT"), 300),
 		TrustedProxies: splitList(os.Getenv("HEKATE_TRUSTED_PROXIES")),
 		Addr:           get("HEKATE_ADDR", ":8080"),

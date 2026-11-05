@@ -9,7 +9,7 @@ import { Attachments } from "@/components/Attachments";
 import { useMe } from "@/lib/session";
 
 interface Detail {
-  id: string; engineer: string; status: string; summary: string; scheduled_for: string | null;
+  id: string; engineer: string; status: string; summary: string; scheduled_for: string | null; site_address: string | null; site_contact: string | null;
   checkin_at: string | null; checkin_lat: number | null; checkin_lng: number | null;
   checkout_at: string | null; checkout_lat: number | null; checkout_lng: number | null;
   report: string | null; signed_by: string | null; signature?: string; document_ref: string | null;
@@ -30,6 +30,8 @@ export default function InterventionPage() {
       <h1>{v.summary || "Intervention"}</h1>
       <p className="meta"><Pill text={v.status} tone={v.status === "completed" ? "ok" : undefined} /> · engineer {v.engineer} · scheduled {when(v.scheduled_for)}</p>
       <dl className="facts">
+        {v.site_address && (<><dt>Site</dt><dd><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v.site_address)}`} target="_blank" rel="noreferrer">{v.site_address}</a></dd></>)}
+        {v.site_contact && (<><dt>Site contact</dt><dd>{v.site_contact}</dd></>)}
         <dt>Checked in</dt><dd>{when(v.checkin_at)} at {pos(v.checkin_lat, v.checkin_lng)}</dd>
         <dt>Completed</dt><dd>{when(v.checkout_at)} at {pos(v.checkout_lat, v.checkout_lng)}</dd>
         {v.document_ref && (<><dt>Document</dt><dd><a href={`/verify?ref=${encodeURIComponent(v.document_ref)}`}>{v.document_ref}</a></dd></>)}

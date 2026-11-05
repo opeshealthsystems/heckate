@@ -22,6 +22,7 @@ function Shell({ children }: { children: ReactNode }) {
   // Auditors and suppliers have no ticket queue; every other signed-in role does.
   if (has("ceo", "manager", "finance", "sales", "support", "engineer", "hr", "employee", "logistics", "procurement", "client_admin", "client_user")) links.push(["/tickets", staff ? "Ticket queue" : "Support"]);
   if (staff && has("ceo", "manager", "sales")) links.push(["/clients", "Clients"], ["/leads", "Leads"]);
+  if (staff && has("ceo", "manager")) links.push(["/access-requests", "Access requests"]);
   else if (staff && has("support", "finance", "engineer")) links.push(["/clients", "Clients"]);
   // Money is for management, finance and sales, and for the client themselves; other staff do not see it.
   if (has("ceo", "manager", "finance", "sales", "client_user", "client_admin")) links.push(["/quotes", "Quotes"], ["/invoices", "Invoices"]);
@@ -41,7 +42,7 @@ function Shell({ children }: { children: ReactNode }) {
   // The menu is the list of what a role may open; a page typed into the address bar follows the same rule.
   // /asset is where a scanned sticker lands: any signed-in person may open it, and the API decides what they see.
   const allowed = path === "/asset" || ordered.some(([href]) => path === href || path.startsWith(href + "/"));
-  const icons: Record<string, IconName> = {"/dashboard": "dashboard", "/tickets": "tickets", "/clients": "clients", "/leads": "leads", "/quotes": "quotes", "/invoices": "invoices", "/projects": "projects", "/interventions": "field", "/timesheets": "time", "/inventory": "inventory", "/accounting": "accounting", "/procurement": "purchasing", "/hr": "people", "/payroll": "payroll", "/documents": "documents", "/contracts": "contracts", "/forms": "forms", "/developer": "developer"};
+  const icons: Record<string, IconName> = {"/dashboard": "dashboard", "/tickets": "tickets", "/clients": "clients", "/leads": "leads", "/access-requests": "people", "/quotes": "quotes", "/invoices": "invoices", "/projects": "projects", "/interventions": "field", "/timesheets": "time", "/inventory": "inventory", "/accounting": "accounting", "/procurement": "purchasing", "/hr": "people", "/payroll": "payroll", "/documents": "documents", "/contracts": "contracts", "/forms": "forms", "/developer": "developer"};
   return (
     <div className="shell">
       <header className="side">

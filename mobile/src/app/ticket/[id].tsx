@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { ErrorBanner } from "../../components/Banner";
 import { Button } from "../../components/Button";
@@ -18,10 +18,11 @@ import { useLive } from "../../lib/live";
 import { useNow } from "../../lib/now";
 import { useSession } from "../../lib/session";
 import { sp } from "../../lib/theme";
-import type { Comment, Status, Ticket } from "../../lib/types";
+import type { Comment, Severity, Status, Ticket } from "../../lib/types";
 
 const stamp = (s: string | null) => (s ? new Date(s).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "–");
 const RATINGS: [number, string][] = [[5, "Excellent"], [4, "Good"], [3, "Okay"], [2, "Poor"], [1, "Very poor"]];
+const LEVELS: [Severity, string][] = [["P1", "Critical"], ["P2", "High"], ["P3", "Medium"], ["P4", "Low"]];
 
 export default function TicketScreen() {
   const gate = useGate();
@@ -36,6 +37,9 @@ export default function TicketScreen() {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [photoKey, setPhotoKey] = useState(0);
+  const [stars, setStars] = useState(0);
+  const [ratingNote, setRatingNote] = useState("");
+  const [sevOpen, setSevOpen] = useState(false);
   const load = useCallback(async () => {
     try {
       const [tk, cs] = await Promise.all([api.ticket(id), api.comments(id)]);
@@ -61,6 +65,8 @@ export default function TicketScreen() {
     );
   }
   const move = (to: Status) => run(api.updateTicket(id, { status: to }, t.version));
+  const setSeverity = (sv: Severity) => { setSevOpen(false); if (sv !== t.severity) void run(api.updateTicket(id, { severity: sv }, t.version)); };
+  const mine = !!me && t.assignee === me.sub;
   const first = t.first_response_at;
   const open = t.status === "open" || t.status === "in_progress";
   const primary: { title: string; to: Status } | null = staff && t.status === "open" ? { title: "Start work", to: "in_progress" }
@@ -84,6 +90,17 @@ export default function TicketScreen() {
         <Row title="Opened" value={stamp(t.created_at)} />
         {t.resolved_at && <Row title="Resolved" value={stamp(t.resolved_at)} />}
       </Section>
+
+      {staff && t.status !== "closed" && (
+        <Section header="Assignment" footer={sevOpen ? "Changing the severity recalculates the response and resolution deadlines." : undefined}>
+          {!mine && <Row icon="person" title={t.assignee ? "Take over this ticket" : "Assign to me"} action disabled={busy} onPress={() => void run(api.updateTicket(id, { assignee: me!.sub }, t.version))} />}
+          {mine && <Row icon="person" title="Release to the queue" action disabled={busy} onPress={() => void run(api.updateTicket(id, { assignee: "" }, t.version))} />}
+          <Row icon="warning" title="Change severity" value={sevOpen ? undefined : t.severity} action onPress={() => setSevOpen((o) => !o)} chevron={false} />
+          {sevOpen && LEVELS.map(([sv, name]) => (
+            <Row key={sv} title={`${sv} · ${name}`} right={sv === t.severity ? <Icon name="check" size={20} tone="tint" /> : undefined} onPress={() => setSeverity(sv)} disabled={busy} />
+          ))}
+        </Section>
+      )}
 
       {!!t.description && (
         <Section header="Description">
@@ -118,23 +135,15 @@ export default function TicketScreen() {
 
       {open && (
         <Section header="Add comment">
-          <View style={{ flexDirection: "row", alignItems: "flex-end", paddingRight: sp.xs }}>
-            <View style={{ flex: 1 }}>
-              <Field multiline placeholder="Write a reply" returnKeyType="default" value={body} onChangeText={setBody} />
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Send comment"
-              disabled={!body.trim() || busy}
-              hitSlop={4}
-              onPress={() => void run(api.addComment(id, body.trim(), internal, `c-${Date.now()}-${Math.random().toString(36).slice(2)}`).then(() => setBody("")))}
-              android_ripple={{ color: "#00000014", borderless: true, radius: 22 }}
-              style={({ pressed }) => ({ width: 44, height: 44, alignItems: "center", justifyContent: "center", marginBottom: sp.xs, opacity: !body.trim() || busy ? 0.4 : pressed ? 0.5 : 1 })}
-            >
-              <Icon name="send" size={24} tone="tint" />
-            </Pressable>
-          </View>
+          <Field multiline placeholder="Write a reply" returnKeyType="default" value={body} onChangeText={setBody} />
           {staff && <SwitchRow title="Internal note" subtitle="Only staff can see it." value={internal} onValueChange={setInternal} />}
+          <Row
+            icon="send"
+            title={internal ? "Add internal note" : "Send reply"}
+            action
+            disabled={!body.trim() || busy}
+            onPress={() => void run(api.addComment(id, body.trim(), internal, `c-${Date.now()}-${Math.random().toString(36).slice(2)}`).then(() => setBody("")))}
+          />
         </Section>
       )}
 
@@ -144,7 +153,12 @@ export default function TicketScreen() {
 
       {!staff && (t.status === "resolved" || t.status === "closed") && (
         <Section header={t.rating ? "Your rating" : "Rate this support"} footer={t.rating ? `You rated this ${t.rating} out of 5.` : undefined}>
-          {!t.rating && RATINGS.map(([n, label]) => <Row key={n} title={`${n} · ${label}`} onPress={() => void run(api.rate(id, n))} />)}
+          {!t.rating && RATINGS.map(([n, label]) => (
+            <Row key={n} title={`${n} · ${label}`} right={stars === n ? <Icon name="check" size={20} tone="tint" /> : undefined} onPress={() => setStars(n)} />
+          ))}
+          {!t.rating && stars > 0 && <Field multiline placeholder="Anything to add? (optional)" value={ratingNote} onChangeText={setRatingNote} maxLength={1000} />}
+          {!t.rating && stars > 0 && <Row icon="send" title="Send rating" action disabled={busy} onPress={() => void run(api.rate(id, stars, ratingNote.trim()))} />}
+          {!!t.rating && !!t.rating_comment && <Row title={t.rating_comment} titleLines={0} />}
         </Section>
       )}
     </Screen>

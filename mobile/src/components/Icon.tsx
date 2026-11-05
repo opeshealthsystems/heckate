@@ -42,6 +42,13 @@ const MAP = {
   money: ["banknote", "payments"],
   note: ["text.bubble", "chat-bubble-outline"],
   location: ["location", "my-location"],
+  eye: ["eye", "visibility"],
+  eyeOff: ["eye.slash", "visibility-off"],
+  map: ["map", "map"],
+  bell: ["bell", "notifications-none"],
+  approvals: ["checkmark.rectangle.stack", "fact-check"],
+  history: ["clock.arrow.circlepath", "history"],
+  inventory: ["shippingbox", "inventory-2"],
 } as const satisfies Record<string, readonly [SFSymbol, keyof typeof MaterialIcons.glyphMap]>;
 
 export type IconName = keyof typeof MAP;

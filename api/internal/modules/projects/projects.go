@@ -271,6 +271,8 @@ type Intervention struct {
 	Status       string          `json:"status"`
 	ScheduledFor *time.Time      `json:"scheduled_for"`
 	Summary      string          `json:"summary"`
+	SiteAddress  *string         `json:"site_address"`
+	SiteContact  *string         `json:"site_contact"`
 	CheckinAt    *time.Time      `json:"checkin_at"`
 	CheckinLat   *float64        `json:"checkin_lat"`
 	CheckinLng   *float64        `json:"checkin_lng"`
@@ -286,12 +288,12 @@ type Intervention struct {
 	CreatedAt    time.Time       `json:"created_at"`
 }
 
-const ivCols = `id, tenant_id, project_id, ticket_id, engineer, status, scheduled_for, summary, checkin_at, checkin_lat, checkin_lng,
+const ivCols = `id, tenant_id, project_id, ticket_id, engineer, status, scheduled_for, summary, site_address, site_contact, checkin_at, checkin_lat, checkin_lng,
  checkout_at, checkout_lat, checkout_lng, report, signed_by, signature IS NOT NULL, document_ref, parts, created_at`
 
 func scanIV(row pgx.Row) (*Intervention, error) {
 	var v Intervention
-	err := row.Scan(&v.ID, &v.TenantID, &v.ProjectID, &v.TicketID, &v.Engineer, &v.Status, &v.ScheduledFor, &v.Summary, &v.CheckinAt, &v.CheckinLat, &v.CheckinLng,
+	err := row.Scan(&v.ID, &v.TenantID, &v.ProjectID, &v.TicketID, &v.Engineer, &v.Status, &v.ScheduledFor, &v.Summary, &v.SiteAddress, &v.SiteContact, &v.CheckinAt, &v.CheckinLat, &v.CheckinLng,
 		&v.CheckoutAt, &v.CheckoutLat, &v.CheckoutLng, &v.Report, &v.SignedBy, &v.HasSignature, &v.DocumentRef, &v.Parts, &v.CreatedAt)
 	if isNotFound(err) {
 		return nil, nf("intervention")
@@ -307,9 +309,14 @@ func createIntervention(r *http.Request, s *platform.Scope) (*platform.Result, e
 		Engineer     string `json:"engineer"`
 		ScheduledFor string `json:"scheduled_for"`
 		Summary      string `json:"summary"`
+		SiteAddress  string `json:"site_address"` // where the engineer goes; opened in Maps by the app
+		SiteContact  string `json:"site_contact"` // person and phone on site
 	}
 	if err := platform.DecodeBody(r, &in); err != nil {
 		return nil, err
+	}
+	if len(in.SiteAddress) > 500 || len(in.SiteContact) > 200 {
+		return nil, platform.Err(http.StatusUnprocessableEntity, "Invalid intervention", "site_address max 500 and site_contact max 200 characters")
 	}
 	if in.TenantID == "" || strings.TrimSpace(in.Engineer) == "" {
 		return nil, platform.Err(http.StatusUnprocessableEntity, "Invalid intervention", "tenant_id and engineer are required")
@@ -322,8 +329,9 @@ func createIntervention(r *http.Request, s *platform.Scope) (*platform.Result, e
 		}
 		when = t
 	}
-	v, err := scanIV(s.Tx.QueryRow(r.Context(), `INSERT INTO projects.interventions (tenant_id, project_id, ticket_id, engineer, scheduled_for, summary, created_by)
-		VALUES ($1,NULLIF($2,'')::uuid,NULLIF($3,'')::uuid,$4,$5,$6,$7) RETURNING `+ivCols, in.TenantID, in.ProjectID, in.TicketID, strings.TrimSpace(in.Engineer), when, in.Summary, s.Claims.Sub))
+	v, err := scanIV(s.Tx.QueryRow(r.Context(), `INSERT INTO projects.interventions (tenant_id, project_id, ticket_id, engineer, scheduled_for, summary, created_by, site_address, site_contact)
+		VALUES ($1,NULLIF($2,'')::uuid,NULLIF($3,'')::uuid,$4,$5,$6,$7,NULLIF($8,''),NULLIF($9,'')) RETURNING `+ivCols, in.TenantID, in.ProjectID, in.TicketID, strings.TrimSpace(in.Engineer), when, in.Summary, s.Claims.Sub,
+		strings.TrimSpace(in.SiteAddress), strings.TrimSpace(in.SiteContact)))
 	if err != nil {
 		if strings.Contains(err.Error(), "foreign key") || strings.Contains(err.Error(), "invalid input syntax") {
 			return nil, platform.Err(http.StatusUnprocessableEntity, "Invalid intervention", "unknown tenant or project")

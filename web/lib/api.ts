@@ -1,6 +1,6 @@
 import { clearToken, getToken } from "./auth";
 import type {
-  Client, Comment, DocumentEntry, Lead, Me, Severity, Channel, Status, SupportReport, Ticket, Verification,
+  Client, Comment, DocumentEntry, Lead, AccountRequest, Me, Severity, Channel, Status, SupportReport, Ticket, Verification,
 } from "./types";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -129,6 +129,9 @@ export const api = {
   report: () => call<SupportReport>("GET", "/v1/reports/support"),
   clients: () => call<{ data: Client[] }>("GET", "/v1/clients"),
   createClient: (b: { legal_name: string; rccm?: string; email?: string; phone?: string }) => call<Client>("POST", "/v1/clients", b),
+  accountRequests: (status = "pending") => call<{ data: AccountRequest[]; roles: string[] }>("GET", `/v1/account-requests?status=${status}`),
+  approveAccountRequest: (id: string, role: string) => call<AccountRequest>("POST", `/v1/account-requests/${id}/approve`, { role }),
+  rejectAccountRequest: (id: string, note: string) => call<AccountRequest>("POST", `/v1/account-requests/${id}/reject`, { note }),
   leads: () => call<{ data: Lead[] }>("GET", "/v1/leads"),
   updateLead: (id: string, b: { stage?: string; owner?: string }) => call<Lead>("PATCH", `/v1/leads/${id}`, b),
   issueDocument: (b: { code: string; title: string; tenant_id?: string }) => call<DocumentEntry>("POST", "/v1/documents", b),

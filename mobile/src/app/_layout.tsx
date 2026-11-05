@@ -6,6 +6,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AnimatedSplash } from "../components/AnimatedSplash";
 import { useStackOptions } from "../components/Header";
 import { LockGate } from "../components/LockScreen";
 import { LockProvider } from "../lib/lock";
@@ -26,7 +27,10 @@ function Shell() {
         <Stack.Screen name="intervention/[id]" options={{ headerShown: true, title: "Site visit" }} />
         <Stack.Screen name="document/[ref]" options={{ headerShown: true, title: "Document" }} />
         <Stack.Screen name="report" options={{ presentation: "modal", headerShown: true }} />
+        <Stack.Screen name="approvals" options={{ headerShown: true, title: "Approvals" }} />
       </Stack>
+      {/* The lock is drawn last so it always covers the launch animation. */}
+      <AnimatedSplash />
       <LockGate />
     </View>
   );
@@ -34,7 +38,12 @@ function Shell() {
 
 export default function RootLayout() {
   // Cinzel is loaded for the HEKATE wordmark on the sign-in and lock screens only. Everything else is the system font.
-  const [loaded, error] = useFonts({ Cinzel_700Bold });
+  const [loaded, error] = useFonts({
+    Cinzel_700Bold,
+    // Montserrat: the brand line on the launch animations (HS-MOTION-001/002).
+    Montserrat_500Medium: require("../../assets/fonts/Montserrat-Medium.ttf"),
+    Montserrat_700Bold: require("../../assets/fonts/Montserrat-Bold.ttf"),
+  });
   useEffect(() => {
     if (loaded || error) void SplashScreen.hideAsync();
   }, [loaded, error]);

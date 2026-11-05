@@ -38,7 +38,7 @@ export interface Dict {
     lead: string;
     ctaPrimary: string;
     ctaSecondary: string;
-    portal: { h: string; emailLabel: string; cta: string; note: string; verify: string };
+    portal: { h: string; emailLabel: string; cta: string; note: string; verify: string; app: string };
     sectors: string[];
     servicesLabel: string;
     servicesH: string;
