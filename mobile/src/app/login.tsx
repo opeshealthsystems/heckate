@@ -6,14 +6,16 @@ import * as WebBrowser from "expo-web-browser";
 import { AuthField, AuthShell } from "../components/AuthShell";
 import { Button } from "../components/Button";
 import { Text } from "../components/Text";
+import { API_URL } from "../lib/api";
 import { DEV_LOGIN, OIDC_CLIENT, OIDC_ISSUER, passwordSignIn } from "../lib/auth";
 import { useSession } from "../lib/session";
-import { sp } from "../lib/theme";
+import { sp, useTheme } from "../lib/theme";
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function Login() {
   const { signIn: signInTo } = useSession();
+  const { c } = useTheme();
   const { next } = useLocalSearchParams<{ next?: string }>();
   // After sign-in the person returns to the route they asked for (a deep link), not always the home tab.
   const signIn = useCallback((token: string) => signInTo(token, next), [signInTo, next]);
@@ -24,6 +26,22 @@ export default function Login() {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const passRef = useRef<ComponentRef<typeof TextInput>>(null);
+  // One-tap demo accounts. The list comes from the server (HEKATE_DEMO_LOGINS), so it can be withdrawn without an app update.
+  const [demos, setDemos] = useState<{ label: string; email: string; password: string }[]>([]);
+  const [demoBusy, setDemoBusy] = useState("");
+  useEffect(() => {
+    fetch(`${API_URL}/v1/public/demo-logins`).then((r) => (r.ok ? r.json() : { data: [] })).then((b) => setDemos(Array.isArray(b?.data) ? b.data : [])).catch(() => {});
+  }, []);
+  const demo = async (d: { label: string; email: string; password: string }) => {
+    setErr("");
+    setDemoBusy(d.label);
+    try {
+      await signIn(await passwordSignIn(d.email, d.password));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+      setDemoBusy("");
+    }
+  };
 
   // Organisation single sign-on in the system browser stays available as the second option (e.g. for MFA set-up).
   const discovery = AuthSession.useAutoDiscovery(OIDC_ISSUER || "https://invalid.invalid");
@@ -110,6 +128,24 @@ export default function Login() {
           {!!err && <Text v="footnote" tone="red" accessibilityLiveRegion="polite">{err}</Text>}
           <Button kind="primary" title="Sign in" loading={busy} onPress={() => void submit()} />
           <Button title="Use organisation sign-in (SSO)" disabled={!request} onPress={() => { setErr(""); void promptAsync(); }} />
+          {demos.length > 0 && (
+            <View style={{ gap: sp.sm, marginTop: sp.sm }}>
+              <Text v="footnote" tone="label2" style={{ textAlign: "center" }}>Try the app as</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: sp.sm, justifyContent: "center" }}>
+                {demos.map((d) => (
+                  <Button
+                    key={d.label}
+                    title={d.label}
+                    loading={demoBusy === d.label}
+                    disabled={!!demoBusy}
+                    onPress={() => void demo(d)}
+                    accessibilityHint={`Signs in with the ${d.label} demo account`}
+                    style={{ borderWidth: 1, borderColor: c.separator, paddingHorizontal: sp.md, minWidth: 120 }}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
         </>
       )}
 

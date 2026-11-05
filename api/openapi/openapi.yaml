@@ -705,6 +705,13 @@ paths:
       responses:
         "202": { description: Received (also returned when a request for this email is already pending) }
         "4XX": { $ref: "#/components/responses/Problem" }
+  /v1/public/demo-logins:
+    get:
+      operationId: listDemoLogins
+      summary: Demo accounts for the mobile sign-in screen (from HEKATE_DEMO_LOGINS; empty list when off)
+      security: []
+      responses:
+        "200": { description: "Demo accounts: label, email and password" }
   /v1/account-requests:
     get:
       operationId: listAccountRequests

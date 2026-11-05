@@ -86,6 +86,7 @@ func build(cfg platform.Config, pool *pgxpool.Pool, hub *stream.Hub) *platform.A
 	clients.Register(app)
 	crm.Register(app)
 	identity.Register(app, &identity.Keycloak{AdminURL: cfg.KeycloakAdminURL, TokenURL: cfg.KeycloakTokenURL, ClientID: cfg.KeycloakClientID, ClientSecret: cfg.KeycloakClientSecret})
+	identity.RegisterDemo(app, identity.ParseDemoLogins(cfg.DemoLogins))
 	support.Register(app)
 	documents.Register(app, cfg.PortalURL)
 	notify.Register(app)

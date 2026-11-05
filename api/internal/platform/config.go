@@ -45,6 +45,8 @@ type Config struct {
 	KeycloakTokenURL     string // HEKATE_KEYCLOAK_TOKEN_URL, e.g. https://auth.example.com/realms/hekate/protocol/openid-connect/token
 	KeycloakClientID     string // HEKATE_KEYCLOAK_CLIENT_ID: service-account client with manage-users and view-realm
 	KeycloakClientSecret string // HEKATE_KEYCLOAK_CLIENT_SECRET
+	// HEKATE_DEMO_LOGINS: one-tap demo accounts on the mobile sign-in screen, "Label|email|password;..."; empty hides them.
+	DemoLogins string
 }
 
 // MoMoConfig is the MTN Mobile Money Collection API account (all empty: MoMo is off).
@@ -85,6 +87,7 @@ func LoadConfig() Config {
 		KeycloakTokenURL:     os.Getenv("HEKATE_KEYCLOAK_TOKEN_URL"),
 		KeycloakClientID:     os.Getenv("HEKATE_KEYCLOAK_CLIENT_ID"),
 		KeycloakClientSecret: os.Getenv("HEKATE_KEYCLOAK_CLIENT_SECRET"),
+		DemoLogins:           os.Getenv("HEKATE_DEMO_LOGINS"),
 		RateLimit:      atoiOr(os.Getenv("HEKATE_RATE_LIMIT"), 300),
 		TrustedProxies: splitList(os.Getenv("HEKATE_TRUSTED_PROXIES")),
 		Addr:           get("HEKATE_ADDR", ":8080"),
