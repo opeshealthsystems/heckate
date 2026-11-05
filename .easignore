@@ -1,0 +1,11 @@
+*.env
+.env
+bin/
+node_modules/
+.DS_Store
+erp-mobile.png
+
+# Local tooling and editor settings are never uploaded to EAS Build.
+_tools/
+.claude/
+docs/brand-preview/
