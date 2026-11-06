@@ -12,8 +12,10 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0B1A33",
-        "foregroundImage": "./assets/android-icon-foreground.png"
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png",
+        "backgroundColor": "#0B1A33"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.hekatesystems.app",
